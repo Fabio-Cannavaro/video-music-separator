@@ -42,7 +42,8 @@ class RunCommandTests(unittest.TestCase):
     def test_extracts_model_input_as_44100hz_pcm16(
         self, _mocked_require, mocked_command
     ) -> None:
-        extract_audio(Path("clip.mp4"), Path("work") / "source.wav")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            extract_audio(Path("clip.mp4"), Path(temp_dir) / "work" / "source.wav")
         command = mocked_command.call_args.args[0]
         self.assertIn("44100", command)
         self.assertIn("pcm_s16le", command)
