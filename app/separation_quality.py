@@ -8,6 +8,7 @@ def apply_stereo_consistent_mask(
     sample_rate: int,
     *,
     model_band_limit: float | None = None,
+    high_band_extension: float = 0.0,
 ):
     """Apply a model's soft music mask to the original stereo waveform.
 
@@ -16,6 +17,9 @@ def apply_stereo_consistent_mask(
     """
     import torch
     import torch.nn.functional as functional
+
+    if not 0.0 <= high_band_extension <= 1.0:
+        raise ValueError("고역 확장 강도는 0 이상 1 이하여야 합니다.")
 
     if reference.ndim != 2:
         raise ValueError(f"원본 오디오 모양이 올바르지 않습니다: {tuple(reference.shape)}")
@@ -88,7 +92,34 @@ def apply_stereo_consistent_mask(
             torch.ones_like(band_weight),
             band_weight,
         )
-        mask = mask * band_weight.view(1, -1, 1)
+        limited_mask = mask * band_weight.view(1, -1, 1)
+        if high_band_extension:
+            # A 16 kHz model cannot directly estimate content above 8 kHz.
+            # Reuse only the time envelope from its upper reliable band and
+            # keep the optional extension deliberately weak. This can catch
+            # cymbal/air energy, but may also affect speech sibilance.
+            guide_bins = (frequencies >= model_band_limit * 0.70) & (
+                frequencies <= model_band_limit * 0.875
+            )
+            if bool(guide_bins.any()):
+                high_envelope = mask[:, guide_bins, :].mean(dim=1, keepdim=True)
+                nyquist = sample_rate / 2
+                high_curve = ((frequencies - fade_start) / max(fade_width, 1.0)).clamp(
+                    0, 1
+                )
+                if nyquist > model_band_limit:
+                    decay = 1.0 - 0.5 * (
+                        (frequencies - model_band_limit)
+                        / (nyquist - model_band_limit)
+                    ).clamp(0, 1)
+                    high_curve = high_curve * decay
+                extension = (
+                    high_envelope
+                    * high_curve.view(1, -1, 1)
+                    * high_band_extension
+                )
+                limited_mask = torch.maximum(limited_mask, extension)
+        mask = limited_mask
 
     if mask.shape[0] == 1 and reference_spec.shape[0] > 1:
         mask = mask.expand(reference_spec.shape[0], -1, -1)

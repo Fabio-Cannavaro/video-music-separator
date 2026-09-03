@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
 
 from audiosep_worker import load_jobs
-from avcass_worker import INFERENCE_HOP, INFERENCE_LENGTH, inference_starts
+from avcass_worker import (
+    INFERENCE_HOP,
+    INFERENCE_LENGTH,
+    configure_yapf_cache,
+    inference_starts,
+)
 
 from sound_separator_app import (
     CREATOR_YOUTUBE_URL,
@@ -396,6 +402,27 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertEqual(starts[0], 0)
         self.assertEqual(starts[-1], long_length - INFERENCE_LENGTH)
         self.assertGreaterEqual(len(starts), 2)
+
+    def test_avcass_chunk_starts_accept_larger_experimental_overlap(self) -> None:
+        overlap = 16000
+        audio_length = INFERENCE_LENGTH * 3
+        starts = inference_starts(audio_length, overlap)
+        self.assertEqual(starts[1], INFERENCE_LENGTH - overlap)
+        self.assertEqual(starts[-1], audio_length - INFERENCE_LENGTH)
+
+    def test_avcass_chunk_starts_reject_invalid_overlap(self) -> None:
+        with self.assertRaises(ValueError):
+            inference_starts(INFERENCE_LENGTH * 2, INFERENCE_LENGTH)
+
+    def test_avcass_yapf_cache_uses_writable_temp_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch("avcass_worker.tempfile.gettempdir", return_value=temporary):
+                cache_dir = configure_yapf_cache()
+            self.assertEqual(
+                cache_dir, Path(temporary) / "video-music-separator-yapf"
+            )
+            self.assertTrue(cache_dir.is_dir())
+            self.assertEqual(os.environ["YAPF_CACHE_DIR"], str(cache_dir))
 
     def test_loads_user_responsibility_and_third_party_notices(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

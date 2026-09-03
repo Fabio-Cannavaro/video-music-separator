@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import argparse
+import faulthandler
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
 AVCASS_SAMPLE_RATE = 16000
 INFERENCE_LENGTH = 130816
-INFERENCE_HOP = INFERENCE_LENGTH - 256
+DEFAULT_OVERLAP_SAMPLES = 256
+INFERENCE_HOP = INFERENCE_LENGTH - DEFAULT_OVERLAP_SAMPLES
 INFERENCE_STEPS = 250
 VIDEO_FPS = 4
 MODEL_BAND_LIMIT = 8000.0
@@ -31,6 +34,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--music-output", required=True)
     parser.add_argument("--non-music-output", required=True)
     parser.add_argument("--steps", type=int, default=INFERENCE_STEPS)
+    parser.add_argument(
+        "--overlap-seconds",
+        type=float,
+        default=DEFAULT_OVERLAP_SAMPLES / AVCASS_SAMPLE_RATE,
+        help="청크 사이 겹침 길이. 기본값은 기존 256샘플 동작을 유지합니다.",
+    )
+    parser.add_argument(
+        "--blend-mode",
+        choices=("average", "cosine"),
+        default="average",
+        help="겹친 청크 결합 방식. 기본값 average는 기존 결과와 같습니다.",
+    )
+    parser.add_argument(
+        "--high-band-extension",
+        type=float,
+        default=0.0,
+        help="8kHz 위 음악 마스크의 보수적 확장 강도(0~1). 기본값 0은 기존 결과입니다.",
+    )
+    parser.add_argument(
+        "--diagnostic-trace-seconds",
+        type=float,
+        default=0.0,
+        help="진단 시 지정 간격마다 현재 Python 스택을 출력합니다.",
+    )
     return parser.parse_args()
 
 
@@ -100,9 +127,25 @@ def centered_correlation(first, second) -> float:
     return float(torch.dot(left, right) / denominator)
 
 
-def inference_starts(audio_length: int) -> list[int]:
+def configure_yapf_cache() -> Path:
+    """Put YAPF's generated grammar cache in a writable per-user location."""
+    cache_dir = Path(tempfile.gettempdir()) / "video-music-separator-yapf"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["YAPF_CACHE_DIR"] = str(cache_dir)
+    return cache_dir
+
+
+def inference_starts(
+    audio_length: int, overlap_samples: int = DEFAULT_OVERLAP_SAMPLES
+) -> list[int]:
+    if not 0 <= overlap_samples < INFERENCE_LENGTH:
+        raise ValueError(
+            f"청크 겹침은 0 이상 {INFERENCE_LENGTH} 미만이어야 합니다: "
+            f"{overlap_samples}"
+        )
+    inference_hop = INFERENCE_LENGTH - overlap_samples
     starts: list[int] = []
-    for index in range(0, audio_length, INFERENCE_HOP):
+    for index in range(0, audio_length, inference_hop):
         start = (
             audio_length - INFERENCE_LENGTH
             if index + INFERENCE_LENGTH >= audio_length
@@ -113,8 +156,56 @@ def inference_starts(audio_length: int) -> list[int]:
     return starts
 
 
+def chunk_blend_weight(starts, index: int, *, device, dtype):
+    """Return complementary cosine-squared fades for one inference chunk."""
+    import torch
+
+    start = starts[index]
+    weight = torch.ones(INFERENCE_LENGTH, device=device, dtype=dtype)
+    if index:
+        left_overlap = starts[index - 1] + INFERENCE_LENGTH - start
+        if left_overlap > 0:
+            phase = torch.linspace(
+                0.0, torch.pi / 2, left_overlap, device=device, dtype=dtype
+            )
+            weight[:left_overlap] *= torch.sin(phase).square()
+    if index + 1 < len(starts):
+        right_overlap = start + INFERENCE_LENGTH - starts[index + 1]
+        if right_overlap > 0:
+            phase = torch.linspace(
+                0.0, torch.pi / 2, right_overlap, device=device, dtype=dtype
+            )
+            weight[-right_overlap:] *= torch.cos(phase).square()
+    return weight
+
+
+def sample_with_progress(transport, model, noise, *, chunk_number: int, **kwargs):
+    """Run AV-CASS sampling while exposing each otherwise opaque Euler step."""
+    completed_steps = 0
+    total_steps = max(int(transport.infer_steps) - 1, 0)
+    started_at = time.perf_counter()
+
+    def forward_with_progress(*args, **model_kwargs):
+        nonlocal completed_steps
+        result = model.forward_with_cfg(*args, **model_kwargs)
+        completed_steps += 1
+        elapsed = time.perf_counter() - started_at
+        print(
+            f"[step {completed_steps}/{total_steps}] "
+            f"청크 {chunk_number}, 누적 {elapsed:.1f}초",
+            flush=True,
+        )
+        return result
+
+    return transport.sample(forward_with_progress, noise, **kwargs)
+
+
 def main() -> int:
     args = parse_args()
+    if args.diagnostic_trace_seconds > 0:
+        faulthandler.dump_traceback_later(
+            args.diagnostic_trace_seconds, repeat=True
+        )
     repo = Path(args.repo).resolve()
     deps = Path(args.deps).resolve()
     runtime_root = Path(args.runtime_root).resolve()
@@ -133,9 +224,12 @@ def main() -> int:
     music_output.parent.mkdir(parents=True, exist_ok=True)
     non_music_output.parent.mkdir(parents=True, exist_ok=True)
 
-    cache_dir = runtime_root / "cache" / "yapf"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    os.environ["YAPF_CACHE_DIR"] = str(cache_dir)
+    # YAPF is imported indirectly by MMCV while CAVP starts. Its grammar
+    # cache uses exclusive temporary files and can spin forever when the
+    # installed/runtime folder is read-only (for example Program Files or a
+    # restricted launcher). Keep this small generated cache in the user's
+    # writable temporary directory instead of beside the model assets.
+    configure_yapf_cache()
     os.environ["CAVP_CKPT"] = str(cavp_checkpoint)
     sys.path.insert(0, str(deps))
     sys.path.insert(0, str(repo))
@@ -153,8 +247,21 @@ def main() -> int:
     if not torch.cuda.is_available():
         raise RuntimeError("AV-CASS 고품질 모드는 NVIDIA GPU가 필요합니다.")
     device = torch.device("cuda")
+    print(
+        "[cuda] "
+        f"장치={torch.cuda.get_device_name(device)}, "
+        f"capability={torch.cuda.get_device_capability(device)}, "
+        f"torch={torch.__version__}, cuda={torch.version.cuda}",
+        flush=True,
+    )
     torch.manual_seed(0)
     torch.backends.cuda.matmul.allow_tf32 = True
+
+    if args.overlap_seconds < 0:
+        raise ValueError("청크 겹침 시간은 0 이상이어야 합니다.")
+    overlap_samples = round(args.overlap_seconds * AVCASS_SAMPLE_RATE)
+    if not 0.0 <= args.high_band_extension <= 1.0:
+        raise ValueError("고역 확장 강도는 0 이상 1 이하여야 합니다.")
 
     reference, sample_rate = torchaudio.load(str(input_path))
     if reference.ndim != 2 or reference.shape[0] < 1:
@@ -179,27 +286,53 @@ def main() -> int:
         extract_video_frames(ffmpeg, video, frame_dir)
         all_frames = load_frames(frame_dir)
 
-        print("[setup] AV-CASS 분리 모델 준비 중", flush=True)
+        setup_started = time.perf_counter()
+        print("[setup] AV-CASS 모델 구조 생성 중", flush=True)
         model = SiT_models["UNet2d_S2"](
             in_channels=8,
             out_channels=6,
             attention_head_dim=64,
             visual_feat_dim=512,
         )
+        print(
+            f"[setup] AV-CASS 체크포인트 읽는 중 ({time.perf_counter() - setup_started:.1f}초)",
+            flush=True,
+        )
         state = torch.load(checkpoint, map_location="cpu", weights_only=False)["ema"]
+        print(
+            f"[setup] AV-CASS 가중치 적용 중 ({time.perf_counter() - setup_started:.1f}초)",
+            flush=True,
+        )
         model.load_state_dict(state, strict=True)
+        print(
+            f"[setup] AV-CASS 모델 CUDA 이동 중 ({time.perf_counter() - setup_started:.1f}초)",
+            flush=True,
+        )
         model = model.to(device).eval()
         del state
 
-        print("[setup] CAVP 영상 인식기 준비 중", flush=True)
+        print(
+            f"[setup] CAVP 영상 인식기 생성·체크포인트 적용 중 "
+            f"({time.perf_counter() - setup_started:.1f}초)",
+            flush=True,
+        )
         image_model, _ = init_visual_encoder("cavp")
+        print(
+            f"[setup] CAVP CUDA 이동 중 ({time.perf_counter() - setup_started:.1f}초)",
+            flush=True,
+        )
         image_model = image_model.to(device).eval()
+        print(
+            f"[setup] 모델 준비 완료 ({time.perf_counter() - setup_started:.1f}초)",
+            flush=True,
+        )
         transport = ReFlow(infer_steps=args.steps)
 
         overlap_count = torch.zeros(audio_length, device=device)
         prediction = torch.zeros(3, audio_length, device=device)
-        starts = inference_starts(audio_length)
-        for chunk_number, start in enumerate(starts, start=1):
+        starts = inference_starts(audio_length, overlap_samples)
+        for chunk_index, start in enumerate(starts):
+            chunk_number = chunk_index + 1
             end = start + INFERENCE_LENGTH
             print(
                 f"[run {chunk_number}/{len(starts)}] "
@@ -228,17 +361,32 @@ def main() -> int:
             with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
                 visual_features = forward_video(image_model, video_chunk, "cavp")
                 noise = torch.randn(1, 6, 256, 512, device=device)
-                samples = transport.sample(
-                    model.forward_with_cfg,
+                samples = sample_with_progress(
+                    transport,
+                    model,
                     noise,
+                    chunk_number=chunk_number,
                     mixture_latents=mixture_latents,
                     cfg_scale=0.0,
                     vid=visual_features.half(),
                 )
                 samples = spec2audio(samples)[0]
 
-            prediction[:, start:end] += samples[:, :INFERENCE_LENGTH]
-            overlap_count[start:end] += 1
+            if args.blend_mode == "cosine":
+                blend_weight = chunk_blend_weight(
+                    starts,
+                    chunk_index,
+                    device=device,
+                    dtype=samples.dtype,
+                )
+            else:
+                blend_weight = torch.ones(
+                    INFERENCE_LENGTH, device=device, dtype=samples.dtype
+                )
+            prediction[:, start:end] += (
+                samples[:, :INFERENCE_LENGTH] * blend_weight.unsqueeze(0)
+            )
+            overlap_count[start:end] += blend_weight
             del mixture, mixture_latents, video_chunk, visual_features, noise, samples
             torch.cuda.empty_cache()
 
@@ -268,6 +416,7 @@ def main() -> int:
         estimated_non_music,
         sample_rate,
         model_band_limit=MODEL_BAND_LIMIT,
+        high_band_extension=args.high_band_extension,
     )
     reconstruction = music + non_music
 
@@ -275,6 +424,9 @@ def main() -> int:
     metrics = {
         "mode": "av-cass-quality-stereo-mask",
         "inference_steps": int(args.steps),
+        "overlap_seconds": float(args.overlap_seconds),
+        "blend_mode": args.blend_mode,
+        "high_band_extension": float(args.high_band_extension),
         "source_rms": source_rms,
         "music_rms_ratio": float(music.square().mean().sqrt()) / source_rms
         if source_rms

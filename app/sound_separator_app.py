@@ -2206,8 +2206,7 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
             stem_dir.mkdir(parents=True, exist_ok=True)
             music_path = stem_dir / "music.wav"
             non_music_path = stem_dir / "non-music.wav"
-            run_command(
-                [
+            command = [
                     str(python_path),
                     str(worker_script_path("avcass_worker.py")),
                     "--repo",
@@ -2231,7 +2230,18 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
                     "--non-music-output",
                     str(non_music_path),
                 ]
-            )
+
+            def record_worker_output(line: str) -> None:
+                print(line, flush=True)
+                write_result(
+                    {
+                        "stage": "separating",
+                        "duration": duration,
+                        "latest_log": line,
+                    }
+                )
+
+            run_worker_command(command, record_worker_output)
             events = build_partition_events(duration, music_path, non_music_path)
             metrics_path = stem_dir / "partition_metrics.json"
             metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
