@@ -889,7 +889,7 @@ class SoundSeparatorApp(tk.Tk):
         )
 
         actions = ttk.Frame(root)
-        actions.grid(row=3, column=0, sticky="ew", pady=(10, 6))
+        actions.grid(row=3, column=0, pady=(10, 6))
         self.play_all_button = ttk.Button(
             actions, text=self._t("play_all"), command=self.preview_original
         )

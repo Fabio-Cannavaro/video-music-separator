@@ -113,7 +113,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("#### 2. Download the Windows Installer", lines)
         self.assertIn("#### 6. Using and Moving the Installed Folder", lines)
         self.assertIn(
-            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r4",
+            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r5",
             readme,
         )
         self.assertIn("Source code (zip)", readme)
