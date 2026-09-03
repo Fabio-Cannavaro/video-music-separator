@@ -27,7 +27,7 @@
 
 #### 2. Windows 설치 파일 다운로드
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0)
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r2)
 
 위 릴리스의 `Assets`에서 다음 두 파일을 함께 내려받는다.
 
@@ -233,7 +233,7 @@ For the first installation, keep the following two executables in the same folde
 
 #### 2. Download the Windows Installer
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0)
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r2)
 
 Under `Assets` in the Release above, download both of the following files:
 
