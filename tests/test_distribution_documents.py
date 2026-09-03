@@ -73,6 +73,17 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("미서명 빌드", readme)
         self.assertIn("https://www.youtube.com/@ms-0606", readme)
 
+        install = readme.index("## 설치 안내")
+        usage = readme.index("## 사용 방법")
+        processing = readme.index("## 처리 구조")
+        exclusions = readme.index("## 저장소에 포함되지 않는 파일")
+        self.assertLess(install, usage)
+        self.assertLess(usage, processing)
+        self.assertLess(processing, exclusions)
+        self.assertIn("### 2. 설치에 필요한 두 파일", readme)
+        self.assertIn("### 6. 설치 후 폴더 사용과 이동", readme)
+        self.assertNotIn("## 이동용 폴더", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
