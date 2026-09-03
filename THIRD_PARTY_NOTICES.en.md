@@ -64,7 +64,7 @@ The online installer does not contain the FFmpeg binary. During installation it 
 
 ## Python packages
 
-The Python packages listed in `requirements.txt` and installed in the portable AI environment are governed by their own licenses. The public Windows ZIP build scans the exact distribution folder and generates `PYTHON_PACKAGES_NOTICES.md`, `PYTHON_PACKAGES_INVENTORY.json`, and `licenses/python/`.
+The Python packages listed in `requirements.txt` and installed from the separate GitHub Release AI-runtime assets are governed by their own licenses. The public Windows ZIP build scans the exact runtime source and generates `PYTHON_PACKAGES_NOTICES.md`, `PYTHON_PACKAGES_INVENTORY.json`, and `licenses/python/`.
 
 ## User-provided media
 

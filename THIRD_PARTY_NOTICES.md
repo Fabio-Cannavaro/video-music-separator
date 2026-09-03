@@ -64,7 +64,7 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 
 ## Python packages
 
-`requirements.txt`와 휴대용 AI 환경에서 설치되는 Python 패키지는 각 패키지의 자체 라이선스를 따른다. 공개 Windows ZIP을 만들 때 실제 배포 폴더를 검사해 `PYTHON_PACKAGES_NOTICES.md`, `PYTHON_PACKAGES_INVENTORY.json`과 `licenses/python/`을 자동 생성한다.
+`requirements.txt`와 별도 GitHub Release 자산으로 설치되는 AI Python 환경의 패키지는 각 패키지의 자체 라이선스를 따른다. 공개 Windows ZIP을 만들 때 실제 런타임 원본을 검사해 `PYTHON_PACKAGES_NOTICES.md`, `PYTHON_PACKAGES_INVENTORY.json`과 `licenses/python/`을 자동 생성한다.
 
 ## User-provided media
 

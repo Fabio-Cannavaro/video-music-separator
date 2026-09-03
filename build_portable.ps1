@@ -30,6 +30,9 @@ $ffmpegDir = Join-Path $ffmpegRoot "bin"
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "빌드용 Python을 찾을 수 없습니다: $python"
 }
+if (-not $AIRuntimeDirectory) {
+    throw "라이선스 목록 생성을 위한 정리된 AI 런타임 원본을 -AIRuntimeDirectory로 지정해 주세요."
+}
 if ($BundleRuntimeAssets -and -not $FFmpegDirectory -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
     & (Join-Path $projectDir "prepare_ffmpeg_lgpl.ps1") -DestinationDirectory $ffmpegRoot
     if ($LASTEXITCODE -ne 0) {
@@ -153,17 +156,24 @@ if (Test-Path -LiteralPath $portableFfmpeg -PathType Container) {
     Remove-Item -LiteralPath $portableFfmpeg -Recurse -Force
 }
 
-if ($AIRuntimeDirectory) {
-    $sourceRuntime = [System.IO.Path]::GetFullPath($AIRuntimeDirectory)
-    $resolvedOutput = [System.IO.Path]::GetFullPath($outputDir).TrimEnd('\') + '\'
-    if ($sourceRuntime.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "AI 런타임 원본은 출력 폴더 밖에 있어야 합니다: $sourceRuntime"
+$sourceRuntime = [System.IO.Path]::GetFullPath($AIRuntimeDirectory)
+$resolvedOutput = [System.IO.Path]::GetFullPath($outputDir).TrimEnd('\') + '\'
+if ($sourceRuntime.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "AI 런타임 원본은 출력 폴더 밖에 있어야 합니다: $sourceRuntime"
+}
+foreach ($requiredDirectory in @("env", "avcass")) {
+    if (-not (Test-Path -LiteralPath (Join-Path $sourceRuntime $requiredDirectory) -PathType Container)) {
+        throw "AI 런타임 원본에 필수 폴더가 없습니다: $requiredDirectory"
     }
-    foreach ($requiredDirectory in @("env", "avcass")) {
-        if (-not (Test-Path -LiteralPath (Join-Path $sourceRuntime $requiredDirectory) -PathType Container)) {
-            throw "AI 런타임 원본에 필수 폴더가 없습니다: $requiredDirectory"
-        }
-    }
+}
+$sourceSitePackages = Join-Path $sourceRuntime "env\Lib\site-packages"
+$sourcePedalboard = @(Get-ChildItem $sourceSitePackages -Force -ErrorAction Stop |
+    Where-Object { $_.Name -eq "pedalboard" -or $_.Name -like "pedalboard-*.dist-info" })
+if ($sourcePedalboard.Count -gt 0) {
+    throw "공개 빌드에는 pedalboard가 제거된 AI 런타임 원본이 필요합니다."
+}
+
+if ($BundleRuntimeAssets) {
     if (Test-Path -LiteralPath $portableAudioSep -PathType Container) {
         $resolvedAudioSep = [System.IO.Path]::GetFullPath($portableAudioSep)
         if (-not $resolvedAudioSep.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -175,15 +185,14 @@ if ($AIRuntimeDirectory) {
     Copy-Item -LiteralPath (Join-Path $sourceRuntime "env") -Destination $portableAudioSep -Recurse -Force
     Copy-Item -LiteralPath (Join-Path $sourceRuntime "avcass") -Destination $portableAudioSep -Recurse -Force
 
-    $portableSitePackages = Join-Path $portableAudioSep "env\Lib\site-packages"
-    & $python (Join-Path $projectDir "prune_python_distribution.py") `
-        --site-packages $portableSitePackages `
-        --distribution pedalboard
-    if ($LASTEXITCODE -ne 0) {
-        throw "공개 런타임에서 GPL pedalboard 제거에 실패했습니다."
-    }
 } else {
-    New-Item -ItemType Directory -Path $portableAudioSep -Force | Out-Null
+    if (Test-Path -LiteralPath $portableAudioSep -PathType Container) {
+        $resolvedAudioSep = [System.IO.Path]::GetFullPath($portableAudioSep)
+        if (-not $resolvedAudioSep.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "AI 런타임 제거 대상이 출력 폴더 밖에 있습니다: $resolvedAudioSep"
+        }
+        Remove-Item -LiteralPath $portableAudioSep -Recurse -Force
+    }
 }
 
 if ($BundleRuntimeAssets) {
@@ -214,8 +223,13 @@ Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.en.md") -Destination $out
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
 
 $pythonLicenseDir = Join-Path $outputDir "licenses\python"
+$auditSitePackages = if ($BundleRuntimeAssets) {
+    Join-Path $portableAudioSep "env\Lib\site-packages"
+} else {
+    $sourceSitePackages
+}
 & $python (Join-Path $projectDir "audit_python_licenses.py") `
-    --site-packages (Join-Path $portableAudioSep "env\Lib\site-packages") `
+    --site-packages $auditSitePackages `
     --output (Join-Path $outputDir "PYTHON_PACKAGES_NOTICES.md") `
     --license-output $pythonLicenseDir `
     --json-output (Join-Path $outputDir "PYTHON_PACKAGES_INVENTORY.json")
@@ -283,7 +297,7 @@ AV-CASS는 영상 장면까지 분석하며 NVIDIA GPU가 필요합니다.
 영상 미리보기 왼쪽의 '라이선스·출처'에서 제3자 고지, 출처, 논문과 라이선스 전문을 확인할 수 있습니다.
 "@
 if (-not $avCassBaseReady) {
-    $usage += "`r`nAV-CASS 기본 실행환경을 찾을 수 없습니다. 기본 AI 런타임을 먼저 포함해 주세요.`r`n"
+    $usage += "`r`n처음 사용하기 전에 video-music-separator-setup.exe를 실행해 AI 실행환경과 필수 구성요소를 설치해 주세요.`r`n"
 } elseif (-not $avCassAssetsReady -or -not (Test-Path -LiteralPath (Join-Path $portableFfmpeg "ffmpeg.exe") -PathType Leaf)) {
     $usage += "`r`n처음 사용하기 전에 video-music-separator-setup.exe를 실행해 주세요.`r`n"
 }
@@ -297,6 +311,7 @@ $checksumLines = @(
 $checksumLines | Set-Content -LiteralPath (Join-Path $outputDir "SHA256SUMS.txt") -Encoding ascii
 
 $forbiddenPublicPaths = @(
+    (Join-Path $outputDir "audiosep"),
     (Join-Path $outputDir "ffmpeg"),
     (Join-Path $portableAudioSep "audiosep"),
     (Join-Path $portableAudioSep "bandit"),
@@ -312,10 +327,8 @@ if (-not $BundleRuntimeAssets) {
     if ($foundForbidden.Count -gt 0) {
         throw "공개 배포본에 금지된 런타임 파일이 남아 있습니다: $($foundForbidden -join ', ')"
     }
-    $remainingModelFiles = @(
-        Get-ChildItem (Join-Path $portableAudioSep "avcass\model") -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Extension -in ".pt", ".pth", ".ckpt", ".safetensors", ".onnx", ".bin" }
-    )
+    $remainingModelFiles = @(Get-ChildItem $outputDir -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in ".pt", ".pth", ".ckpt", ".safetensors", ".onnx", ".bin" })
     if ($remainingModelFiles.Count -gt 0) {
         throw "공개 배포본에 모델 또는 가중치 파일이 남아 있습니다: $($remainingModelFiles.FullName -join ', ')"
     }

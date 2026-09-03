@@ -3,6 +3,28 @@ from __future__ import annotations
 
 APP_VERSION = "0.2.0"
 
+BASE_RUNTIME_VERSION = "0.2.0"
+BASE_RUNTIME_ARCHIVE = "video-music-separator-ai-runtime-0.2.0.zip"
+BASE_RUNTIME_ARCHIVE_SIZE = 3_764_354_481
+BASE_RUNTIME_ARCHIVE_SHA256 = "70e521a80ce24f530238ef95973130f8f17b6f8c8254a94822109dcb4adb995f"
+BASE_RUNTIME_SOURCE = "https://github.com/Fabio-Cannavaro/video-music-separator"
+BASE_RUNTIME_RELEASE_BASE_URL = (
+    "https://github.com/Fabio-Cannavaro/video-music-separator/releases/download/"
+    "runtime-v0.2.0"
+)
+BASE_RUNTIME_PARTS = (
+    {
+        "name": "video-music-separator-ai-runtime-0.2.0.zip.001",
+        "size": 1_992_294_400,
+        "sha256": "053db87a8406f8cf23d15157860d98173cd2026b8a6cac658572add011364c37",
+    },
+    {
+        "name": "video-music-separator-ai-runtime-0.2.0.zip.002",
+        "size": 1_772_060_081,
+        "sha256": "8679f1930015a4768c5a977cfbc42d05ab14eb538b5c671e875471c01560bb33",
+    },
+)
+
 AVCASS_VERSION = "official audio-visual checkpoint (unversioned)"
 AVCASS_SHA256 = "66a8a3b9de317d2c508edae6bbd2d727bfd4faa6aec10c7c5ed02f5966e29b64"
 AVCASS_SIZE = 738_312_597
@@ -34,6 +56,14 @@ FFMPEG_DOWNLOAD_URL = (
 
 
 RUNTIME_COMPONENTS = (
+    {
+        "name": "AI Python runtime",
+        "version": BASE_RUNTIME_VERSION,
+        "sha256": BASE_RUNTIME_ARCHIVE_SHA256,
+        "size": BASE_RUNTIME_ARCHIVE_SIZE,
+        "source": BASE_RUNTIME_SOURCE,
+        "download_url": BASE_RUNTIME_RELEASE_BASE_URL,
+    },
     {
         "name": "AV-CASS",
         "version": AVCASS_VERSION,

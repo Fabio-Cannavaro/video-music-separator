@@ -5,7 +5,8 @@
 - [ ] AV-CASS 권리자에게 공개 앱의 체크포인트 자동 다운로드와 이용 범위를 서면으로 확인한다.
 - [x] 실제 `audiosep/env/`에 포함된 Python 패키지 전체의 이름·버전·라이선스·NOTICE를 자동 목록화한다.
 - [x] 공개 런타임에서 GPL `pedalboard`와 예전 AudioSep/BandIt 런타임을 제거한다.
-- [x] 배포 ZIP에 AV-CASS·CAVP 가중치와 FFmpeg 바이너리가 들어 있지 않은지 자동 검사한다.
+- [x] 기본 앱 ZIP에 AI Python 환경·AV-CASS 코드·AV-CASS/CAVP 가중치·FFmpeg 바이너리가 들어 있지 않은지 자동 검사한다.
+- [ ] AI 실행환경 분할 파일 두 개를 `runtime-v0.2.0` GitHub Release에 올리고 공개 다운로드를 시험한다.
 - [ ] 앱과 설치 파일에서 영상·음원이 외부로 전송되지 않는지 다시 검사한다.
 - [ ] `THIRD_PARTY_NOTICES`, `MODEL_LICENSES`, `PRIVACY`와 라이선스 전문이 배포 ZIP에 들어 있는지 확인한다.
 - [ ] `SHA256SUMS.txt`와 공개 ZIP의 `.sha256` 파일을 Release에 올린다.

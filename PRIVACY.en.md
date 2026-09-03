@@ -8,19 +8,21 @@ The required-components installer sends HTTPS download requests to the following
 
 | Download | Destination | Purpose |
 | --- | --- | --- |
+| AI Python runtime and AV-CASS runtime code | `github.com`, `objects.githubusercontent.com`, and other download hosts used by GitHub | Download pinned assets from this project's GitHub Release |
 | AV-CASS checkpoint | `drive.usercontent.google.com` | Download the file provided by the AV-CASS project |
 | CAVP checkpoint | `huggingface.co` | Download from the official Diff-Foley model repository |
 | FFmpeg LGPL shared build | `github.com`, `objects.githubusercontent.com`, and other download hosts used by GitHub | Download the BtbN GitHub Release |
 
 Download URLs pinned in the installer:
 
+- AI Python runtime: two split files below `https://github.com/Fabio-Cannavaro/video-music-separator/releases/download/runtime-v0.2.0/`
 - AV-CASS: `https://drive.usercontent.google.com/download?id=1_d-RCP111No-wS-wrmxyK-zH87Sm2xzf&export=download&confirm=t`
 - CAVP: `https://huggingface.co/SimianLuo/Diff-Foley/resolve/b17ddbe76e6d42f4b4135eeb443b1c1644267e3e/diff_foley_ckpt/cavp_epoch66.ckpt?download=true`
 - FFmpeg: `https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-20-13-45/ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip`
 
 As part of an ordinary web download, each server operator may receive or log connection data such as the IP address, request time, download URL, HTTP User-Agent, and Range header used to resume a download. Each operator controls its own privacy policy and terms.
 
-The installer pins and verifies the URL, expected size, and SHA-256 of each model and FFmpeg archive. Normal video processing does not require an internet connection after installation.
+The installer pins and verifies the URL, expected size, and SHA-256 of the AI runtime, each model, and the FFmpeg archive. Normal video processing does not require an internet connection after installation.
 
 ## Local files
 

@@ -5,6 +5,7 @@ import io
 import argparse
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -53,7 +54,9 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
 
     def test_disclosure_lists_downloads_network_data_and_user_responsibility(self) -> None:
         disclosure = installer.installation_disclosure_text()
-        self.assertIn("총 약 2.1GB", disclosure)
+        self.assertIn("총 다운로드 약 5.9GB", disclosure)
+        self.assertIn("AI Python 실행환경", disclosure)
+        self.assertIn("github.com/Fabio-Cannavaro", disclosure)
         self.assertIn("drive.usercontent.google.com", disclosure)
         self.assertIn("huggingface.co", disclosure)
         self.assertIn("github.com/BtbN", disclosure)
@@ -63,6 +66,8 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertIn("공식 앱이 아니며", disclosure)
 
     def test_manifest_pins_official_model_sources_and_hashes(self) -> None:
+        self.assertIn("runtime-v0.2.0", installer.BASE_RUNTIME_ASSETS[0].url)
+        self.assertEqual(len(installer.BASE_RUNTIME_ARCHIVE_SHA256), 64)
         avcass, cavp = installer.MODEL_ASSETS
         self.assertIn("drive.usercontent.google.com", avcass.url)
         self.assertEqual(avcass.size, 738_312_597)
@@ -71,6 +76,60 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertEqual(cavp.size, 1_361_483_035)
         self.assertEqual(len(cavp.sha256), 64)
         self.assertIn("lgpl-shared", installer.FFMPEG_ARCHIVE.url)
+
+    def test_base_runtime_parts_are_below_github_asset_limit(self) -> None:
+        self.assertEqual(len(installer.BASE_RUNTIME_ASSETS), 2)
+        self.assertTrue(all(asset.size < 2 * 1024**3 for asset in installer.BASE_RUNTIME_ASSETS))
+        self.assertEqual(
+            sum(asset.size for asset in installer.BASE_RUNTIME_ASSETS),
+            installer.BASE_RUNTIME_ARCHIVE_SIZE,
+        )
+
+    def test_installs_combined_base_runtime_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            archive = root / "source.zip"
+            with zipfile.ZipFile(archive, "w") as package:
+                package.writestr("audiosep/env/python.exe", b"python")
+                package.writestr(
+                    "audiosep/avcass/repo/models_avdnr_zero_conv_2vid.py", b"model"
+                )
+                package.writestr(
+                    "audiosep/avcass/deps/diffusers/__init__.py", b"diffusers"
+                )
+            payload = archive.read_bytes()
+            split_at = len(payload) // 2
+            chunks = (payload[:split_at], payload[split_at:])
+            assets = tuple(
+                installer.DownloadAsset(
+                    asset_id=f"runtime-{index}",
+                    label="runtime",
+                    url="https://example.invalid/runtime",
+                    relative_path=f".downloads/runtime.{index:03d}",
+                    sha256=hashlib.sha256(chunk).hexdigest(),
+                    size=len(chunk),
+                    source="https://example.invalid",
+                )
+                for index, chunk in enumerate(chunks, start=1)
+            )
+            for asset, chunk in zip(assets, chunks):
+                destination = root / asset.relative_path
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(chunk)
+            with (
+                patch.object(installer, "BASE_RUNTIME_ASSETS", assets),
+                patch.object(installer, "BASE_RUNTIME_ARCHIVE", "runtime.zip"),
+                patch.object(installer, "BASE_RUNTIME_ARCHIVE_SIZE", len(payload)),
+                patch.object(
+                    installer,
+                    "BASE_RUNTIME_ARCHIVE_SHA256",
+                    hashlib.sha256(payload).hexdigest(),
+                ),
+            ):
+                installer.install_base_runtime(root, lambda *_: None)
+                self.assertTrue(installer.base_runtime_is_current(root))
+            self.assertEqual(installer.validate_base_runtime(root), [])
+            self.assertFalse((root / ".downloads" / "runtime.zip").exists())
 
     def test_downloads_and_verifies_asset_before_replacing_target(self) -> None:
         payload = b"verified model bytes"

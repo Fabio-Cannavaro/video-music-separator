@@ -36,8 +36,11 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("$archivePath.sha256", portable_build)
         self.assertIn("SIGNING_STATUS.txt", portable_build)
         self.assertIn("audit_python_licenses.py", portable_build)
-        self.assertIn("prune_python_distribution.py", portable_build)
-        self.assertIn("--distribution pedalboard", portable_build)
+        self.assertIn('Join-Path $outputDir "audiosep"', portable_build)
+
+        runtime_build = (ROOT / "build_ai_runtime_archive.ps1").read_text(encoding="utf-8")
+        self.assertIn("PartSizeMiB = 1900", runtime_build)
+        self.assertIn("runtime-parts.json", runtime_build)
 
     def test_public_build_excludes_legacy_workers(self) -> None:
         portable_build = (ROOT / "build_portable.ps1").read_text(encoding="utf-8")

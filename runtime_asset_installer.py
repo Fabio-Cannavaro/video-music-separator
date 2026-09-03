@@ -19,6 +19,13 @@ from typing import Callable
 
 from release_info import (
     APP_VERSION,
+    BASE_RUNTIME_ARCHIVE,
+    BASE_RUNTIME_ARCHIVE_SHA256,
+    BASE_RUNTIME_ARCHIVE_SIZE,
+    BASE_RUNTIME_PARTS,
+    BASE_RUNTIME_RELEASE_BASE_URL,
+    BASE_RUNTIME_SOURCE,
+    BASE_RUNTIME_VERSION,
     AVCASS_DOWNLOAD_URL,
     AVCASS_SHA256,
     AVCASS_SIZE,
@@ -74,6 +81,19 @@ MODEL_ASSETS = (
     ),
 )
 
+BASE_RUNTIME_ASSETS = tuple(
+    DownloadAsset(
+        asset_id=f"base-runtime-{index}",
+        label=f"AI Python 실행환경 {index}/{len(BASE_RUNTIME_PARTS)}",
+        url=f"{BASE_RUNTIME_RELEASE_BASE_URL}/{part['name']}",
+        relative_path=f".downloads/{part['name']}",
+        sha256=part["sha256"],
+        size=part["size"],
+        source=BASE_RUNTIME_SOURCE,
+    )
+    for index, part in enumerate(BASE_RUNTIME_PARTS, start=1)
+)
+
 FFMPEG_ARCHIVE = DownloadAsset(
     asset_id="ffmpeg",
     label="FFmpeg LGPL 공유 빌드",
@@ -102,7 +122,9 @@ INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
 
 이 앱은 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며, 해당 연구진과 제휴하거나 보증받지 않았습니다.
 
-설치할 항목 (총 약 2.1GB)
+설치할 항목 (총 다운로드 약 5.9GB, 설치 중 여유 공간 약 15GB 권장)
+• AI Python 실행환경 약 3.76GB — github.com/Fabio-Cannavaro
+  {BASE_RUNTIME_RELEASE_BASE_URL}
 • AV-CASS 약 704MB — drive.usercontent.google.com
   {AVCASS_DOWNLOAD_URL}
 • CAVP 약 1.27GB — huggingface.co
@@ -114,7 +136,7 @@ INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
 각 모델·프로그램에는 원 권리자의 라이선스와 이용조건이 적용됩니다. AV-CASS 체크포인트에는 별도 재배포 조건이 명시되어 있지 않으므로 이 설치 파일은 모델을 포함하지 않고 공식 제공 주소에서 직접 내려받습니다.
 
 개인정보와 외부 통신
-영상과 음원은 PC에서만 처리되며 설치 프로그램이나 앱이 업로드하지 않습니다. 설치 중 위 세 서버에 HTTPS 다운로드 요청을 보냅니다. 서버 운영자는 IP 주소, 요청 시각, 다운로드 URL, User-Agent와 이어받기용 Range 헤더 같은 일반 접속 정보를 받을 수 있습니다. 파일명, 영상·음원 내용 및 사용 통계는 전송하지 않습니다.
+영상과 음원은 PC에서만 처리되며 설치 프로그램이나 앱이 업로드하지 않습니다. 설치 중 위 서버에 HTTPS 다운로드 요청을 보냅니다. 서버 운영자는 IP 주소, 요청 시각, 다운로드 URL, User-Agent와 이어받기용 Range 헤더 같은 일반 접속 정보를 받을 수 있습니다. 파일명, 영상·음원 내용 및 사용 통계는 전송하지 않습니다.
 
 사용자 책임
 처리할 영상·음원의 저작권과 이용 권리를 확인하고 결과물을 사용하는 책임은 사용자에게 있습니다.
@@ -273,9 +295,91 @@ def install_ffmpeg(root: Path, progress: ProgressCallback) -> None:
     progress("FFmpeg LGPL 공유 빌드 · 설치 완료", 1, 1)
 
 
+def _safe_extract_zip(archive: Path, destination: Path) -> None:
+    destination_resolved = destination.resolve()
+    with zipfile.ZipFile(archive) as package:
+        for item in package.infolist():
+            target = (destination / item.filename).resolve()
+            try:
+                target.relative_to(destination_resolved)
+            except ValueError as error:
+                raise RuntimeError(
+                    f"AI 실행환경 압축에 안전하지 않은 경로가 있습니다: {item.filename}"
+                ) from error
+        package.extractall(destination)
+
+
+def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
+    if base_runtime_is_current(root):
+        progress("AI Python 실행환경 · 이미 설치됨", 1, 1)
+        return
+
+    downloads = root / ".downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    part_paths: list[Path] = []
+    for asset in BASE_RUNTIME_ASSETS:
+        part_path = root / asset.relative_path
+        download_asset(asset, part_path, progress)
+        part_paths.append(part_path)
+
+    archive = downloads / BASE_RUNTIME_ARCHIVE
+    pending_archive = archive.with_name(archive.name + ".part")
+    progress("AI Python 실행환경 · 분할 파일을 결합하는 중", 0, 1)
+    with pending_archive.open("wb") as output:
+        for part_path in part_paths:
+            with part_path.open("rb") as source:
+                shutil.copyfileobj(source, output, length=CHUNK_SIZE)
+    if pending_archive.stat().st_size != BASE_RUNTIME_ARCHIVE_SIZE:
+        pending_archive.unlink(missing_ok=True)
+        raise RuntimeError("AI Python 실행환경 결합 파일의 크기가 올바르지 않습니다.")
+    if sha256_file(pending_archive).lower() != BASE_RUNTIME_ARCHIVE_SHA256.lower():
+        pending_archive.unlink(missing_ok=True)
+        raise RuntimeError("AI Python 실행환경 결합 파일의 SHA-256이 일치하지 않습니다.")
+    os.replace(pending_archive, archive)
+
+    with tempfile.TemporaryDirectory(prefix="runtime-extract-", dir=downloads) as temp_name:
+        extraction = Path(temp_name)
+        progress("AI Python 실행환경 · 압축을 푸는 중", 0, 1)
+        _safe_extract_zip(archive, extraction)
+        extracted_runtime = extraction / "audiosep"
+        if not extracted_runtime.is_dir():
+            raise RuntimeError("AI 실행환경 압축 파일의 구조가 예상과 다릅니다.")
+        if validate_base_runtime(extraction):
+            raise RuntimeError("압축을 푼 AI 실행환경의 필수 파일이 없습니다.")
+
+        destination = root / "audiosep"
+        previous = root / f"audiosep-old-{uuid.uuid4().hex}"
+        try:
+            if destination.exists():
+                destination.rename(previous)
+            extracted_runtime.rename(destination)
+        except BaseException:
+            if not destination.exists() and previous.exists():
+                previous.rename(destination)
+            raise
+        shutil.rmtree(previous, ignore_errors=True)
+        (destination / "base-runtime.json").write_text(
+            json.dumps(
+                {
+                    "version": BASE_RUNTIME_VERSION,
+                    "archive": BASE_RUNTIME_ARCHIVE,
+                    "size": BASE_RUNTIME_ARCHIVE_SIZE,
+                    "sha256": BASE_RUNTIME_ARCHIVE_SHA256,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    archive.unlink(missing_ok=True)
+    for part_path in part_paths:
+        part_path.unlink(missing_ok=True)
+    progress("AI Python 실행환경 · 설치 완료", 1, 1)
+
+
 def validate_base_runtime(root: Path) -> list[Path]:
     required = (
-        root / "video-music-separator.exe",
         root / "audiosep" / "env" / "python.exe",
         root / "audiosep" / "avcass" / "repo" / "models_avdnr_zero_conv_2vid.py",
         root / "audiosep" / "avcass" / "deps" / "diffusers" / "__init__.py",
@@ -283,8 +387,30 @@ def validate_base_runtime(root: Path) -> list[Path]:
     return [path for path in required if not path.exists()]
 
 
+def base_runtime_is_current(root: Path) -> bool:
+    if validate_base_runtime(root):
+        return False
+    marker = root / "audiosep" / "base-runtime.json"
+    try:
+        data = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return False
+    return (
+        data.get("version") == BASE_RUNTIME_VERSION
+        and data.get("archive") == BASE_RUNTIME_ARCHIVE
+        and data.get("size") == BASE_RUNTIME_ARCHIVE_SIZE
+        and str(data.get("sha256", "")).lower() == BASE_RUNTIME_ARCHIVE_SHA256.lower()
+    )
+
+
 def verify_installation(root: Path) -> list[str]:
-    problems = [f"기본 파일 없음: {path}" for path in validate_base_runtime(root)]
+    problems = []
+    app = root / "video-music-separator.exe"
+    if not app.is_file():
+        problems.append(f"기본 파일 없음: {app}")
+    problems.extend(f"기본 파일 없음: {path}" for path in validate_base_runtime(root))
+    if not validate_base_runtime(root) and not base_runtime_is_current(root):
+        problems.append("AI Python 실행환경 버전 확인 또는 재설치 필요")
     for asset in MODEL_ASSETS:
         target = root / asset.relative_path
         if not asset_is_valid(target, asset):
@@ -298,6 +424,14 @@ def write_install_record(root: Path) -> None:
     record = {
         "app_version": APP_VERSION,
         "installed_at": datetime.now(timezone.utc).isoformat(),
+        "base_runtime": {
+            "version": BASE_RUNTIME_VERSION,
+            "archive": BASE_RUNTIME_ARCHIVE,
+            "size": BASE_RUNTIME_ARCHIVE_SIZE,
+            "sha256": BASE_RUNTIME_ARCHIVE_SHA256,
+            "source": BASE_RUNTIME_SOURCE,
+            "parts": [asdict(asset) for asset in BASE_RUNTIME_ASSETS],
+        },
         "models": [
             {
                 **asdict(asset),
@@ -314,13 +448,12 @@ def write_install_record(root: Path) -> None:
 
 
 def install_all(root: Path, progress: ProgressCallback) -> None:
-    missing_base = validate_base_runtime(root)
-    if missing_base:
-        missing = "\n".join(str(path) for path in missing_base)
+    app = root / "video-music-separator.exe"
+    if not app.is_file():
         raise RuntimeError(
-            "기본 앱 또는 AI 실행환경이 없습니다. 설치 파일을 앱 폴더에서 실행해 주세요.\n\n"
-            + missing
+            "기본 앱이 없습니다. 설치 파일을 앱 폴더에서 실행해 주세요.\n\n" + str(app)
         )
+    install_base_runtime(root, progress)
     for asset in MODEL_ASSETS:
         download_asset(asset, root / asset.relative_path, progress)
     install_ffmpeg(root, progress)
@@ -349,7 +482,7 @@ class InstallerWindow:
         self.status = tk.StringVar(value="설치를 시작할 준비가 됐습니다.")
         self.accepted = tk.BooleanVar(value=False)
         self.detail = tk.StringVar(
-            value="AV-CASS 약 704MB · CAVP 약 1.27GB · FFmpeg 약 68MB"
+            value="AI 실행환경 약 3.76GB · AV-CASS 약 704MB · CAVP 약 1.27GB · FFmpeg 약 68MB"
         )
         frame = ttk.Frame(self.window, padding=22)
         frame.pack(fill="both", expand=True)
