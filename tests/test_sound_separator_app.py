@@ -16,6 +16,7 @@ from audiosep_worker import load_jobs
 from avcass_worker import INFERENCE_HOP, INFERENCE_LENGTH, inference_starts
 
 from sound_separator_app import (
+    CREATOR_YOUTUBE_URL,
     DEFAULT_MODEL_ID,
     DEFAULT_VOLUME,
     TRANSLATIONS,
@@ -34,6 +35,7 @@ from sound_separator_app import (
     model_result_directory,
     muted_copy_output_path,
     muted_mix_preview_path,
+    open_creator_youtube_channel,
     format_playback_time,
     playback_position,
     preview_path_for_event,
@@ -109,6 +111,12 @@ class PlaybackCommandTests(unittest.TestCase):
 class MusicPartitionTests(unittest.TestCase):
     def test_korean_and_english_translation_tables_have_matching_keys(self) -> None:
         self.assertEqual(set(TRANSLATIONS["ko"]), set(TRANSLATIONS["en"]))
+
+    @patch("sound_separator_app.webbrowser.open_new_tab")
+    def test_creator_link_opens_ms_0606_youtube_channel(self, mocked_open) -> None:
+        open_creator_youtube_channel()
+        mocked_open.assert_called_once_with(CREATOR_YOUTUBE_URL)
+        self.assertEqual(CREATOR_YOUTUBE_URL, "https://www.youtube.com/@ms-0606")
 
     def test_maps_worker_output_to_visible_progress_messages(self) -> None:
         self.assertEqual(

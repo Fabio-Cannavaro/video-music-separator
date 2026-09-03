@@ -10,6 +10,7 @@ import tempfile
 import time
 import traceback
 import threading
+import webbrowser
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -41,6 +42,7 @@ PREVIEW_FPS = 30
 PREVIEW_UPDATE_MS = 15
 DEFAULT_VOLUME = 100
 DEFAULT_MODEL_ID = "avcass"
+CREATOR_YOUTUBE_URL = "https://www.youtube.com/@ms-0606"
 MODEL_LABELS = {
     "avcass": "AV-CASS",
     "bandit": "BandIt",
@@ -89,6 +91,8 @@ TRANSLATIONS = {
         "stop_all": "전체 영상 정지",
         "playback_volume": "전체 재생 볼륨",
         "licenses_sources": "라이선스·출처",
+        "creator_prefix": "앱 제작: ",
+        "creator_suffix": " × OpenAI Codex",
         "preview_title": "영상 미리보기",
         "preview_placeholder": "재생하면 여기에 영상이 표시됩니다.",
         "stage_results": "2. 음악 / 음악 아님 분리 결과",
@@ -208,6 +212,8 @@ TRANSLATIONS = {
         "stop_all": "Stop Full Video",
         "playback_volume": "Playback Volume",
         "licenses_sources": "Licenses & Sources",
+        "creator_prefix": "Created by: ",
+        "creator_suffix": " × OpenAI Codex",
         "preview_title": "Video Preview",
         "preview_placeholder": "The video will appear here during playback.",
         "stage_results": "2. Music / Non-Music Separation Results",
@@ -346,6 +352,10 @@ def translate(language: str, key: str, **values: object) -> str:
     table = TRANSLATIONS.get(language, TRANSLATIONS["ko"])
     template = table.get(key, TRANSLATIONS["ko"][key])
     return template.format(**values)
+
+
+def open_creator_youtube_channel(_event: object | None = None) -> None:
+    webbrowser.open_new_tab(CREATOR_YOUTUBE_URL)
 
 
 def clamp_volume(value: float) -> int:
@@ -746,6 +756,8 @@ class SoundSeparatorApp(tk.Tk):
         self.stop_all_button.configure(text=self._t("stop_all"))
         self.volume_title_label.configure(text=self._t("playback_volume"))
         self.legal_button.configure(text=self._t("licenses_sources"))
+        self.creator_prefix_label.configure(text=self._t("creator_prefix"))
+        self.creator_suffix_label.configure(text=self._t("creator_suffix"))
         self.language_frame.configure(text=self._t("language"))
         self.preview_frame.configure(text=self._t("preview_title"))
         self.table_frame.configure(text=self._t("stage_results"))
@@ -838,21 +850,43 @@ class SoundSeparatorApp(tk.Tk):
         self.volume_label = ttk.Label(actions, width=4, text=str(DEFAULT_VOLUME))
         self.volume_label.pack(side="left")
 
-        self.legal_button = ttk.Button(
-            root,
-            text=self._t("licenses_sources"),
-            command=self.show_legal_information,
-            width=16,
-        )
-        self.legal_button.grid(
+        legal_area = ttk.Frame(root)
+        legal_area.grid(
             row=0,
             column=0,
             sticky="nw",
             padx=(2, 0),
             pady=(8, 0),
-            ipadx=6,
-            ipady=4,
         )
+        self.legal_button = ttk.Button(
+            legal_area,
+            text=self._t("licenses_sources"),
+            command=self.show_legal_information,
+            width=16,
+        )
+        self.legal_button.pack(anchor="w", ipadx=6, ipady=4)
+
+        creator_area = ttk.Frame(legal_area)
+        creator_area.pack(anchor="w", pady=(5, 0))
+        self.creator_prefix_label = ttk.Label(
+            creator_area,
+            text=self._t("creator_prefix"),
+        )
+        self.creator_prefix_label.pack(side="left")
+        self.creator_link_label = ttk.Label(
+            creator_area,
+            text="@ms-0606",
+            foreground="#0563C1",
+            cursor="hand2",
+            font=("Segoe UI", 9, "underline"),
+        )
+        self.creator_link_label.pack(side="left")
+        self.creator_link_label.bind("<Button-1>", open_creator_youtube_channel)
+        self.creator_suffix_label = ttk.Label(
+            creator_area,
+            text=self._t("creator_suffix"),
+        )
+        self.creator_suffix_label.pack(side="left")
 
         self.language_frame = ttk.LabelFrame(
             root, text=self._t("language"), padding=(10, 6)
