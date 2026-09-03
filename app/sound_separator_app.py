@@ -89,7 +89,6 @@ TRANSLATIONS = {
         "no_video": "선택된 영상 없음",
         "separate_music": "영상에서 음악 분리",
         "audiosep_compare": "AudioSep 3종 비교",
-        "separation_model": "분리 모델: AV-CASS",
         "play_all": "전체 영상 재생",
         "stop_all": "전체 영상 정지",
         "playback_volume": "전체 재생 볼륨",
@@ -139,11 +138,6 @@ TRANSLATIONS = {
         "choose_video_first": "먼저 영상을 선택해 주세요.",
         "analyze_first": "먼저 영상을 분석해 주세요.",
         "select_mute_first": "뮤트할 소리를 하나 이상 표시해 주세요.",
-        "model_status": "선택 모델: {model} · {state}",
-        "state_before": "분석 전",
-        "state_complete_selected": "분석 완료 · 저장 후보로 선택됨",
-        "state_existing_preserved": "기존 결과 유지",
-        "state_failed": "분석 실패",
         "status_choose_video": "영상을 선택해 주세요.",
         "status_video_opened": "영상을 열었습니다. AV-CASS 분리를 실행해 주세요.",
         "status_loaded_existing": "{model}의 기존 분리 결과를 불러왔습니다.",
@@ -216,7 +210,6 @@ TRANSLATIONS = {
         "no_video": "No video selected",
         "separate_music": "Separate Music from Video",
         "audiosep_compare": "Compare 3 AudioSep Types",
-        "separation_model": "Separation model: AV-CASS",
         "play_all": "Play Full Video",
         "stop_all": "Stop Full Video",
         "playback_volume": "Playback Volume",
@@ -266,11 +259,6 @@ TRANSLATIONS = {
         "choose_video_first": "Select a video first.",
         "analyze_first": "Analyze a video first.",
         "select_mute_first": "Mark at least one sound to mute.",
-        "model_status": "Selected model: {model} · {state}",
-        "state_before": "Not analyzed",
-        "state_complete_selected": "Analysis complete · Selected for saving",
-        "state_existing_preserved": "Previous result preserved",
-        "state_failed": "Analysis failed",
         "status_choose_video": "Select a video.",
         "status_video_opened": "Video opened. Run AV-CASS separation.",
         "status_loaded_existing": "Loaded the existing {model} separation result.",
@@ -761,10 +749,6 @@ class SoundSeparatorApp(tk.Tk):
         self.audiosep_query_label_var = tk.StringVar(
             value=self._query_label("music")
         )
-        self.model_state_key = "state_before"
-        self.model_status_var = tk.StringVar(
-            value=self._model_status_text()
-        )
         self.volume_var = tk.DoubleVar(value=DEFAULT_VOLUME)
         self.status_key = "status_choose_video"
         self.status_values: dict[str, object] = {}
@@ -796,24 +780,12 @@ class SoundSeparatorApp(tk.Tk):
         self.status_values = values
         self.status_var.set(self._t(key, **values))
 
-    def _model_status_text(self) -> str:
-        return self._t(
-            "model_status",
-            model=self._active_result_label(),
-            state=self._t(self.model_state_key),
-        )
-
-    def _set_model_status(self, state_key: str) -> None:
-        self.model_state_key = state_key
-        self.model_status_var.set(self._model_status_text())
-
     def change_language(self) -> None:
         self.title(self._t("app_title"))
         self.source_frame.configure(text=self._t("stage_video"))
         self.open_video_button.configure(text=self._t("open_video"))
         self.separate_button.configure(text=self._t("separate_music"))
         self.audiosep_compare_button.configure(text=self._t("audiosep_compare"))
-        self.model_label.configure(text=self._t("separation_model"))
         self.play_all_button.configure(text=self._t("play_all"))
         self.stop_all_button.configure(text=self._t("stop_all"))
         self.volume_title_label.configure(text=self._t("playback_volume"))
@@ -838,7 +810,6 @@ class SoundSeparatorApp(tk.Tk):
             self._query_label(self.audiosep_query_var.get())
         )
         self.status_var.set(self._t(self.status_key, **self.status_values))
-        self.model_status_var.set(self._model_status_text())
         self.refresh_rows()
         self._refresh_legal_information()
 
@@ -869,12 +840,8 @@ class SoundSeparatorApp(tk.Tk):
             command=self.analyze_audiosep_comparison,
         )
 
-        model_area = ttk.Frame(self.source_frame)
-        model_area.grid(row=1, column=0, columnspan=2, sticky="w", pady=(9, 0))
-        self.model_label = ttk.Label(model_area, text=self._t("separation_model"))
-        self.model_label.pack(side="left")
         self.audiosep_query_combo = ttk.Combobox(
-            model_area,
+            self.source_frame,
             state="disabled",
             width=13,
             textvariable=self.audiosep_query_label_var,
@@ -884,32 +851,42 @@ class SoundSeparatorApp(tk.Tk):
             "<<ComboboxSelected>>", self.select_audiosep_query
         )
         self._update_audiosep_query_control()
-        ttk.Label(self.source_frame, textvariable=self.model_status_var, foreground="#555555").grid(
-            row=2, column=0, columnspan=4, sticky="w", pady=(7, 0)
-        )
 
-        actions = ttk.Frame(root)
-        actions.grid(row=3, column=0, pady=(10, 6))
+        actions = ttk.Frame(root, height=32)
+        actions.grid(row=3, column=0, sticky="ew", pady=(10, 6))
+        actions.grid_propagate(False)
+
+        playback_actions = ttk.Frame(actions)
+        playback_actions.place(relx=0.5, rely=0.5, anchor="center")
         self.play_all_button = ttk.Button(
-            actions, text=self._t("play_all"), command=self.preview_original
+            playback_actions, text=self._t("play_all"), command=self.preview_original
         )
         self.play_all_button.pack(side="left")
         self.stop_all_button = ttk.Button(
-            actions, text=self._t("stop_all"), command=self.stop_original_preview
+            playback_actions, text=self._t("stop_all"), command=self.stop_original_preview
         )
         self.stop_all_button.pack(side="left", padx=4)
-        ttk.Separator(actions, orient="vertical").pack(side="left", fill="y", padx=8)
-        self.volume_title_label = ttk.Label(actions, text=self._t("playback_volume"))
+
+        volume_actions = ttk.Frame(actions)
+        volume_actions.place(relx=0.5, x=115, rely=0.5, anchor="w")
+        ttk.Separator(volume_actions, orient="vertical").pack(
+            side="left", fill="y", padx=(0, 8)
+        )
+        self.volume_title_label = ttk.Label(
+            volume_actions, text=self._t("playback_volume")
+        )
         self.volume_title_label.pack(side="left")
         ttk.Scale(
-            actions,
+            volume_actions,
             from_=0,
             to=100,
             variable=self.volume_var,
             length=170,
             command=self._schedule_volume_update,
         ).pack(side="left", padx=(6, 4))
-        self.volume_label = ttk.Label(actions, width=4, text=str(DEFAULT_VOLUME))
+        self.volume_label = ttk.Label(
+            volume_actions, width=4, text=str(DEFAULT_VOLUME)
+        )
         self.volume_label.pack(side="left")
 
         legal_area = ttk.Frame(root)
@@ -1162,7 +1139,6 @@ class SoundSeparatorApp(tk.Tk):
         self.video_var.set(str(path))
         self.events.clear()
         self.refresh_rows()
-        self._set_model_status("state_before")
         self._set_status("status_video_opened")
 
     def _bandit_is_available(self) -> bool:
@@ -1224,12 +1200,10 @@ class SoundSeparatorApp(tk.Tk):
         self.events = self.model_results.get(result_key, [])
         self.refresh_rows()
         if self.events:
-            self._set_model_status("state_complete_selected")
             self._set_status(
                 "status_loaded_existing", model=self._active_result_label()
             )
         else:
-            self._set_model_status("state_before")
             self._set_status(
                 "status_model_selected", model=self._active_result_label()
             )
@@ -1295,12 +1269,10 @@ class SoundSeparatorApp(tk.Tk):
         self.events = self.model_results.get(result_key, [])
         self.refresh_rows()
         if self.events:
-            self._set_model_status("state_complete_selected")
             self._set_status(
                 "status_loaded_existing", model=self._active_result_label()
             )
         else:
-            self._set_model_status("state_before")
             self._set_status(
                 "status_model_selected_short", model=self._active_result_label()
             )
@@ -1393,9 +1365,6 @@ class SoundSeparatorApp(tk.Tk):
                     if self._active_result_key() == result_key:
                         self.events = self.model_results.get(result_key, [])
                         self.refresh_rows()
-                        self._set_model_status(
-                            "state_existing_preserved" if self.events else "state_failed"
-                        )
 
                 self.after(0, restore_previous)
                 raise
@@ -1409,7 +1378,6 @@ class SoundSeparatorApp(tk.Tk):
                     self.result_dir = result_dir
                     self.events = completed_events
                     self.refresh_rows()
-                    self._set_model_status("state_complete_selected")
                     self._set_status(
                         "status_separation_complete", model=model_label
                     )
@@ -1510,7 +1478,6 @@ class SoundSeparatorApp(tk.Tk):
                     self.result_dir = model_result_directory(work_dir, active_key)
                     self.events = completed_results[active_key]
                     self.refresh_rows()
-                self._set_model_status("state_complete_selected")
                 self._set_status("status_audiosep_compare_complete")
 
             self.after(0, finish)
@@ -2128,7 +2095,6 @@ class SoundSeparatorApp(tk.Tk):
                     self.model_preview_dirty.clear()
                     self.source_ready = False
                     self.refresh_rows()
-                    self._set_model_status("state_before")
                 self._set_status("status_save_complete", path=target)
                 messagebox.showinfo(
                     self._t("app_title"),
