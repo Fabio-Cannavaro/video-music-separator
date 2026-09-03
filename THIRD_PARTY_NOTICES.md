@@ -1,40 +1,61 @@
-# Third-party notices
+# Third-party notices, sources, and papers
 
-이 저장소에는 아래 프로젝트의 소스, 모델 가중치 또는 실행 파일을 직접 포함하지 않는다. 앱을 실행하거나 휴대용 배포본을 만들 때 별도로 결합하는 외부 구성요소에는 각 원 저작권자와 원 라이선스의 조건이 그대로 적용된다.
+Video Music Separator의 자체 코드는 루트 `LICENSE`를 따른다. 아래 외부 구성요소의 코드·모델·실행 파일에는 각 원 저작권자와 원 라이선스가 적용되며, 앱의 라이선스로 바뀌지 않는다.
 
 ## AV-CASS
 
+이 앱의 음악/비음악 분리에 AV-CASS를 사용한다.
+
 - 프로젝트: <https://cass-flowmatching.github.io/>
 - 소스: <https://github.com/pantheon5100/AVCASS>
-- 공식 저장소의 `LICENSE.txt`: MIT License
+- 체크포인트 안내: AV-CASS 공식 저장소의 README
+- 코드 라이선스: MIT License
+- 원 라이선스 고지: Copyright (c) Meta Platforms, Inc. and affiliates.
+- 라이선스 전문: `licenses/MIT.txt`
 
-## TIGER / TIGER-DnR
+논문:
 
-- 소스: <https://github.com/JusperLee/TIGER>
-- 모델: <https://huggingface.co/JusperLee/TIGER-DnR>
-- 공식 소스 저장소: MIT License
-- 공식 TIGER-DnR 모델 카드: Apache License 2.0
+> Kang Zhang, Suyeon Lee, Arda Senocak, and Joon Son Chung. “Cinematic Audio Source Separation Using Visual Cues.” CVPR 2026. <https://arxiv.org/abs/2603.26113>
 
-## Diff-Foley CAVP
+AV-CASS 공식 저장소는 코드에 MIT License를 표시하지만, README에서 링크한 사전학습 체크포인트에 별도의 재배포 조건을 명시하지 않았다. 권리자의 명시적 확인 전에는 체크포인트를 공개 저장소에 올리지 않는다.
+
+## CAVP / Diff-Foley
+
+AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 코드를 사용한다.
 
 - 모델: <https://huggingface.co/SimianLuo/Diff-Foley>
-- 공식 모델 페이지: MIT License
-- AV-CASS의 영상 인코더가 사용하는 별도 체크포인트다. 다운로드·이용·재배포 전 모델 카드와 저장소의 최신 조건을 확인해야 한다.
+- 소스: <https://github.com/luosiallen/Diff-Foley>
+- 프로젝트: <https://diff-foley.github.io/>
+- CAVP 모델 페이지 라이선스 표기: MIT
+- Diff-Foley 소스 저장소 라이선스: Apache License 2.0
+- 라이선스 전문: `licenses/MIT.txt`, `licenses/Apache-2.0.txt`
 
-## AudioSep and BandIt
+논문:
 
-- AudioSep: <https://github.com/Audio-AGI/AudioSep>
-- BandIt: <https://github.com/kwatcharasupat/bandit-v2>
-- AudioSep 공식 소스 저장소: MIT License
-- BandIt v2 공식 소스 저장소: Apache License 2.0
-- 현재 사용자 화면에는 노출되지 않는 호환 작업자 코드가 남아 있다. 이 저장소는 해당 프로젝트의 소스나 가중치를 포함하지 않는다.
+> Simian Luo, Chuanhao Yan, Chenxu Hu, and Hang Zhao. “Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models.” NeurIPS 2023. <https://arxiv.org/abs/2306.17203>
+
+## AudioSep and BandIt compatibility workers
+
+사용자 화면에는 노출되지 않는 이전 호환 작업자 코드가 남아 있다. 공개 배포본에 관련 코드나 가중치를 포함할 때는 실제 포함 버전의 고지와 라이선스를 다시 확인해야 한다.
+
+- AudioSep: <https://github.com/Audio-AGI/AudioSep> — MIT License
+- BandIt v2: <https://github.com/kwatcharasupat/bandit-v2> — Apache License 2.0
+- 라이선스 전문: `licenses/MIT.txt`, `licenses/Apache-2.0.txt`
 
 ## FFmpeg
 
-- 홈페이지와 법적 안내: <https://ffmpeg.org/legal.html>
+이 앱은 FFmpeg 명령줄 프로그램을 외부 프로세스로 실행한다.
 
-이 앱은 FFmpeg 명령줄 프로그램을 외부 프로세스로 실행한다. 이 소스 저장소에는 FFmpeg 바이너리가 없다. 휴대용 실행 파일과 함께 FFmpeg를 배포하면 실제 빌드 구성에 따라 LGPL 또는 GPL 의무가 생길 수 있다. 공개 배포본은 사용한 바이너리의 정확한 구성, 해당 소스, 빌드 방법, 라이선스 문구를 함께 준비해야 한다.
+- 프로젝트 및 법적 안내: <https://ffmpeg.org/legal.html>
+- 현재 휴대용 배포본에 사용한 FFmpeg 빌드: GNU GPL version 3
+- 라이선스 전문: `licenses/GPL-3.0.txt`
+
+FFmpeg는 빌드 옵션에 따라 LGPL 또는 GPL이 적용된다. 공개 배포 전에는 포함한 바이너리의 정확한 빌드 설정과 일치하는 소스, 빌드 방법, 저작권 고지와 라이선스 전문을 함께 제공해야 한다.
 
 ## Python packages
 
-`requirements.txt`와 휴대용 AI 환경에서 설치되는 Python 패키지는 각 패키지의 자체 라이선스를 따른다. 공개 배포 전에 실제 잠금 버전 기준으로 고지 목록을 다시 생성해야 한다.
+`requirements.txt`와 휴대용 AI 환경에서 설치되는 Python 패키지는 각 패키지의 자체 라이선스를 따른다. 공개 배포 전에는 실제 잠금 버전과 배포 폴더를 기준으로 고지 목록을 다시 생성해야 한다.
+
+## User-provided media
+
+이 앱은 사용자가 선택한 영상·음원을 로컬 PC에서 처리한다. 사용자는 입력 파일의 저작권과 이용 권리를 확인하고, 처리 결과를 사용·공유·배포할 책임을 진다. 이 앱은 입력 파일이나 결과물에 대한 권리를 부여하지 않는다.

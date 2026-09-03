@@ -7,8 +7,6 @@
 | AV-CASS 소스 | 공식 저장소의 `LICENSE.txt`는 MIT License | 소스는 원 고지를 유지해 사용한다. |
 | AV-CASS 체크포인트 | 공식 README에 다운로드 링크는 있지만 체크포인트 전용 재배포 조건은 별도로 명시돼 있지 않다. | 권리자의 명시적 확인 전에는 이 저장소나 공개 설치 파일에 포함하지 않는다. |
 | CAVP / Diff-Foley | 공식 Hugging Face 모델 페이지는 MIT License로 표기한다. | 원 고지를 유지하고, 다운로드 시점의 조건을 다시 확인하며 AV-CASS 체크포인트와 분리해 관리한다. |
-| TIGER 소스 | 공식 GitHub 저장소는 MIT License | 원 저작권·라이선스 고지를 유지한다. |
-| TIGER-DnR 가중치 | 공식 Hugging Face 모델 카드는 Apache License 2.0으로 표기한다. | Apache 2.0 고지와 필요한 파일을 포함한 별도 런타임으로 관리한다. |
 | AudioSep·BandIt | 공식 소스 저장소는 각각 MIT와 Apache 2.0으로 표기하며, 이 저장소에는 호환 작업자만 있고 가중치는 없다. | 다시 배포에 포함할 때 해당 버전의 코드·가중치 조건을 별도로 검토한다. |
 
 ## 공개 배포 전 확인 항목

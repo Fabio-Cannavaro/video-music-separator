@@ -35,7 +35,7 @@ class RunCommandTests(unittest.TestCase):
 
     @patch("audio_core.run_command")
     @patch("audio_core.require_program", return_value="ffmpeg.exe")
-    def test_extracts_tiger_input_as_44100hz_pcm16(
+    def test_extracts_model_input_as_44100hz_pcm16(
         self, _mocked_require, mocked_command
     ) -> None:
         extract_audio(Path("clip.mp4"), Path("work") / "source.wav")

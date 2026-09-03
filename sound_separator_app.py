@@ -13,6 +13,7 @@ import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+from tkinter.scrolledtext import ScrolledText
 from typing import Callable, Sequence
 
 import cv2
@@ -41,11 +42,21 @@ DEFAULT_VOLUME = 100
 DEFAULT_MODEL_ID = "avcass"
 MODEL_LABELS = {
     "avcass": "AV-CASS",
-    "tiger": "TIGER-DnR",
     "bandit": "BandIt",
     "audiosep": "AudioSep",
 }
-VISIBLE_MODEL_IDS = ("avcass", "tiger")
+VISIBLE_MODEL_IDS = ("avcass",)
+USER_CONTENT_NOTICE = (
+    "처리할 영상·음원의 저작권과 이용 권리를 확인하고, 결과물을 사용하는 책임은 "
+    "사용자에게 있습니다."
+)
+LEGAL_INFORMATION_FILES = (
+    ("제3자 고지·출처·논문", "THIRD_PARTY_NOTICES.md"),
+    ("Video Music Separator 라이선스", "LICENSE"),
+    ("MIT License 전문", "licenses/MIT.txt"),
+    ("Apache License 2.0 전문", "licenses/Apache-2.0.txt"),
+    ("GNU GPL v3 전문", "licenses/GPL-3.0.txt"),
+)
 AUDIOSEP_QUERIES = {
     "music": ("기본 음악", "music"),
     "background": ("배경음악", "background music"),
@@ -87,19 +98,21 @@ def worker_progress_message(model_id: str, line: str) -> str | None:
         match = re.match(r"^\[run (\d+)/(\d+)\]", line)
         if match:
             return f"{label} · 구간 {match.group(1)}/{match.group(2)} 분리 중…"
-    elif model_id == "tiger":
-        if line.startswith("[setup]"):
-            return f"{label} · 분리 모델을 불러오는 중…"
-        match = re.match(r"^\[progress (\d+)/(\d+)\]\s*(.*)$", line)
-        if match:
-            detail = match.group(3).strip()
-            suffix = f" · {detail}" if detail else ""
-            return f"{label} · {match.group(1)}/{match.group(2)} 단계 완료{suffix}"
-        if line.startswith("[run]"):
-            return f"{label} · 음악과 효과음을 분리하는 중…"
     if line.startswith("[done]"):
         return f"{label} · 분리 결과를 정리하는 중…"
     return None
+
+
+def load_legal_information(root: Path) -> str:
+    sections = [f"사용자 콘텐츠 안내\n\n{USER_CONTENT_NOTICE}"]
+    for title, relative_path in LEGAL_INFORMATION_FILES:
+        path = root / relative_path
+        if path.is_file():
+            content = path.read_text(encoding="utf-8").strip()
+        else:
+            content = f"파일을 찾을 수 없습니다: {relative_path}"
+        sections.append(f"{title}\n{'=' * len(title)}\n\n{content}")
+    return "\n\n\n".join(sections)
 
 
 def run_worker_command(
@@ -235,15 +248,6 @@ def bandit_runtime_paths(runtime_root: Path) -> tuple[Path, Path, Path, Path]:
     )
 
 
-def tiger_runtime_paths(runtime_root: Path) -> tuple[Path, Path, Path]:
-    tiger_root = runtime_root / "tiger"
-    return (
-        runtime_root / "env" / "python.exe",
-        tiger_root / "repo",
-        tiger_root / "model",
-    )
-
-
 def audiosep_runtime_paths(runtime_root: Path) -> tuple[Path, Path, Path, Path]:
     audiosep_root = runtime_root / "audiosep"
     return (
@@ -326,10 +330,6 @@ class SoundSeparatorApp(tk.Tk):
         self.busy = False
 
         self.portable_runtime = application_root() / "audiosep"
-        if not all(
-            path.exists() for path in avcass_runtime_paths(self.portable_runtime)[:5]
-        ):
-            self.active_model_id = "tiger"
         self.model_var = tk.StringVar(value=self.active_model_id)
         self.audiosep_query_var = tk.StringVar(value="music")
         self.audiosep_query_label_var = tk.StringVar(
@@ -354,8 +354,8 @@ class SoundSeparatorApp(tk.Tk):
         ttk.Button(source, text="영상 열기", command=self.choose_video).grid(row=0, column=0, padx=(0, 8))
         self.video_var = tk.StringVar(value="선택된 영상 없음")
         ttk.Label(source, textvariable=self.video_var).grid(row=0, column=1, sticky="w")
-        ttk.Button(source, text="선택 모델로 분리", command=self.analyze).grid(
-            row=0, column=2, rowspan=2, padx=(8, 0)
+        ttk.Button(source, text="AV-CASS로 분리", command=self.analyze).grid(
+            row=0, column=2, padx=(8, 0)
         )
         self.audiosep_compare_button = ttk.Button(
             source,
@@ -365,18 +365,7 @@ class SoundSeparatorApp(tk.Tk):
 
         model_area = ttk.Frame(source)
         model_area.grid(row=1, column=0, columnspan=2, sticky="w", pady=(9, 0))
-        ttk.Label(model_area, text="분리 모델").pack(side="left", padx=(0, 8))
-        for model_id in VISIBLE_MODEL_IDS:
-            button = ttk.Radiobutton(
-                model_area,
-                text=MODEL_LABELS[model_id],
-                variable=self.model_var,
-                value=model_id,
-                command=self.select_model,
-            )
-            button.pack(side="left", padx=(0, 10))
-            if not self._model_is_available(model_id):
-                button.state(["disabled"])
+        ttk.Label(model_area, text="분리 모델: AV-CASS").pack(side="left")
         self.audiosep_query_combo = ttk.Combobox(
             model_area,
             state="disabled",
@@ -388,6 +377,11 @@ class SoundSeparatorApp(tk.Tk):
             "<<ComboboxSelected>>", self.select_audiosep_query
         )
         self._update_audiosep_query_control()
+        ttk.Button(
+            source,
+            text="라이선스·출처",
+            command=self.show_legal_information,
+        ).grid(row=1, column=2, padx=(8, 0), pady=(7, 0))
         ttk.Label(source, textvariable=self.model_status_var, foreground="#555555").grid(
             row=2, column=0, columnspan=4, sticky="w", pady=(7, 0)
         )
@@ -501,6 +495,32 @@ class SoundSeparatorApp(tk.Tk):
             width=16,
         )
         self.save_button.grid(row=0, column=1, ipadx=6, ipady=4)
+        ttk.Label(
+            root,
+            text=USER_CONTENT_NOTICE,
+            foreground="#666666",
+            anchor="center",
+            wraplength=900,
+        ).grid(row=6, column=0, sticky="ew", pady=(7, 0))
+
+    def show_legal_information(self) -> None:
+        window = tk.Toplevel(self)
+        window.title("라이선스·출처·사용자 책임")
+        window.geometry("860x680")
+        window.minsize(650, 480)
+        window.transient(self)
+
+        text = ScrolledText(
+            window,
+            wrap="word",
+            padx=14,
+            pady=14,
+            font=("Segoe UI", 10),
+        )
+        text.pack(fill="both", expand=True, padx=10, pady=(10, 6))
+        text.insert("1.0", load_legal_information(application_root()))
+        text.configure(state="disabled")
+        ttk.Button(window, text="닫기", command=window.destroy).pack(pady=(0, 10))
 
     def choose_video(self) -> None:
         if self.busy:
@@ -532,7 +552,7 @@ class SoundSeparatorApp(tk.Tk):
         self.model_status_var.set(
             f"선택 모델: {MODEL_LABELS[self.active_model_id]} · 분석 전"
         )
-        self.status_var.set("영상을 열었습니다. 모델을 선택하고 분리를 실행해 주세요.")
+        self.status_var.set("영상을 열었습니다. AV-CASS 분리를 실행해 주세요.")
 
     def _bandit_is_available(self) -> bool:
         return all(path.exists() for path in bandit_runtime_paths(self.portable_runtime))
@@ -563,8 +583,6 @@ class SoundSeparatorApp(tk.Tk):
     def _model_is_available(self, model_id: str) -> bool:
         if model_id == "avcass":
             return self._avcass_is_available()
-        if model_id == "tiger":
-            return True
         if model_id == "bandit":
             return self._bandit_is_available()
         if model_id == "audiosep":
@@ -1239,17 +1257,6 @@ class SoundSeparatorApp(tk.Tk):
                 cavp_checkpoint,
                 runtime_root,
             )
-        elif model_id == "tiger":
-            python_path, repo, model_dir = tiger_runtime_paths(
-                self.portable_runtime
-            )
-            required = (
-                (python_path, "AI Python"),
-                (repo, "TIGER 폴더"),
-                (model_dir / "config.json", "TIGER 모델 설정"),
-                (model_dir / "model.safetensors", "TIGER 모델 체크포인트"),
-            )
-            result = (python_path, repo, model_dir)
         elif model_id == "bandit":
             python_path, repo, hparams, checkpoint = bandit_runtime_paths(
                 self.portable_runtime
@@ -1326,22 +1333,6 @@ class SoundSeparatorApp(tk.Tk):
                 require_program("ffmpeg"),
                 "--video",
                 str(video_path),
-                "--input",
-                str(source_wav),
-                "--music-output",
-                str(music_path),
-                "--non-music-output",
-                str(non_music_path),
-            ]
-        elif model_id == "tiger":
-            python_path, repo, model_dir = runtime_paths
-            command = [
-                str(python_path),
-                str(application_root() / "tiger_worker.py"),
-                "--repo",
-                str(repo),
-                "--model",
-                str(model_dir),
                 "--input",
                 str(source_wav),
                 "--music-output",
@@ -1511,7 +1502,7 @@ class SoundSeparatorApp(tk.Tk):
 
 
 def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
-    """Exercise packaged FFmpeg, TIGER-DnR inference, previews, and export."""
+    """Exercise packaged FFmpeg, AV-CASS inference, previews, and export."""
     def write_result(data: dict[str, object]) -> None:
         result_path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -1527,10 +1518,12 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
             write_result({"stage": "audio_extracted", "duration": duration})
 
             runtime_root = application_root() / "audiosep"
-            tiger_root = runtime_root / "tiger"
             python_path = runtime_root / "env" / "python.exe"
-            repo = tiger_root / "repo"
-            model_dir = tiger_root / "model"
+            avcass_root = runtime_root / "avcass"
+            repo = avcass_root / "repo"
+            deps = avcass_root / "deps"
+            checkpoint = avcass_root / "model" / "av_cass_checkpoint.pt"
+            cavp_checkpoint = avcass_root / "model" / "cavp" / "cavp_epoch66.ckpt"
             stem_dir = test_root / "stems"
             stem_dir.mkdir(parents=True, exist_ok=True)
             music_path = stem_dir / "music.wav"
@@ -1538,11 +1531,21 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
             run_command(
                 [
                     str(python_path),
-                    str(application_root() / "tiger_worker.py"),
+                    str(application_root() / "avcass_worker.py"),
                     "--repo",
                     str(repo),
-                    "--model",
-                    str(model_dir),
+                    "--deps",
+                    str(deps),
+                    "--checkpoint",
+                    str(checkpoint),
+                    "--cavp-checkpoint",
+                    str(cavp_checkpoint),
+                    "--runtime-root",
+                    str(avcass_root),
+                    "--ffmpeg",
+                    require_program("ffmpeg"),
+                    "--video",
+                    str(video_path),
                     "--input",
                     str(source_wav),
                     "--music-output",

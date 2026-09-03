@@ -26,6 +26,7 @@ from sound_separator_app import (
     build_partition_events,
     clamp_volume,
     cleanup_work_directory,
+    load_legal_information,
     model_result_directory,
     muted_copy_output_path,
     muted_mix_preview_path,
@@ -33,7 +34,6 @@ from sound_separator_app import (
     playback_position,
     preview_path_for_event,
     run_worker_command,
-    tiger_runtime_paths,
     worker_progress_message,
 )
 
@@ -108,19 +108,13 @@ class MusicPartitionTests(unittest.TestCase):
             worker_progress_message("avcass", "[run 2/4] 8.16-16.34초"),
             "AV-CASS · 구간 2/4 분리 중…",
         )
-        self.assertEqual(
-            worker_progress_message(
-                "tiger", "[progress 5/6] 오른쪽 효과음 분석 완료"
-            ),
-            "TIGER-DnR · 5/6 단계 완료 · 오른쪽 효과음 분석 완료",
-        )
         self.assertIsNone(worker_progress_message("avcass", "일반 경고 메시지"))
 
     def test_uses_avcass_as_the_default_model(self) -> None:
         self.assertEqual(DEFAULT_MODEL_ID, "avcass")
 
-    def test_keeps_avcass_and_tiger_as_visible_radio_models(self) -> None:
-        self.assertEqual(VISIBLE_MODEL_IDS, ("avcass", "tiger"))
+    def test_keeps_only_avcass_as_the_visible_model(self) -> None:
+        self.assertEqual(VISIBLE_MODEL_IDS, ("avcass",))
 
     def test_audiosep_batch_jobs_resolve_outputs_before_worker_changes_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -218,10 +212,6 @@ class MusicPartitionTests(unittest.TestCase):
             work_dir / "models" / "avcass",
         )
         self.assertEqual(
-            model_result_directory(work_dir, "tiger"),
-            work_dir / "models" / "tiger",
-        )
-        self.assertEqual(
             model_result_directory(work_dir, "bandit"),
             work_dir / "models" / "bandit",
         )
@@ -262,13 +252,6 @@ class MusicPartitionTests(unittest.TestCase):
         )
         self.assertEqual(runtime_root, runtime / "audiosep")
 
-    def test_builds_portable_tiger_runtime_paths(self) -> None:
-        runtime = Path("portable") / "audiosep"
-        python_path, repo, model = tiger_runtime_paths(runtime)
-        self.assertEqual(python_path, runtime / "env" / "python.exe")
-        self.assertEqual(repo, runtime / "tiger" / "repo")
-        self.assertEqual(model, runtime / "tiger" / "model")
-
     def test_builds_portable_avcass_runtime_paths(self) -> None:
         runtime = Path("portable") / "audiosep"
         python_path, repo, deps, checkpoint, cavp_checkpoint, runtime_root = (
@@ -294,6 +277,28 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertEqual(starts[0], 0)
         self.assertEqual(starts[-1], long_length - INFERENCE_LENGTH)
         self.assertGreaterEqual(len(starts), 2)
+
+    def test_loads_user_responsibility_and_third_party_notices(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "licenses").mkdir()
+            (root / "THIRD_PARTY_NOTICES.md").write_text(
+                "AV-CASS and CAVP sources", encoding="utf-8"
+            )
+            (root / "LICENSE").write_text("app license", encoding="utf-8")
+            (root / "licenses" / "MIT.txt").write_text("MIT", encoding="utf-8")
+            (root / "licenses" / "Apache-2.0.txt").write_text(
+                "Apache", encoding="utf-8"
+            )
+            (root / "licenses" / "GPL-3.0.txt").write_text("GPL", encoding="utf-8")
+
+            information = load_legal_information(root)
+
+        self.assertIn("저작권과 이용 권리", information)
+        self.assertIn("AV-CASS and CAVP sources", information)
+        self.assertIn("MIT", information)
+        self.assertIn("Apache", information)
+        self.assertIn("GPL", information)
 
 
 class WorkDirectoryCleanupTests(unittest.TestCase):
