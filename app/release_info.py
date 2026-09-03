@@ -8,9 +8,11 @@ BASE_RUNTIME_ARCHIVE = "video-music-separator-ai-runtime-0.2.0.zip"
 BASE_RUNTIME_ARCHIVE_SIZE = 3_764_354_481
 BASE_RUNTIME_ARCHIVE_SHA256 = "70e521a80ce24f530238ef95973130f8f17b6f8c8254a94822109dcb4adb995f"
 BASE_RUNTIME_SOURCE = "https://github.com/Fabio-Cannavaro/video-music-separator"
+BASE_RUNTIME_GITHUB_REPOSITORY = "Fabio-Cannavaro/video-music-separator"
+BASE_RUNTIME_RELEASE_TAG = "runtime-v0.2.0"
 BASE_RUNTIME_RELEASE_BASE_URL = (
     "https://github.com/Fabio-Cannavaro/video-music-separator/releases/download/"
-    "runtime-v0.2.0"
+    + BASE_RUNTIME_RELEASE_TAG
 )
 BASE_RUNTIME_PARTS = (
     {

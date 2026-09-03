@@ -22,8 +22,10 @@ from release_info import (
     BASE_RUNTIME_ARCHIVE,
     BASE_RUNTIME_ARCHIVE_SHA256,
     BASE_RUNTIME_ARCHIVE_SIZE,
+    BASE_RUNTIME_GITHUB_REPOSITORY,
     BASE_RUNTIME_PARTS,
     BASE_RUNTIME_RELEASE_BASE_URL,
+    BASE_RUNTIME_RELEASE_TAG,
     BASE_RUNTIME_SOURCE,
     BASE_RUNTIME_VERSION,
     AVCASS_DOWNLOAD_URL,
@@ -138,6 +140,8 @@ INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
 개인정보와 외부 통신
 영상과 음원은 PC에서만 처리되며 설치 프로그램이나 앱이 업로드하지 않습니다. 설치 중 위 서버에 HTTPS 다운로드 요청을 보냅니다. 서버 운영자는 IP 주소, 요청 시각, 다운로드 URL, User-Agent와 이어받기용 Range 헤더 같은 일반 접속 정보를 받을 수 있습니다. 파일명, 영상·음원 내용 및 사용 통계는 전송하지 않습니다.
 
+현재 비공개 테스트 빌드는 AI Python 실행환경을 받을 때 이 PC의 GitHub CLI(gh) 로그인 정보를 사용합니다. 로그인이 없거나 만료되었으면 설치 중 GitHub의 웹 인증을 시작합니다. 설치 파일은 GitHub 토큰을 포함하거나 직접 읽고 저장하지 않으며, 인증 정보 저장은 GitHub CLI가 처리합니다. GitHub CLI가 설치되어 있어야 하고 이 비공개 저장소를 볼 수 있는 계정으로 인증해야 합니다.
+
 사용자 책임
 처리할 영상·음원의 저작권과 이용 권리를 확인하고 결과물을 사용하는 책임은 사용자에게 있습니다.
 """
@@ -230,6 +234,126 @@ def download_asset(
     os.replace(partial, destination)
 
 
+def _github_cli() -> str:
+    executable = shutil.which("gh")
+    if executable is None:
+        raise RuntimeError(
+            "GitHub CLI(gh)를 찾을 수 없습니다.\n\n"
+            "https://cli.github.com/ 에서 GitHub CLI를 설치한 뒤 다음 명령으로 "
+            "로그인해 주세요.\n"
+            "gh auth login --hostname github.com"
+        )
+    return executable
+
+
+def _github_login_is_valid(executable: str) -> bool:
+    result = subprocess.run(
+        [executable, "auth", "status", "--hostname", "github.com"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _require_github_login(executable: str, progress: ProgressCallback) -> None:
+    if _github_login_is_valid(executable):
+        return
+
+    progress("GitHub 로그인 필요 · 웹 인증을 여는 중", 0, 1)
+    creation_flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+    result = subprocess.run(
+        [
+            executable,
+            "auth",
+            "login",
+            "--hostname",
+            "github.com",
+            "--git-protocol",
+            "https",
+            "--web",
+            "--clipboard",
+        ],
+        check=False,
+        creationflags=creation_flags,
+    )
+    if result.returncode != 0 or not _github_login_is_valid(executable):
+        raise RuntimeError(
+            "GitHub 로그인을 완료하지 못했습니다. 설치 중 열린 창과 웹브라우저에서 "
+            "이 비공개 저장소에 접근할 수 있는 계정으로 인증한 뒤 다시 시도해 주세요."
+        )
+    progress("GitHub 로그인 완료", 1, 1)
+
+
+def download_private_runtime_asset(
+    asset: DownloadAsset,
+    destination: Path,
+    progress: ProgressCallback,
+) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if asset_is_valid(destination, asset):
+        progress(f"{asset.label} · 이미 설치됨", asset.size, asset.size)
+        return
+
+    executable = _github_cli()
+    _require_github_login(executable, progress)
+    asset_name = Path(asset.relative_path).name
+    progress(f"{asset.label} · GitHub 인증 다운로드 중", 0, asset.size)
+    with tempfile.TemporaryDirectory(
+        prefix="github-release-", dir=destination.parent
+    ) as temp_name:
+        temp_directory = Path(temp_name)
+        result = subprocess.run(
+            [
+                executable,
+                "release",
+                "download",
+                BASE_RUNTIME_RELEASE_TAG,
+                "--repo",
+                BASE_RUNTIME_GITHUB_REPOSITORY,
+                "--pattern",
+                asset_name,
+                "--dir",
+                str(temp_directory),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            if detail:
+                detail = f"\n\nGitHub CLI 응답:\n{detail}"
+            raise RuntimeError(
+                "비공개 AI 실행환경을 내려받지 못했습니다. 로그인한 GitHub 계정이 "
+                f"{BASE_RUNTIME_GITHUB_REPOSITORY} 저장소를 볼 수 있는지 확인해 주세요."
+                + detail
+            )
+
+        downloaded = temp_directory / asset_name
+        if not downloaded.is_file():
+            raise RuntimeError(
+                f"GitHub CLI가 다운로드를 완료했지만 파일을 찾을 수 없습니다: {asset_name}"
+            )
+        if downloaded.stat().st_size != asset.size:
+            raise RuntimeError(
+                f"{asset.label} 파일 크기가 올바르지 않습니다: "
+                f"{downloaded.stat().st_size:,} / {asset.size:,} 바이트"
+            )
+        progress(f"{asset.label} · 무결성 확인 중", asset.size, asset.size)
+        actual_hash = sha256_file(downloaded)
+        if actual_hash.lower() != asset.sha256.lower():
+            raise RuntimeError(
+                f"{asset.label} SHA-256이 일치하지 않습니다.\n"
+                f"예상: {asset.sha256}\n실제: {actual_hash}"
+            )
+        os.replace(downloaded, destination)
+
+
 def validate_ffmpeg(directory: Path) -> bool:
     if any(not (directory / name).is_file() for name in FFMPEG_REQUIRED_FILES):
         return False
@@ -319,7 +443,7 @@ def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
     part_paths: list[Path] = []
     for asset in BASE_RUNTIME_ASSETS:
         part_path = root / asset.relative_path
-        download_asset(asset, part_path, progress)
+        download_private_runtime_asset(asset, part_path, progress)
         part_paths.append(part_path)
 
     archive = downloads / BASE_RUNTIME_ARCHIVE

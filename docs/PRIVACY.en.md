@@ -22,6 +22,8 @@ Download URLs pinned in the installer:
 
 As part of an ordinary web download, each server operator may receive or log connection data such as the IP address, request time, download URL, HTTP User-Agent, and Range header used to resume a download. Each operator controls its own privacy policy and terms.
 
+The current private test build uses the GitHub CLI login on this PC to download the AI Python runtime. If that login is missing or expired, the installer starts GitHub CLI web authentication and copies the one-time authentication code to the clipboard. The installer does not embed, directly read, or store the GitHub token; authentication and credential storage are handled by GitHub CLI. GitHub may receive the signed-in account identity and ordinary authentication request data. A future public build is intended to use a download location that does not require access to the private source repository.
+
 The installer pins and verifies the URL, expected size, and SHA-256 of the AI runtime, each model, and the FFmpeg archive. Normal video processing does not require an internet connection after installation.
 
 ## Local files

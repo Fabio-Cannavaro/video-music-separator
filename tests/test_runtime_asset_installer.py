@@ -8,6 +8,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from subprocess import CompletedProcess
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +89,99 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
             sum(asset.size for asset in installer.BASE_RUNTIME_ASSETS),
             installer.BASE_RUNTIME_ARCHIVE_SIZE,
         )
+
+    def test_private_runtime_download_uses_logged_in_github_cli(self) -> None:
+        payload = b"private runtime part"
+        asset = installer.DownloadAsset(
+            asset_id="runtime-test",
+            label="AI runtime",
+            url="https://github.com/example/repo/releases/download/tag/runtime.zip.001",
+            relative_path=".downloads/runtime.zip.001",
+            sha256=hashlib.sha256(payload).hexdigest(),
+            size=len(payload),
+            source="https://github.com/example/repo",
+        )
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+
+            def fake_run(arguments, **kwargs):
+                if arguments[1:3] == ["auth", "status"]:
+                    return CompletedProcess(arguments, 0, "", "")
+                download_directory = Path(arguments[arguments.index("--dir") + 1])
+                (download_directory / "runtime.zip.001").write_bytes(payload)
+                return CompletedProcess(arguments, 0, "", "")
+
+            with (
+                patch.object(installer, "_github_cli", return_value="gh"),
+                patch.object(installer.subprocess, "run", side_effect=fake_run) as run,
+            ):
+                installer.download_private_runtime_asset(
+                    asset, destination, lambda *_: None
+                )
+
+            self.assertEqual(destination.read_bytes(), payload)
+            download_arguments = run.call_args_list[1].args[0]
+            self.assertEqual(download_arguments[:3], ["gh", "release", "download"])
+            self.assertIn(installer.BASE_RUNTIME_RELEASE_TAG, download_arguments)
+            self.assertIn(installer.BASE_RUNTIME_GITHUB_REPOSITORY, download_arguments)
+
+    def test_private_runtime_download_requires_github_cli(self) -> None:
+        payload = b"runtime"
+        asset = fake_asset(payload)
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+            with patch.object(installer.shutil, "which", return_value=None):
+                with self.assertRaisesRegex(RuntimeError, "GitHub CLI"):
+                    installer.download_private_runtime_asset(
+                        asset, destination, lambda *_: None
+                    )
+
+    def test_private_runtime_download_starts_web_login_when_needed(self) -> None:
+        payload = b"runtime"
+        asset = fake_asset(payload)
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+
+            results = iter(
+                (
+                    CompletedProcess(["gh"], 1, "", "not logged in"),
+                    CompletedProcess(["gh"], 0, "", ""),
+                    CompletedProcess(["gh"], 0, "", ""),
+                    CompletedProcess(["gh"], 1, "", "download stopped"),
+                )
+            )
+            with (
+                patch.object(installer, "_github_cli", return_value="gh"),
+                patch.object(installer.subprocess, "run", side_effect=results) as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "비공개 AI 실행환경"):
+                    installer.download_private_runtime_asset(
+                        asset, destination, lambda *_: None
+                    )
+            login_arguments = run.call_args_list[1].args[0]
+            self.assertEqual(login_arguments[:3], ["gh", "auth", "login"])
+            self.assertIn("--web", login_arguments)
+            self.assertIn("--clipboard", login_arguments)
+
+    def test_private_runtime_download_rejects_cancelled_web_login(self) -> None:
+        payload = b"runtime"
+        asset = fake_asset(payload)
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+            results = iter(
+                (
+                    CompletedProcess(["gh"], 1, "", "not logged in"),
+                    CompletedProcess(["gh"], 1, "", "cancelled"),
+                )
+            )
+            with (
+                patch.object(installer, "_github_cli", return_value="gh"),
+                patch.object(installer.subprocess, "run", side_effect=results),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "GitHub 로그인을 완료하지"):
+                    installer.download_private_runtime_asset(
+                        asset, destination, lambda *_: None
+                    )
 
     def test_installs_combined_base_runtime_archive(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
