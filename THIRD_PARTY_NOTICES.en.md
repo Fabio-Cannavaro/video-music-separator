@@ -19,6 +19,8 @@ Paper:
 
 The official AV-CASS repository identifies the code as MIT-licensed, but it does not specify separate redistribution terms for the pretrained checkpoint linked from its README. Do not upload the checkpoint to a public repository before receiving explicit confirmation from the rights holder.
 
+For personal online installation, `video-music-separator-setup.exe` downloads `av_cass_checkpoint.pt` directly from the official AV-CASS Google Drive to the user's PC. The checkpoint is not included in this repository or in the public installer binary.
+
 ## CAVP / Diff-Foley
 
 AV-CASS uses the Diff-Foley CAVP checkpoint and related code to extract visual features.
@@ -29,6 +31,8 @@ AV-CASS uses the Diff-Foley CAVP checkpoint and related code to extract visual f
 - License shown on the CAVP model page: MIT
 - Diff-Foley source repository license: Apache License 2.0
 - Full license texts: `licenses/MIT.txt`, `licenses/Apache-2.0.txt`
+
+For online installation, `cavp_epoch66.ckpt` is downloaded directly from a pinned commit in the official Diff-Foley Hugging Face repository and verified with SHA-256.
 
 Paper:
 
@@ -53,6 +57,8 @@ This application runs the FFmpeg command-line programs as external processes.
 - Full license texts: `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt`
 
 This build uses shared libraries and does not use `--enable-gpl` or `--enable-nonfree`. Before a public release, provide the exact corresponding FFmpeg and build-dependency sources, build instructions, copyright notices, and full license texts alongside the binary.
+
+The online installer does not contain the FFmpeg binary. During installation it downloads a pinned LGPL shared build directly from BtbN's official GitHub Release and verifies the archive SHA-256 together with the FFmpeg version and build options.
 
 ## Python packages
 

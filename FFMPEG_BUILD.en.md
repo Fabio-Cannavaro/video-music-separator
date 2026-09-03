@@ -14,7 +14,7 @@ The Windows portable distribution runs FFmpeg as a separate command-line program
 - Corresponding FFmpeg source commit: <https://github.com/FFmpeg/FFmpeg/commit/7c533d0f86>
 - Corresponding build-system commit: <https://github.com/BtbN/FFmpeg-Builds/tree/48576f197ad1c2afb2e0b8efe204919a1afbff54>
 
-During application builds, `prepare_ffmpeg_lgpl.ps1` downloads the pinned archive above and verifies its SHA-256 checksum. `build_portable.ps1` then verifies that the build has `--enable-shared` and does not have `--enable-gpl` or `--enable-nonfree` before copying the EXE and required DLLs together.
+During online installation, `video-music-separator-setup.exe` downloads the pinned archive directly from the official GitHub Release and verifies its SHA-256 checksum. After extraction, only files whose FFmpeg configuration includes `--enable-shared` and excludes `--enable-gpl` and `--enable-nonfree` are installed into the application's `ffmpeg/` directory. Development and offline builds perform the same checks through `prepare_ffmpeg_lgpl.ps1` and `build_portable.ps1 -BundleRuntimeAssets`.
 
 ## FFmpeg configure line
 

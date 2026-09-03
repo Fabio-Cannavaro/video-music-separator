@@ -31,21 +31,36 @@
 
 ## 이동용 폴더
 
-최종 사용자는 `video-music-separator-portable` 폴더 하나만 이동하면 된다.
+최종 사용자는 기본 앱 폴더를 받은 뒤 그 안의 `video-music-separator-setup.exe`를 한 번 실행한다. 설치 파일은 AV-CASS, CAVP와 LGPL FFmpeg를 각 공식 배포처에서 직접 내려받아 SHA-256을 확인한 뒤 앱 폴더에 배치한다.
 
 같은 PC 안에서는 이 큰 폴더를 영상 폴더마다 복사할 필요가 없다. 현재 위치에서 EXE를 실행하고 `영상 열기`로 다른 폴더의 영상을 선택하면 작업 폴더와 결과 사본은 원본 영상 옆에 생긴다. 자주 쓸 때는 EXE의 바로가기만 바탕화면 등에 두면 된다. 폴더 전체 이동은 다른 PC로 옮길 때만 필요하다.
 
 - 실행 파일: `video-music-separator.exe`
-- LGPL 공유 FFmpeg 실행 파일과 DLL: `ffmpeg/`
+- 필수 구성요소 설치 파일: `video-music-separator-setup.exe`
+- 설치 시 내려받는 LGPL 공유 FFmpeg 실행 파일과 DLL: `ffmpeg/`
 - AI Python 환경: `audiosep/env/`
 - AV-CASS 코드와 구성요소: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
-- AV-CASS 모델: `audiosep/avcass/model/av_cass_checkpoint.pt`, `audiosep/avcass/model/cavp/cavp_epoch66.ckpt`
+- 설치 시 내려받는 AV-CASS 모델: `audiosep/avcass/model/av_cass_checkpoint.pt`
+- 설치 시 내려받는 CAVP 모델: `audiosep/avcass/model/cavp/cavp_epoch66.ckpt`
 - BandIt 코드와 설정: `audiosep/bandit/repo/`, `audiosep/bandit/hparams.yaml`
 - BandIt 모델: `audiosep/bandit/model/dnr-3s-mus64-l1snr-plus.ckpt`
 - AudioSep 코드와 모델: `audiosep/audiosep/repo/`, `audiosep/audiosep/model/pytorch_model.bin`
 - AudioSep 텍스트 인코더: `audiosep/audiosep/roberta-base/model.safetensors`
 
-`audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다. 앱의 분리 모델은 AV-CASS이며 NVIDIA GPU가 필요하다. 완성된 휴대용 폴더는 인터넷 연결이나 별도 Python 설치 없이 실행할 수 있다.
+`audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다. 앱의 분리 모델은 AV-CASS이며 NVIDIA GPU가 필요하다. 기본 앱 패키지에는 AI Python 환경과 AV-CASS 실행 코드가 들어 있어야 한다. 설치할 때는 약 2.1GB의 모델·FFmpeg 다운로드를 위한 인터넷 연결이 필요하지만, 설치 완료 후 일반 사용에는 인터넷 연결이나 별도 Python 설치가 필요하지 않다.
+
+## 필수 구성요소 자동 설치
+
+1. `video-music-separator-setup.exe`를 `video-music-separator.exe`와 같은 폴더에서 실행한다.
+2. `설치 시작`을 누른다.
+3. 설치 파일이 다음 세 항목을 공식 배포처에서 직접 내려받는다.
+   - AV-CASS `av_cass_checkpoint.pt`: AV-CASS 공식 Google Drive
+   - CAVP `cavp_epoch66.ckpt`: Diff-Foley 공식 Hugging Face의 고정 커밋
+   - FFmpeg: BtbN의 고정 LGPL 공유 빌드
+4. 각 파일의 크기와 SHA-256, FFmpeg의 버전·빌드 옵션을 확인한다.
+5. 중단된 다운로드는 `.part` 파일에서 이어받으며 검증이 끝난 파일만 실제 설치 위치로 교체한다.
+
+설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. 공식 주소가 변경되거나 파일 내용이 바뀌어 체크섬이 맞지 않으면 설치를 중단한다. 설치 결과와 출처는 앱 폴더의 `runtime-assets.json`에 기록한다.
 
 ## 사용 방법
 
@@ -80,10 +95,13 @@ py -m venv --system-site-packages .venv
 ```powershell
 .\.venv\Scripts\python.exe -m unittest -v
 .\prepare_ffmpeg_lgpl.ps1
+.\build_runtime_installer.ps1
 .\build_portable.ps1
 ```
 
-`prepare_ffmpeg_lgpl.ps1`는 고정된 BtbN FFmpeg 8.1 LGPL 공유 빌드를 내려받고 SHA-256을 검증한다. `build_portable.ps1`는 GPL/nonfree 옵션이 없는지 검사하고 FFmpeg 실행 파일과 필요한 DLL을 함께 복사한다. 정확한 버전, 소스 커밋과 빌드 설정은 [FFMPEG_BUILD.md](FFMPEG_BUILD.md)에 기록한다.
+`build_runtime_installer.ps1`는 사용자가 실행할 단일 `video-music-separator-setup.exe`를 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 개인용 오프라인 묶음이 필요하면 `build_portable.ps1 -BundleRuntimeAssets`를 사용한다.
+
+`prepare_ffmpeg_lgpl.ps1`는 개발·오프라인 빌드용으로 고정된 BtbN FFmpeg 8.1 LGPL 공유 빌드를 내려받고 SHA-256을 검증한다. 정확한 버전, 소스 커밋과 빌드 설정은 [FFMPEG_BUILD.md](FFMPEG_BUILD.md)에 기록한다.
 
 휴대용 실동작 검사는 다음처럼 실행한다.
 

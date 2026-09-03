@@ -1,7 +1,8 @@
 param(
     [string]$PythonPath = "",
     [string]$OutputDirectory = "",
-    [string]$FFmpegDirectory = ""
+    [string]$FFmpegDirectory = "",
+    [switch]$BundleRuntimeAssets
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,13 +27,13 @@ $ffmpegDir = Join-Path $ffmpegRoot "bin"
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "빌드용 Python을 찾을 수 없습니다: $python"
 }
-if (-not $FFmpegDirectory -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
+if ($BundleRuntimeAssets -and -not $FFmpegDirectory -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
     & (Join-Path $projectDir "prepare_ffmpeg_lgpl.ps1") -DestinationDirectory $ffmpegRoot
     if ($LASTEXITCODE -ne 0) {
         throw "LGPL FFmpeg 준비에 실패했습니다."
     }
 }
-if (-not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
+if ($BundleRuntimeAssets -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
     throw "FFmpeg 폴더를 찾을 수 없습니다: $ffmpegDir"
 }
 
@@ -47,22 +48,24 @@ $requiredFfmpegFiles = @(
     "swresample-6.dll",
     "swscale-9.dll"
 )
-foreach ($name in $requiredFfmpegFiles) {
-    if (-not (Test-Path -LiteralPath (Join-Path $ffmpegDir $name) -PathType Leaf)) {
-        throw "LGPL 공유 FFmpeg 구성 파일을 찾을 수 없습니다: $name"
+if ($BundleRuntimeAssets) {
+    foreach ($name in $requiredFfmpegFiles) {
+        if (-not (Test-Path -LiteralPath (Join-Path $ffmpegDir $name) -PathType Leaf)) {
+            throw "LGPL 공유 FFmpeg 구성 파일을 찾을 수 없습니다: $name"
+        }
     }
-}
 
-$ffmpegVersionText = (& (Join-Path $ffmpegDir "ffmpeg.exe") -version 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0) {
-    throw "FFmpeg 버전을 확인하지 못했습니다."
-}
-if (
-    -not $ffmpegVersionText.Contains("--enable-shared") -or
-    $ffmpegVersionText.Contains("--enable-gpl") -or
-    $ffmpegVersionText.Contains("--enable-nonfree")
-) {
-    throw "배포에는 GPL/nonfree 옵션이 없는 LGPL 공유 FFmpeg만 사용할 수 있습니다."
+    $ffmpegVersionText = (& (Join-Path $ffmpegDir "ffmpeg.exe") -version 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0) {
+        throw "FFmpeg 버전을 확인하지 못했습니다."
+    }
+    if (
+        -not $ffmpegVersionText.Contains("--enable-shared") -or
+        $ffmpegVersionText.Contains("--enable-gpl") -or
+        $ffmpegVersionText.Contains("--enable-nonfree")
+    ) {
+        throw "배포에는 GPL/nonfree 옵션이 없는 LGPL 공유 FFmpeg만 사용할 수 있습니다."
+    }
 }
 
 & $python -m PyInstaller `
@@ -98,6 +101,17 @@ if (Test-Path -LiteralPath $legacyExecutable -PathType Leaf) {
 }
 Copy-Item -LiteralPath (Join-Path $builtDir "video-music-separator.exe") -Destination $outputDir -Force
 
+& (Join-Path $projectDir "build_runtime_installer.ps1") `
+    -PythonPath $python `
+    -OutputDirectory (Join-Path $distDir "runtime-installer")
+if ($LASTEXITCODE -ne 0) {
+    throw "필수 구성요소 설치 파일 빌드에 실패했습니다."
+}
+Copy-Item -LiteralPath `
+    (Join-Path $distDir "runtime-installer\video-music-separator-setup.exe") `
+    -Destination $outputDir `
+    -Force
+
 $portableFfmpeg = Join-Path $outputDir "ffmpeg"
 $portableAudioSep = Join-Path $outputDir "audiosep"
 if (Test-Path -LiteralPath $portableFfmpeg -PathType Container) {
@@ -108,10 +122,22 @@ if (Test-Path -LiteralPath $portableFfmpeg -PathType Container) {
     }
     Remove-Item -LiteralPath $portableFfmpeg -Recurse -Force
 }
-New-Item -ItemType Directory -Path $portableFfmpeg -Force | Out-Null
 New-Item -ItemType Directory -Path $portableAudioSep -Force | Out-Null
 
-Copy-Item -Path (Join-Path $ffmpegDir "*") -Destination $portableFfmpeg -Recurse -Force
+if ($BundleRuntimeAssets) {
+    New-Item -ItemType Directory -Path $portableFfmpeg -Force | Out-Null
+    Copy-Item -Path (Join-Path $ffmpegDir "*") -Destination $portableFfmpeg -Recurse -Force
+} else {
+    $downloadedModelFiles = @(
+        (Join-Path $portableAudioSep "avcass\model\av_cass_checkpoint.pt"),
+        (Join-Path $portableAudioSep "avcass\model\cavp\cavp_epoch66.ckpt")
+    )
+    foreach ($modelFile in $downloadedModelFiles) {
+        if (Test-Path -LiteralPath $modelFile -PathType Leaf) {
+            Remove-Item -LiteralPath $modelFile -Force
+        }
+    }
+}
 Copy-Item -LiteralPath (Join-Path $projectDir "bandit_worker.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "audiosep_worker.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "avcass_worker.py") -Destination $outputDir -Force
@@ -124,10 +150,11 @@ Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.md") -Destination $o
 Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
 
-$avCassReady =
+$avCassBaseReady =
     (Test-Path -LiteralPath (Join-Path $portableAudioSep "env\python.exe") -PathType Leaf) -and
     (Test-Path -LiteralPath (Join-Path $portableAudioSep "avcass\repo\models_avdnr_zero_conv_2vid.py") -PathType Leaf) -and
-    (Test-Path -LiteralPath (Join-Path $portableAudioSep "avcass\deps\diffusers\__init__.py") -PathType Leaf) -and
+    (Test-Path -LiteralPath (Join-Path $portableAudioSep "avcass\deps\diffusers\__init__.py") -PathType Leaf)
+$avCassAssetsReady =
     (Test-Path -LiteralPath (Join-Path $portableAudioSep "avcass\model\av_cass_checkpoint.pt") -PathType Leaf) -and
     (Test-Path -LiteralPath (Join-Path $portableAudioSep "avcass\model\cavp\cavp_epoch66.ckpt") -PathType Leaf)
 
@@ -160,13 +187,17 @@ AV-CASS는 영상 장면까지 분석하며 NVIDIA GPU가 필요합니다.
 앱 맨 위의 작은 영상 화면에서 전체 믹스와 각 분리본을 영상과 함께 확인할 수 있습니다.
 음악 행을 뮤트한 뒤 전체 영상을 재생하고, 원본 옆에 _음악제거 사본으로 저장할 수 있습니다.
 두 행의 듣기/정지, 행별 뮤트/해제, 공통 볼륨 조절 기능이 포함되어 있습니다.
-인터넷 연결이나 별도 Python 설치는 필요하지 않습니다.
+처음 한 번 video-music-separator-setup.exe를 실행하면 AV-CASS, CAVP와 LGPL FFmpeg를
+각 공식 배포처에서 자동으로 내려받고 SHA-256을 확인합니다. 설치할 때는 인터넷 연결이 필요합니다.
+설치가 끝난 뒤 앱 사용에는 인터넷 연결이나 별도 Python 설치가 필요하지 않습니다.
 
 처리할 영상·음원의 저작권과 이용 권리를 확인하고, 결과물을 사용하는 책임은 사용자에게 있습니다.
 영상 미리보기 왼쪽의 '라이선스·출처'에서 제3자 고지, 출처, 논문과 라이선스 전문을 확인할 수 있습니다.
 "@
-if (-not $avCassReady) {
-    $usage += "`r`nAV-CASS 실행 파일이나 모델을 찾을 수 없습니다.`r`n"
+if (-not $avCassBaseReady) {
+    $usage += "`r`nAV-CASS 기본 실행환경을 찾을 수 없습니다. 기본 AI 런타임을 먼저 포함해 주세요.`r`n"
+} elseif (-not $avCassAssetsReady -or -not (Test-Path -LiteralPath (Join-Path $portableFfmpeg "ffmpeg.exe") -PathType Leaf)) {
+    $usage += "`r`n처음 사용하기 전에 video-music-separator-setup.exe를 실행해 주세요.`r`n"
 }
 $usage | Set-Content -LiteralPath (Join-Path $outputDir "사용법.txt") -Encoding UTF8
 

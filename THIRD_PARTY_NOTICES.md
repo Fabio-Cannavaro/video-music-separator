@@ -19,6 +19,8 @@ Video Music Separator의 자체 코드는 루트 `LICENSE`를 따른다. 아래 
 
 AV-CASS 공식 저장소는 코드에 MIT License를 표시하지만, README에서 링크한 사전학습 체크포인트에 별도의 재배포 조건을 명시하지 않았다. 권리자의 명시적 확인 전에는 체크포인트를 공개 저장소에 올리지 않는다.
 
+개인용 온라인 설치에서는 `video-music-separator-setup.exe`가 공식 AV-CASS Google Drive에서 `av_cass_checkpoint.pt`를 사용자 PC로 직접 내려받고, 공개 설치 파일이나 이 저장소에는 체크포인트를 포함하지 않는다.
+
 ## CAVP / Diff-Foley
 
 AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 코드를 사용한다.
@@ -29,6 +31,8 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 - CAVP 모델 페이지 라이선스 표기: MIT
 - Diff-Foley 소스 저장소 라이선스: Apache License 2.0
 - 라이선스 전문: `licenses/MIT.txt`, `licenses/Apache-2.0.txt`
+
+온라인 설치에서는 Diff-Foley 공식 Hugging Face 저장소의 고정 커밋에서 `cavp_epoch66.ckpt`를 사용자 PC로 직접 내려받고 SHA-256을 확인한다.
 
 논문:
 
@@ -53,6 +57,8 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 - 라이선스 전문: `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt`
 
 이 빌드는 공유 라이브러리를 사용하며 `--enable-gpl`과 `--enable-nonfree`를 사용하지 않는다. 공개 배포 전에는 포함한 바이너리의 정확한 빌드 설정과 일치하는 FFmpeg 및 빌드 의존성 소스, 빌드 방법, 저작권 고지와 라이선스 전문을 같은 Release에 함께 제공해야 한다.
+
+기본 온라인 설치 파일은 FFmpeg 바이너리를 포함하지 않는다. 설치 시 BtbN의 고정 LGPL 공유 빌드를 공식 GitHub Release에서 사용자 PC로 직접 내려받고, 압축 파일의 SHA-256과 FFmpeg의 버전·빌드 옵션을 검사한다.
 
 ## Python packages
 
