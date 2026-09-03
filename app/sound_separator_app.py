@@ -62,6 +62,7 @@ LEGAL_INFORMATION_FILES = (
     ("모델 파일 및 배포 정책", "MODEL_LICENSES.md"),
     ("제3자 고지·출처·논문", "THIRD_PARTY_NOTICES.md"),
     ("FFmpeg LGPL 빌드 정보", "FFMPEG_BUILD.md"),
+    ("Video Music Separator 저작권 고지", "COPYRIGHT.md"),
     ("Video Music Separator 라이선스", "LICENSE"),
     ("MIT License 전문", "licenses/MIT.txt"),
     ("Apache License 2.0 전문", "licenses/Apache-2.0.txt"),
@@ -109,6 +110,7 @@ TRANSLATIONS = {
         "legal_model_policy": "모델 파일 및 배포 정책",
         "legal_third_party": "제3자 고지·출처·논문",
         "legal_ffmpeg": "FFmpeg LGPL 빌드 정보",
+        "legal_copyright": "Video Music Separator 저작권 고지",
         "legal_app_license": "Video Music Separator 라이선스",
         "legal_mit": "MIT License 전문",
         "legal_apache": "Apache License 2.0 전문",
@@ -230,6 +232,7 @@ TRANSLATIONS = {
         "legal_model_policy": "Model Files and Distribution Policy",
         "legal_third_party": "Third-Party Notices, Sources & Papers",
         "legal_ffmpeg": "FFmpeg LGPL Build Information",
+        "legal_copyright": "Video Music Separator Copyright Notice",
         "legal_app_license": "Video Music Separator License",
         "legal_mit": "Full MIT License",
         "legal_apache": "Full Apache License 2.0",
@@ -327,6 +330,7 @@ LEGAL_TITLE_KEYS = {
     "MODEL_LICENSES.md": "legal_model_policy",
     "THIRD_PARTY_NOTICES.md": "legal_third_party",
     "FFMPEG_BUILD.md": "legal_ffmpeg",
+    "COPYRIGHT.md": "legal_copyright",
     "LICENSE": "legal_app_license",
     "licenses/MIT.txt": "legal_mit",
     "licenses/Apache-2.0.txt": "legal_apache",
@@ -339,6 +343,7 @@ ENGLISH_LEGAL_FILES = {
     "MODEL_LICENSES.md": "MODEL_LICENSES.en.md",
     "THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.en.md",
     "FFMPEG_BUILD.md": "FFMPEG_BUILD.en.md",
+    "COPYRIGHT.md": "COPYRIGHT.en.md",
 }
 
 QUALITY_NOTE_KEYS = {

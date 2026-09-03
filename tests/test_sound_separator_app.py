@@ -323,6 +323,12 @@ class MusicPartitionTests(unittest.TestCase):
             (root / "PRIVACY.en.md").write_text(
                 "Video and audio are processed locally", encoding="utf-8"
             )
+            (root / "COPYRIGHT.md").write_text(
+                "Copyright © 2026 SONG HO PARK", encoding="utf-8"
+            )
+            (root / "COPYRIGHT.en.md").write_text(
+                "English copyright notice for SONG HO PARK", encoding="utf-8"
+            )
             (root / "LICENSE").write_text("app license", encoding="utf-8")
             (root / "licenses" / "MIT.txt").write_text("MIT", encoding="utf-8")
             (root / "licenses" / "Apache-2.0.txt").write_text(
@@ -344,7 +350,9 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("Video Music Separator: 0.2.0", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
         self.assertIn("영상과 음원은 로컬 PC에서 처리", information)
+        self.assertIn("Copyright © 2026 SONG HO PARK", information)
         self.assertIn("Video and audio are processed locally", english_information)
+        self.assertIn("English copyright notice for SONG HO PARK", english_information)
         self.assertIn("User Content Notice", english_information)
         self.assertIn("You are responsible", english_information)
         self.assertIn("Third-Party Notices, Sources & Papers", english_information)

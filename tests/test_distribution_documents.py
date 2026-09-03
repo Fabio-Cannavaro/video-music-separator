@@ -10,14 +10,21 @@ SCRIPTS = ROOT / "scripts"
 
 
 class DistributionDocumentTests(unittest.TestCase):
-    def test_license_protects_original_and_requires_share_alike_source(self) -> None:
+    def test_repository_uses_unmodified_gpl_v3_only_license(self) -> None:
         license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
-        self.assertIn("No-Resale Share-Alike License 1.0", license_text)
-        self.assertIn("insubstantial changes", license_text)
-        self.assertIn("claim copyright only", license_text)
-        self.assertIn("same license", license_text)
-        self.assertIn("corresponding source code", license_text)
-        self.assertIn("not impose additional terms", license_text)
+        packaged_gpl = (ROOT / "licenses" / "GPL-3.0.txt").read_text(encoding="utf-8")
+        self.assertEqual(license_text, packaged_gpl)
+        self.assertIn("GNU GENERAL PUBLIC LICENSE", license_text)
+        self.assertIn("Version 3, 29 June 2007", license_text)
+
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        checklist = (DOCS / "DISTRIBUTION_CHECKLIST.md").read_text(encoding="utf-8")
+        copyright_notice = (DOCS / "COPYRIGHT.md").read_text(encoding="utf-8")
+        self.assertIn("GPL-3.0-only", readme)
+        self.assertIn("Copyright © 2026 SONG HO PARK", readme)
+        self.assertIn("GPL-3.0-only", checklist)
+        self.assertIn("Copyright © 2026 SONG HO PARK", copyright_notice)
+        self.assertIn("GPL-3.0-only", copyright_notice)
 
     def test_privacy_notice_names_network_destinations_and_local_processing(self) -> None:
         privacy = (DOCS / "PRIVACY.md").read_text(encoding="utf-8")

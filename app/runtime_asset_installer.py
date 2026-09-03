@@ -519,6 +519,7 @@ class InstallerWindow:
 
     def show_documents(self) -> None:
         document_names = (
+            "COPYRIGHT.md",
             "LICENSE",
             "MODEL_LICENSES.md",
             "THIRD_PARTY_NOTICES.md",
