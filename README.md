@@ -1,8 +1,8 @@
 # 영상 음악 분리·제거기
 
-영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 같은 원본을 각각 `음악`과 `음악 아님(목소리·효과음)` 두 트랙으로 나누고, 결과를 번갈아 들어본 뒤 저장한다. 처리 속도보다 분리 품질을 우선한다.
+영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님(목소리·효과음)` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
 
-원본 영상은 바꾸지 않는다. 음악만 뮤트하면 원본 옆에 `<원본이름>_음악제거.mp4`를 만들며, 같은 이름의 사본은 덮어쓴다.
+A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music (Voice & Effects)` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
 
 - 현재 앱 버전: `0.2.0`
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
