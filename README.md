@@ -25,14 +25,13 @@
 | Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 LGPL FFmpeg를 내려받는다. |
 | 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. |
 
-#### 2. 설치에 필요한 두 파일
+#### 2. Windows 설치 파일 다운로드
 
-| 파일 | 용도 |
-| --- | --- |
-| `video-music-separator-setup.exe` | 처음 한 번 실행해 AI 실행환경, 모델과 FFmpeg를 설치한다. |
-| `video-music-separator.exe` | 설치가 끝난 뒤 영상에서 음악을 분리할 때 실행한다. |
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0)
 
-두 EXE는 반드시 같은 폴더에 둔다. 기본 앱 ZIP에는 AI Python 환경·AV-CASS 코드·모델·FFmpeg가 들어 있지 않다.
+위 릴리스의 `Assets`에서 `video-music-separator-0.2.0-windows-x64.zip`을 내려받는다. GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
+
+설치 ZIP에는 `video-music-separator-setup.exe`와 `video-music-separator.exe`가 함께 들어 있다. 두 EXE는 반드시 같은 폴더에 두며, AI Python 환경·AV-CASS 코드·모델·FFmpeg는 설치 프로그램이 별도로 내려받는다.
 
 #### 3. 설치 순서
 
@@ -227,14 +226,13 @@ For the first installation, keep the following two executables in the same folde
 | Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and LGPL FFmpeg build. |
 | Installation location | Do not run the application from inside the ZIP. Extract the entire ZIP into a normal user-writable folder such as Documents. |
 
-#### 2. Required Installation Files
+#### 2. Download the Windows Installer
 
-| File | Purpose |
-| --- | --- |
-| `video-music-separator-setup.exe` | Run once to install the AI runtime, models, and FFmpeg. |
-| `video-music-separator.exe` | Run after installation to separate music from a video. |
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0)
 
-Both EXE files must remain in the same folder. The base application ZIP does not contain the AI Python environment, AV-CASS code, model files, or FFmpeg.
+Under `Assets` in the Release above, download `video-music-separator-0.2.0-windows-x64.zip`. The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
+
+The installation ZIP contains both `video-music-separator-setup.exe` and `video-music-separator.exe`. Keep both EXE files in the same folder. The installer separately downloads the AI Python environment, AV-CASS code, model files, and FFmpeg.
 
 #### 3. Installation Steps
 

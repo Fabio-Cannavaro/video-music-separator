@@ -96,10 +96,15 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertLess(exclusions, english)
         self.assertLess(english, english_install)
         self.assertLess(english_install, english_license)
-        self.assertIn("#### 2. 설치에 필요한 두 파일", lines)
+        self.assertIn("#### 2. Windows 설치 파일 다운로드", lines)
         self.assertIn("#### 6. 설치 후 폴더 사용과 이동", lines)
-        self.assertIn("#### 2. Required Installation Files", lines)
+        self.assertIn("#### 2. Download the Windows Installer", lines)
         self.assertIn("#### 6. Using and Moving the Installed Folder", lines)
+        self.assertIn(
+            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0",
+            readme,
+        )
+        self.assertIn("Source code (zip)", readme)
         self.assertNotIn("## 이동용 폴더", readme)
         self.assertIn(
             "CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석",
