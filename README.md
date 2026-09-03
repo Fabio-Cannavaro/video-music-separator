@@ -1,0 +1,111 @@
+# 영상 음악 분리·제거기
+
+영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS와 TIGER-DnR 중 하나를 선택해 같은 원본을 각각 `음악`과 `음악 아님(목소리·효과음)` 두 트랙으로 나누고, 결과를 번갈아 들어본 뒤 가장 마음에 드는 결과만 저장한다. 두 모델 모두 처리 속도보다 분리 품질을 우선한다.
+
+원본 영상은 바꾸지 않는다. 음악만 뮤트하면 원본 옆에 `<원본이름>_음악제거.mp4`를 만들며, 같은 이름의 사본은 덮어쓴다.
+
+## 처리 구조
+
+1. FFmpeg가 영상 오디오를 44.1kHz 스테레오 WAV로 추출한다.
+2. 사용자가 AV-CASS 또는 TIGER-DnR 하나를 선택해 분리를 실행한다.
+3. AV-CASS는 오디오와 영상 장면을 함께 분석하고, TIGER-DnR은 12초 창을 2초 간격으로 여섯 번 겹쳐 분석한다.
+4. AI 분리 결과에서 부드러운 음악 마스크를 만든 뒤 원본 44.1kHz 스테레오에 적용한다.
+5. `music`은 음악 행으로, `dialog + effects` 또는 `speech + sfx`는 음악 아님 행으로 저장한다.
+6. 두 모델의 결과는 서로 다른 캐시 폴더에 보관되며 선택을 바꾸면 즉시 다시 불러온다.
+7. 음악과 음악 아님을 합치면 원본과 정확히 같아지도록 만들어 채널 수, 공간감, 원본 위상을 유지한다.
+8. 음악이 원본 전체와 사실상 같고 음악 아님이 거의 무음인 붕괴 결과는 `검토 필요`로 표시한다.
+9. 음악 뮤트 저장은 `음악 아님` 트랙을 영상에 직접 결합한다.
+10. 음악과 음악 아님을 모두 유지한 전체 재생은 원본 오디오를 사용한다.
+
+처리 시간은 영상 길이, 선택한 모델, GPU 상태에 따라 달라진다.
+
+## 저장소에 포함되지 않는 파일
+
+이 저장소에는 앱 소스와 테스트만 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
+
+- AV-CASS, CAVP, TIGER-DnR, BandIt, AudioSep 모델 가중치
+- 각 모델의 원본 저장소 사본과 Python 추론 환경
+- FFmpeg 실행 파일
+- 개인 영상·오디오, 분리 결과, 임시 작업 폴더와 로그
+
+모델과 외부 도구의 이용·재배포 조건은 [MODEL_LICENSES.md](MODEL_LICENSES.md)와 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 먼저 확인해야 한다.
+
+## 이동용 폴더
+
+최종 사용자는 `video-music-separator-portable` 폴더 하나만 이동하면 된다.
+
+같은 PC 안에서는 이 큰 폴더를 영상 폴더마다 복사할 필요가 없다. 현재 위치에서 EXE를 실행하고 `영상 열기`로 다른 폴더의 영상을 선택하면 작업 폴더와 결과 사본은 원본 영상 옆에 생긴다. 자주 쓸 때는 EXE의 바로가기만 바탕화면 등에 두면 된다. 폴더 전체 이동은 다른 PC로 옮길 때만 필요하다.
+
+- 실행 파일: `video-music-separator.exe`
+- FFmpeg: `ffmpeg/`
+- AI Python 환경: `audiosep/env/`
+- AV-CASS 코드와 구성요소: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
+- AV-CASS 모델: `audiosep/avcass/model/av_cass_checkpoint.pt`, `audiosep/avcass/model/cavp/cavp_epoch66.ckpt`
+- TIGER-DnR 코드: `audiosep/tiger/repo/`
+- TIGER-DnR 모델: `audiosep/tiger/model/config.json`, `audiosep/tiger/model/model.safetensors`
+- BandIt 코드와 설정: `audiosep/bandit/repo/`, `audiosep/bandit/hparams.yaml`
+- BandIt 모델: `audiosep/bandit/model/dnr-3s-mus64-l1snr-plus.ckpt`
+- AudioSep 코드와 모델: `audiosep/audiosep/repo/`, `audiosep/audiosep/model/pytorch_model.bin`
+- AudioSep 텍스트 인코더: `audiosep/audiosep/roberta-base/model.safetensors`
+
+`audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다. AV-CASS가 설치되어 있으면 기본 선택되고, 없으면 TIGER-DnR로 시작한다. 인터넷 연결이나 별도 Python 설치는 필요하지 않는다. AV-CASS는 NVIDIA GPU가 필요하다.
+
+## 사용 방법
+
+1. `영상 열기`로 클립을 선택한다.
+2. AV-CASS 또는 TIGER-DnR 라디오 버튼을 하나 선택하고 `선택 모델로 분리`를 누른다.
+3. 각 행의 `듣기`를 누르면 앱 맨 위의 작은 화면에서 영상과 해당 트랙이 함께 재생된다. 같은 버튼을 다시 누르면 정지한다. 미리보기 아래 슬라이더를 움직이면 원하는 재생 위치로 바로 이동한다.
+4. 다른 모델도 같은 방식으로 분리한 뒤 선택을 바꿔 결과를 비교한다.
+5. 가장 좋은 모델을 선택한 상태에서 `음악 (BGM)` 행의 `뮤트`를 누른다.
+6. `전체 영상 재생`으로 음악이 빠진 영상과 목소리·효과음을 확인한다. 영상 프레임은 소리 재생 시계를 기준으로 맞춰 장시간 재생해도 싱크가 누적해서 벌어지지 않게 한다.
+7. 창 아래의 `사본 저장`을 누르면 선택한 모델의 결과로 `<원본이름>_음악제거.mp4`를 만든다.
+
+전체 볼륨 슬라이더는 앱을 시작할 때 100으로 설정되며 원본·뮤트 믹스·두 분리본에 공통 적용된다. AV-CASS와 TIGER-DnR 실행 경로는 휴대용 폴더 안에서 자동으로 관리된다.
+
+영상 옆에는 처리 중 `<영상이름>_sound_work` 임시 폴더가 생긴다. 원본 WAV는 한 번만 추출하며, `models/avcass`와 `models/tiger` 아래에 각각 `stems`, `previews`, `sounds.json`을 저장한다. 최종 MP4 저장과 파일 확인이 성공하면 이 임시 폴더 전체가 자동으로 삭제된다. 저장 실패·취소 또는 폴더 정리 실패 시에는 진단과 재시도를 위해 남겨 둔다.
+
+## 개발 실행
+
+GUI 자체는 가벼운 Python 환경으로 실행하고, AI 추론은 휴대용 폴더의 별도 환경을 사용한다.
+
+```powershell
+cd video-music-separator
+py -m venv --system-site-packages .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe sound_separator_app.py
+```
+
+`py`가 설치된 Python을 찾지 못하면 설치된 Python 실행 파일의 전체 경로로 첫 명령을 실행한다. AI 추론 기능을 사용하려면 별도로 준비한 휴대용 런타임과 모델 파일이 필요하다.
+
+## 빌드와 테스트
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest -v
+.\build_portable.ps1
+```
+
+휴대용 실동작 검사는 다음처럼 실행한다.
+
+```powershell
+..\video-music-separator-portable\video-music-separator.exe --portable-smoke-test `
+  ..\sample.mp4 `
+  ..\test-output\portable_tiger_smoke.json
+```
+
+## 한계
+
+- 음악/비음악 분리는 세부 소리 이름별 독립 추출보다 안정적이지만 AI 분리이므로 100% 무누출을 보장하지 않는다.
+- 매우 작은 음악, 음악처럼 반복되는 효과음, 노래·신음처럼 음악과 사람 발성의 경계가 애매한 소리는 반대 트랙에 일부 남을 수 있다.
+- TIGER-DnR는 공식 12초 창을 2초 간격으로 겹쳐 품질을 높이므로 기존 4초 간격보다 느리다.
+- AV-CASS는 16kHz 모노로 장면과 소리를 판단하지만, 최종 출력은 그 판정 마스크를 원본 스테레오에 적용한다. 모델이 판단할 수 없는 8kHz 이상은 음악 아님 쪽에 보존한다.
+- 저장 전에는 반드시 음악 행과 음악 아님 행을 각각 들어보고, 음악 뮤트 전체 재생까지 확인해야 한다.
+
+## 입력 파일과 결과물 책임
+
+이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 완벽한 대사·효과음 보존이나 음악 제거를 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
+
+## 라이선스
+
+이 저장소의 자체 코드는 **MIT License + Commons Clause 1.0** 조건으로 제공된다. 소스 열람, 수정, 비판매 목적의 사용과 재배포는 허용하지만, 이 소프트웨어 자체 또는 기능 가치가 실질적으로 이 소프트웨어에서 나오는 제품·서비스를 유료로 판매하는 것은 허용하지 않는다. 따라서 OSI 정의의 오픈 소스가 아니라 **source-available** 소프트웨어다. 정확한 조건은 [LICENSE](LICENSE)를 따른다.
+
+외부 프로젝트의 코드, 모델 가중치, FFmpeg에는 각각의 원 라이선스가 적용되며 이 저장소의 라이선스로 바뀌지 않는다. 실행 파일을 공개 배포하기 전에는 포함한 각 파일의 라이선스와 소스 제공 의무를 다시 확인해야 한다.
