@@ -337,6 +337,16 @@ class MusicPartitionTests(unittest.TestCase):
             )
             (root / "licenses" / "LGPL-3.0.txt").write_text("LGPL", encoding="utf-8")
             (root / "licenses" / "GPL-3.0.txt").write_text("GPL", encoding="utf-8")
+            (root / "runtime-assets.json").write_text(
+                json.dumps(
+                    {
+                        "installed_at": "2026-09-04T00:00:00+00:00",
+                        "ffmpeg_version": "ffmpeg version n8.1.3-test",
+                        "ffmpeg": {"sha256": "f" * 64},
+                    }
+                ),
+                encoding="utf-8",
+            )
 
             information = load_legal_information(root)
             english_information = load_legal_information(root, language="en")
@@ -350,6 +360,9 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("GPL", information)
         self.assertIn("Video Music Separator: 0.2.0", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
+        self.assertIn("ffmpeg version n8.1.3-test", information)
+        self.assertIn("f" * 64, information)
+        self.assertIn("2026-09-04T00:00:00+00:00", information)
         self.assertIn("영상과 음원은 로컬 PC에서 처리", information)
         self.assertIn(
             "Copyright © 2026 @ms-0606 (GitHub: Fabio-Cannavaro)", information

@@ -13,18 +13,19 @@ Video Music Separator는 사용자가 선택한 영상과 음원을 로컬 PC에
 | CAVP 체크포인트 | `huggingface.co` | Diff-Foley 공식 모델 저장소 다운로드 |
 | FFmpeg LGPL 공유 빌드 | `github.com`, `objects.githubusercontent.com` 등 GitHub가 사용하는 다운로드 호스트 | BtbN GitHub Release 다운로드 |
 
-설치 프로그램에 고정된 다운로드 주소:
+설치 프로그램이 사용하는 다운로드 주소:
 
 - AI Python 실행환경: `https://github.com/Fabio-Cannavaro/video-music-separator/releases/download/runtime-v0.2.0/` 아래의 두 분할 파일
 - AV-CASS: `https://drive.usercontent.google.com/download?id=1_d-RCP111No-wS-wrmxyK-zH87Sm2xzf&export=download&confirm=t`
 - CAVP: `https://huggingface.co/SimianLuo/Diff-Foley/resolve/b17ddbe76e6d42f4b4135eeb443b1c1644267e3e/diff_foley_ckpt/cavp_epoch66.ckpt?download=true`
-- FFmpeg: `https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-20-13-45/ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip`
+- FFmpeg Release 정보: `https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest`
+- FFmpeg: `https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip`
 
 서버 운영자는 일반적인 웹 다운로드 과정에서 IP 주소, 요청 시각, 다운로드 URL, HTTP User-Agent, 이어받기용 Range 헤더와 같은 접속 정보를 수신하거나 기록할 수 있다. 각 서버의 개인정보 처리방침과 이용조건은 해당 운영자가 정한다.
 
 AI Python 실행환경은 먼저 인증 없이 GitHub Release에서 내려받는다. Release가 공개되어 있으면 GitHub 계정이나 GitHub CLI가 필요하지 않다. 공개 접근이 거부되면 비공개 Release로 보고 이 PC의 GitHub CLI 로그인 상태를 사용한다. 로그인이 없거나 만료되었으면 설치 프로그램이 GitHub CLI의 웹 인증을 시작하며 일회용 인증 코드를 클립보드에 복사한다. 설치 프로그램은 GitHub 토큰을 포함하거나 직접 읽고 저장하지 않고, 인증과 자격 증명 저장은 GitHub CLI가 처리한다. 이때 GitHub에는 로그인한 계정 정보와 일반적인 인증 요청 정보가 전달될 수 있다.
 
-설치 파일은 AI 실행환경·모델·FFmpeg의 URL, 예상 파일 크기와 SHA-256을 고정해 확인한다. 설치 완료 후 일반적인 영상 처리에는 인터넷 연결이 필요하지 않다.
+설치 파일은 AI 실행환경·모델의 URL, 예상 파일 크기와 SHA-256을 고정해 확인한다. FFmpeg는 BtbN 공식 `latest` Release API에서 해당 자산의 실제 URL·크기·SHA-256을 받아 검증하고, LGPL 공유 빌드 옵션도 확인한다. 설치 완료 후 일반적인 영상 처리에는 인터넷 연결이 필요하지 않다.
 
 ## 로컬 파일
 
@@ -38,4 +39,4 @@ AI Python 실행환경은 먼저 인증 없이 GitHub Release에서 내려받는
 
 사용자는 처리할 영상·음원의 저작권과 이용 권리를 확인하고, 생성된 결과물을 이용·공유·배포할 권한이 있는지 직접 확인해야 한다.
 
-마지막 갱신: 2026-09-03
+마지막 갱신: 2026-09-04

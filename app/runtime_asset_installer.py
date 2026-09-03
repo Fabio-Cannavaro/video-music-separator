@@ -40,10 +40,13 @@ from release_info import (
     CAVP_SOURCE,
     CAVP_VERSION,
     FFMPEG_DOWNLOAD_URL,
+    FFMPEG_ASSET_NAME,
+    FFMPEG_RELEASE_API_URL,
     FFMPEG_SHA256,
     FFMPEG_SIZE,
     FFMPEG_SOURCE,
     FFMPEG_VERSION,
+    FFMPEG_VERSION_FAMILY,
 )
 
 
@@ -105,7 +108,7 @@ FFMPEG_ARCHIVE = DownloadAsset(
     asset_id="ffmpeg",
     label="FFmpeg LGPL 공유 빌드",
     url=FFMPEG_DOWNLOAD_URL,
-    relative_path=".downloads/ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip",
+    relative_path=f".downloads/{FFMPEG_ASSET_NAME}",
     sha256=FFMPEG_SHA256,
     size=FFMPEG_SIZE,
     source=FFMPEG_SOURCE,
@@ -212,16 +215,21 @@ INSTALLER_UI = {
 
 
 PROGRESS_TRANSLATIONS = (
+    ("필수 구성요소 설치 완료", "Required components installed"),
     ("GitHub 로그인 필요 · 웹 인증을 여는 중", "GitHub login required · Opening web authentication"),
     ("GitHub 로그인 완료", "GitHub login complete"),
     ("비공개 Release 인증 확인 중", "Checking private Release authentication"),
     ("GitHub 인증 다운로드 중", "Downloading with GitHub authentication"),
+    ("GitHub Release 정보 확인 중", "Checking GitHub Release information"),
     ("분할 파일을 결합하는 중", "Combining split files"),
+    ("결합 파일 무결성 확인 중", "Verifying combined-file integrity"),
     ("무결성 확인 중", "Verifying integrity"),
     ("다운로드 중단", "Download interrupted"),
     ("압축을 푸는 중", "Extracting"),
+    ("파일을 배치하는 중", "Placing files"),
+    ("설치 검증 중", "Verifying installation"),
+    ("필수 구성요소", "Required components"),
     ("이미 설치됨", "Already installed"),
-    ("필수 구성요소 설치 완료", "Required components installed"),
     ("설치 완료", "Installation complete"),
     ("AI Python 실행환경", "AI Python runtime"),
     ("AV-CASS 분리 모델", "AV-CASS separation model"),
@@ -235,6 +243,8 @@ ERROR_TRANSLATIONS = (
     ("로그인해 주세요.", "Sign in and try again."),
     ("GitHub 로그인을 완료하지 못했습니다.", "GitHub login was not completed."),
     ("비공개 AI 실행환경을 내려받지 못했습니다.", "The private AI runtime could not be downloaded."),
+    ("BtbN 공식 latest Release에서 FFmpeg 8.1 LGPL 공유 빌드 정보를 확인하지 못했습니다.", "The FFmpeg 8.1 LGPL shared-build information could not be read from BtbN's official latest Release."),
+    ("BtbN FFmpeg Release 자산 정보가 올바르지 않습니다.", "The BtbN FFmpeg Release asset information is invalid."),
     ("다운로드한 FFmpeg 압축 파일의 구조가 예상과 다릅니다.", "The downloaded FFmpeg archive has an unexpected structure."),
     ("지정된 LGPL 공유 FFmpeg 빌드를 확인하지 못했습니다.", "The specified LGPL shared FFmpeg build could not be verified."),
     ("기본 앱이 없습니다.", "The main application is missing."),
@@ -285,20 +295,38 @@ def application_directory() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def sha256_file(path: Path) -> str:
+def sha256_file(
+    path: Path,
+    progress: ProgressCallback | None = None,
+    label: str = "무결성 확인 중",
+) -> str:
     digest = hashlib.sha256()
+    total = path.stat().st_size
+    current = 0
+    if progress is not None:
+        progress(label, 0, max(total, 1))
     with path.open("rb") as stream:
         while chunk := stream.read(CHUNK_SIZE):
             digest.update(chunk)
+            current += len(chunk)
+            if progress is not None:
+                progress(label, current, max(total, 1))
     return digest.hexdigest()
 
 
-def asset_is_valid(path: Path, asset: DownloadAsset) -> bool:
-    return (
-        path.is_file()
-        and path.stat().st_size == asset.size
-        and sha256_file(path).lower() == asset.sha256.lower()
+def asset_is_valid(
+    path: Path,
+    asset: DownloadAsset,
+    progress: ProgressCallback | None = None,
+) -> bool:
+    if not path.is_file() or path.stat().st_size != asset.size:
+        return False
+    actual_hash = sha256_file(
+        path,
+        progress,
+        f"{asset.label} · 무결성 확인 중",
     )
+    return actual_hash.lower() == asset.sha256.lower()
 
 
 def _open_download(asset: DownloadAsset, offset: int):
@@ -315,7 +343,7 @@ def download_asset(
     progress: ProgressCallback,
 ) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if asset_is_valid(destination, asset):
+    if asset_is_valid(destination, asset, progress):
         progress(f"{asset.label} · 이미 설치됨", asset.size, asset.size)
         return
 
@@ -351,8 +379,11 @@ def download_asset(
             f"{asset.label} 파일 크기가 올바르지 않습니다: "
             f"{partial.stat().st_size:,} / {asset.size:,} 바이트"
         )
-    progress(f"{asset.label} · 무결성 확인 중", asset.size, asset.size)
-    actual_hash = sha256_file(partial)
+    actual_hash = sha256_file(
+        partial,
+        progress,
+        f"{asset.label} · 무결성 확인 중",
+    )
     if actual_hash.lower() != asset.sha256.lower():
         partial.unlink(missing_ok=True)
         raise RuntimeError(
@@ -415,72 +446,138 @@ def _require_github_login(executable: str, progress: ProgressCallback) -> None:
     progress("GitHub 로그인 완료", 1, 1)
 
 
+def _github_release_asset_id(executable: str, asset_name: str) -> int:
+    result = subprocess.run(
+        [
+            executable,
+            "api",
+            f"repos/{BASE_RUNTIME_GITHUB_REPOSITORY}/releases/tags/"
+            f"{BASE_RUNTIME_RELEASE_TAG}",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(
+            "비공개 AI 실행환경의 GitHub Release 정보를 확인하지 못했습니다."
+            + (f"\n\nGitHub CLI 응답:\n{detail}" if detail else "")
+        )
+    try:
+        release = json.loads(result.stdout)
+        matching = [
+            item for item in release.get("assets", []) if item.get("name") == asset_name
+        ]
+        asset_id = int(matching[0]["id"])
+    except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise RuntimeError(
+            f"비공개 AI 실행환경 Release에서 파일을 찾지 못했습니다: {asset_name}"
+        ) from error
+    return asset_id
+
+
+def _stream_github_release_asset(
+    executable: str,
+    github_asset_id: int,
+    asset: DownloadAsset,
+    partial: Path,
+    progress: ProgressCallback,
+) -> None:
+    process = subprocess.Popen(
+        [
+            executable,
+            "api",
+            "--method",
+            "GET",
+            "--header",
+            "Accept: application/octet-stream",
+            f"repos/{BASE_RUNTIME_GITHUB_REPOSITORY}/releases/assets/{github_asset_id}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        raise RuntimeError("GitHub CLI 다운로드 스트림을 열지 못했습니다.")
+
+    downloaded = 0
+    try:
+        with partial.open("wb") as output:
+            while True:
+                chunk = process.stdout.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                output.write(chunk)
+                downloaded += len(chunk)
+                progress(
+                    f"{asset.label} · GitHub 인증 다운로드 중",
+                    downloaded,
+                    asset.size,
+                )
+        error_output = process.stderr.read().decode("utf-8", errors="replace").strip()
+        return_code = process.wait()
+    except BaseException:
+        process.kill()
+        process.wait()
+        progress(f"{asset.label} · 다운로드 중단", downloaded, asset.size)
+        raise
+
+    if return_code != 0:
+        partial.unlink(missing_ok=True)
+        raise RuntimeError(
+            "비공개 AI 실행환경을 내려받지 못했습니다. 로그인한 GitHub 계정이 "
+            f"{BASE_RUNTIME_GITHUB_REPOSITORY} 저장소를 볼 수 있는지 확인해 주세요."
+            + (f"\n\nGitHub CLI 응답:\n{error_output}" if error_output else "")
+        )
+
+
 def download_private_runtime_asset(
     asset: DownloadAsset,
     destination: Path,
     progress: ProgressCallback,
 ) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if asset_is_valid(destination, asset):
+    if asset_is_valid(destination, asset, progress):
         progress(f"{asset.label} · 이미 설치됨", asset.size, asset.size)
         return
 
     executable = _github_cli()
     _require_github_login(executable, progress)
     asset_name = Path(asset.relative_path).name
-    progress(f"{asset.label} · GitHub 인증 다운로드 중", 0, asset.size)
-    with tempfile.TemporaryDirectory(
-        prefix="github-release-", dir=destination.parent
-    ) as temp_name:
-        temp_directory = Path(temp_name)
-        result = subprocess.run(
-            [
-                executable,
-                "release",
-                "download",
-                BASE_RUNTIME_RELEASE_TAG,
-                "--repo",
-                BASE_RUNTIME_GITHUB_REPOSITORY,
-                "--pattern",
-                asset_name,
-                "--dir",
-                str(temp_directory),
-            ],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
+    progress(f"{asset.label} · GitHub Release 정보 확인 중", 0, 1)
+    github_asset_id = _github_release_asset_id(executable, asset_name)
+    progress(f"{asset.label} · GitHub Release 정보 확인 중", 1, 1)
+    partial = destination.with_name(destination.name + ".part")
+    partial.unlink(missing_ok=True)
+    _stream_github_release_asset(
+        executable,
+        github_asset_id,
+        asset,
+        partial,
+        progress,
+    )
+    if partial.stat().st_size != asset.size:
+        raise RuntimeError(
+            f"{asset.label} 파일 크기가 올바르지 않습니다: "
+            f"{partial.stat().st_size:,} / {asset.size:,} 바이트"
         )
-        if result.returncode != 0:
-            detail = (result.stderr or result.stdout).strip()
-            if detail:
-                detail = f"\n\nGitHub CLI 응답:\n{detail}"
-            raise RuntimeError(
-                "비공개 AI 실행환경을 내려받지 못했습니다. 로그인한 GitHub 계정이 "
-                f"{BASE_RUNTIME_GITHUB_REPOSITORY} 저장소를 볼 수 있는지 확인해 주세요."
-                + detail
-            )
-
-        downloaded = temp_directory / asset_name
-        if not downloaded.is_file():
-            raise RuntimeError(
-                f"GitHub CLI가 다운로드를 완료했지만 파일을 찾을 수 없습니다: {asset_name}"
-            )
-        if downloaded.stat().st_size != asset.size:
-            raise RuntimeError(
-                f"{asset.label} 파일 크기가 올바르지 않습니다: "
-                f"{downloaded.stat().st_size:,} / {asset.size:,} 바이트"
-            )
-        progress(f"{asset.label} · 무결성 확인 중", asset.size, asset.size)
-        actual_hash = sha256_file(downloaded)
-        if actual_hash.lower() != asset.sha256.lower():
-            raise RuntimeError(
-                f"{asset.label} SHA-256이 일치하지 않습니다.\n"
-                f"예상: {asset.sha256}\n실제: {actual_hash}"
-            )
-        os.replace(downloaded, destination)
-        destination.with_name(destination.name + ".part").unlink(missing_ok=True)
+    actual_hash = sha256_file(
+        partial,
+        progress,
+        f"{asset.label} · 무결성 확인 중",
+    )
+    if actual_hash.lower() != asset.sha256.lower():
+        partial.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"{asset.label} SHA-256이 일치하지 않습니다.\n"
+            f"예상: {asset.sha256}\n실제: {actual_hash}"
+        )
+    os.replace(partial, destination)
 
 
 def download_base_runtime_asset(
@@ -496,6 +593,58 @@ def download_base_runtime_asset(
             raise
     progress(f"{asset.label} · 비공개 Release 인증 확인 중", 0, asset.size)
     download_private_runtime_asset(asset, destination, progress)
+
+
+def resolve_ffmpeg_archive() -> DownloadAsset:
+    request = urllib.request.Request(
+        FFMPEG_RELEASE_API_URL,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": USER_AGENT,
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            release = json.load(response)
+        matching = [
+            item
+            for item in release.get("assets", [])
+            if item.get("name") == FFMPEG_ASSET_NAME
+        ]
+        item = matching[0]
+        digest_text = str(item["digest"])
+        digest_type, digest = digest_text.split(":", 1)
+        size = int(item["size"])
+        url = str(item["browser_download_url"])
+    except (
+        IndexError,
+        KeyError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+        OSError,
+    ) as error:
+        raise RuntimeError(
+            "BtbN 공식 latest Release에서 FFmpeg 8.1 LGPL 공유 빌드 정보를 "
+            "확인하지 못했습니다."
+        ) from error
+    if (
+        digest_type.lower() != "sha256"
+        or len(digest) != 64
+        or any(character not in "0123456789abcdefABCDEF" for character in digest)
+        or size <= 0
+        or not url.startswith("https://github.com/BtbN/FFmpeg-Builds/")
+    ):
+        raise RuntimeError("BtbN FFmpeg Release 자산 정보가 올바르지 않습니다.")
+    return DownloadAsset(
+        asset_id="ffmpeg",
+        label="FFmpeg LGPL 공유 빌드",
+        url=url,
+        relative_path=f".downloads/{FFMPEG_ASSET_NAME}",
+        sha256=digest.lower(),
+        size=size,
+        source=FFMPEG_SOURCE,
+    )
 
 
 def validate_ffmpeg(directory: Path) -> bool:
@@ -516,37 +665,104 @@ def validate_ffmpeg(directory: Path) -> bool:
     version_text = result.stdout + result.stderr
     return (
         result.returncode == 0
-        and FFMPEG_VERSION in version_text
+        and FFMPEG_VERSION_FAMILY in version_text
         and "--enable-shared" in version_text
         and "--enable-gpl" not in version_text
         and "--enable-nonfree" not in version_text
     )
 
 
-def install_ffmpeg(root: Path, progress: ProgressCallback) -> None:
-    destination = root / "ffmpeg"
-    if validate_ffmpeg(destination):
-        progress("FFmpeg LGPL 공유 빌드 · 이미 설치됨", 1, 1)
-        return
+def _extract_zip_with_progress(
+    archive: Path,
+    destination: Path,
+    label: str,
+    progress: ProgressCallback,
+) -> None:
+    destination_resolved = destination.resolve()
+    with zipfile.ZipFile(archive) as package:
+        items = package.infolist()
+        for item in items:
+            target = (destination / item.filename).resolve()
+            try:
+                target.relative_to(destination_resolved)
+            except ValueError as error:
+                raise RuntimeError(
+                    f"압축 파일에 안전하지 않은 경로가 있습니다: {item.filename}"
+                ) from error
+        total = max(sum(item.file_size for item in items), 1)
+        current = 0
+        progress(label, 0, total)
+        update_step = max(total // 500, 1)
+        next_update = update_step
+        for item in items:
+            package.extract(item, destination)
+            current += item.file_size
+            if current >= next_update or current >= total:
+                progress(label, current, total)
+                next_update = current + update_step
+        progress(label, total, total)
 
-    archive = root / FFMPEG_ARCHIVE.relative_path
-    download_asset(FFMPEG_ARCHIVE, archive, progress)
+
+def _copy_directory_with_progress(
+    source: Path,
+    destination: Path,
+    label: str,
+    progress: ProgressCallback,
+) -> None:
+    files = [path for path in source.rglob("*") if path.is_file()]
+    total = max(sum(path.stat().st_size for path in files), 1)
+    current = 0
+    destination.mkdir(parents=True, exist_ok=False)
+    progress(label, 0, total)
+    for source_file in files:
+        relative = source_file.relative_to(source)
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_file, target)
+        current += source_file.stat().st_size
+        progress(label, current, total)
+    progress(label, total, total)
+
+
+def install_ffmpeg(root: Path, progress: ProgressCallback) -> DownloadAsset | None:
+    destination = root / "ffmpeg"
+    progress("FFmpeg · 설치 검증 중", 0, 1)
+    if validate_ffmpeg(destination):
+        progress("FFmpeg · 설치 검증 중", 1, 1)
+        progress("FFmpeg LGPL 공유 빌드 · 이미 설치됨", 1, 1)
+        return None
+
+    progress("FFmpeg · GitHub Release 정보 확인 중", 0, 1)
+    ffmpeg_archive = resolve_ffmpeg_archive()
+    progress("FFmpeg · GitHub Release 정보 확인 중", 1, 1)
+    archive = root / ffmpeg_archive.relative_path
+    download_asset(ffmpeg_archive, archive, progress)
     downloads = archive.parent
     downloads.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="ffmpeg-extract-", dir=downloads) as temp_name:
         extraction = Path(temp_name)
-        progress("FFmpeg · 압축을 푸는 중", 0, 1)
-        with zipfile.ZipFile(archive) as package:
-            package.extractall(extraction)
+        _extract_zip_with_progress(
+            archive,
+            extraction,
+            "FFmpeg · 압축을 푸는 중",
+            progress,
+        )
         candidates = list(extraction.glob("*/bin/ffmpeg.exe"))
         if len(candidates) != 1:
             raise RuntimeError("다운로드한 FFmpeg 압축 파일의 구조가 예상과 다릅니다.")
         source_bin = candidates[0].parent
         pending = root / f"ffmpeg-new-{uuid.uuid4().hex}"
-        shutil.copytree(source_bin, pending)
+        _copy_directory_with_progress(
+            source_bin,
+            pending,
+            "FFmpeg · 파일을 배치하는 중",
+            progress,
+        )
+        progress("FFmpeg · 설치 검증 중", 0, 1)
         if not validate_ffmpeg(pending):
             shutil.rmtree(pending, ignore_errors=True)
             raise RuntimeError("지정된 LGPL 공유 FFmpeg 빌드를 확인하지 못했습니다.")
+        progress("FFmpeg · 설치 검증 중", 1, 1)
 
         previous = root / f"ffmpeg-old-{uuid.uuid4().hex}"
         try:
@@ -561,20 +777,20 @@ def install_ffmpeg(root: Path, progress: ProgressCallback) -> None:
         shutil.rmtree(previous, ignore_errors=True)
     archive.unlink(missing_ok=True)
     progress("FFmpeg LGPL 공유 빌드 · 설치 완료", 1, 1)
+    return ffmpeg_archive
 
 
-def _safe_extract_zip(archive: Path, destination: Path) -> None:
-    destination_resolved = destination.resolve()
-    with zipfile.ZipFile(archive) as package:
-        for item in package.infolist():
-            target = (destination / item.filename).resolve()
-            try:
-                target.relative_to(destination_resolved)
-            except ValueError as error:
-                raise RuntimeError(
-                    f"AI 실행환경 압축에 안전하지 않은 경로가 있습니다: {item.filename}"
-                ) from error
-        package.extractall(destination)
+def _safe_extract_zip(
+    archive: Path,
+    destination: Path,
+    progress: ProgressCallback,
+) -> None:
+    _extract_zip_with_progress(
+        archive,
+        destination,
+        "AI Python 실행환경 · 압축을 푸는 중",
+        progress,
+    )
 
 
 def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
@@ -592,23 +808,31 @@ def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
 
     archive = downloads / BASE_RUNTIME_ARCHIVE
     pending_archive = archive.with_name(archive.name + ".part")
-    progress("AI Python 실행환경 · 분할 파일을 결합하는 중", 0, 1)
+    combine_label = "AI Python 실행환경 · 분할 파일을 결합하는 중"
+    combined = 0
+    progress(combine_label, 0, BASE_RUNTIME_ARCHIVE_SIZE)
     with pending_archive.open("wb") as output:
         for part_path in part_paths:
             with part_path.open("rb") as source:
-                shutil.copyfileobj(source, output, length=CHUNK_SIZE)
+                while chunk := source.read(CHUNK_SIZE):
+                    output.write(chunk)
+                    combined += len(chunk)
+                    progress(combine_label, combined, BASE_RUNTIME_ARCHIVE_SIZE)
     if pending_archive.stat().st_size != BASE_RUNTIME_ARCHIVE_SIZE:
         pending_archive.unlink(missing_ok=True)
         raise RuntimeError("AI Python 실행환경 결합 파일의 크기가 올바르지 않습니다.")
-    if sha256_file(pending_archive).lower() != BASE_RUNTIME_ARCHIVE_SHA256.lower():
+    if sha256_file(
+        pending_archive,
+        progress,
+        "AI Python 실행환경 · 결합 파일 무결성 확인 중",
+    ).lower() != BASE_RUNTIME_ARCHIVE_SHA256.lower():
         pending_archive.unlink(missing_ok=True)
         raise RuntimeError("AI Python 실행환경 결합 파일의 SHA-256이 일치하지 않습니다.")
     os.replace(pending_archive, archive)
 
     with tempfile.TemporaryDirectory(prefix="runtime-extract-", dir=downloads) as temp_name:
         extraction = Path(temp_name)
-        progress("AI Python 실행환경 · 압축을 푸는 중", 0, 1)
-        _safe_extract_zip(archive, extraction)
+        _safe_extract_zip(archive, extraction, progress)
         extracted_runtime = extraction / "audiosep"
         if not extracted_runtime.is_dir():
             raise RuntimeError("AI 실행환경 압축 파일의 구조가 예상과 다릅니다.")
@@ -671,24 +895,75 @@ def base_runtime_is_current(root: Path) -> bool:
     )
 
 
-def verify_installation(root: Path) -> list[str]:
+def verify_installation(
+    root: Path,
+    progress: ProgressCallback | None = None,
+    full_hash: bool = True,
+) -> list[str]:
     problems = []
+    progress_callback = progress or (lambda *_: None)
+    label = "필수 구성요소 · 설치 검증 중"
+    total_steps = 4
+    current_step = 0
+    progress_callback(label, current_step, total_steps)
     app = root / "video-music-separator.exe"
     if not app.is_file():
         problems.append(f"기본 파일 없음: {app}")
     problems.extend(f"기본 파일 없음: {path}" for path in validate_base_runtime(root))
     if not validate_base_runtime(root) and not base_runtime_is_current(root):
         problems.append("AI Python 실행환경 버전 확인 또는 재설치 필요")
+    current_step += 1
+    progress_callback(label, current_step, total_steps)
     for asset in MODEL_ASSETS:
         target = root / asset.relative_path
-        if not asset_is_valid(target, asset):
+        valid = (
+            asset_is_valid(target, asset, progress)
+            if full_hash
+            else target.is_file() and target.stat().st_size == asset.size
+        )
+        if not valid:
             problems.append(f"설치 또는 검증 필요: {target}")
+        current_step += 1
+        progress_callback(label, current_step, total_steps)
     if not validate_ffmpeg(root / "ffmpeg"):
         problems.append("설치 또는 검증 필요: FFmpeg LGPL 공유 빌드")
+    current_step += 1
+    progress_callback(label, current_step, total_steps)
     return problems
 
 
-def write_install_record(root: Path) -> None:
+def _installed_ffmpeg_version(directory: Path) -> str:
+    try:
+        result = subprocess.run(
+            [str(directory / "ffmpeg.exe"), "-version"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return FFMPEG_VERSION
+    first_line = (result.stdout or result.stderr).splitlines()
+    return first_line[0].strip() if first_line else FFMPEG_VERSION
+
+
+def write_install_record(
+    root: Path,
+    ffmpeg_archive: DownloadAsset | None = None,
+) -> None:
+    record_path = root / "docs" / "runtime-assets.json"
+    existing_record: dict = {}
+    try:
+        existing_record = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        pass
+    ffmpeg_record = (
+        asdict(ffmpeg_archive)
+        if ffmpeg_archive is not None
+        else existing_record.get("ffmpeg", asdict(FFMPEG_ARCHIVE))
+    )
     record = {
         "app_version": APP_VERSION,
         "installed_at": datetime.now(timezone.utc).isoformat(),
@@ -707,12 +982,12 @@ def write_install_record(root: Path) -> None:
             }
             for asset in MODEL_ASSETS
         ],
-        "ffmpeg": asdict(FFMPEG_ARCHIVE),
-        "ffmpeg_version": FFMPEG_VERSION,
+        "ffmpeg": ffmpeg_record,
+        "ffmpeg_version": _installed_ffmpeg_version(root / "ffmpeg"),
     }
     documents = root / "docs"
     documents.mkdir(parents=True, exist_ok=True)
-    (documents / "runtime-assets.json").write_text(
+    record_path.write_text(
         json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
@@ -726,11 +1001,11 @@ def install_all(root: Path, progress: ProgressCallback) -> None:
     install_base_runtime(root, progress)
     for asset in MODEL_ASSETS:
         download_asset(asset, root / asset.relative_path, progress)
-    install_ffmpeg(root, progress)
-    problems = verify_installation(root)
+    ffmpeg_archive = install_ffmpeg(root, progress)
+    problems = verify_installation(root, progress, full_hash=False)
     if problems:
         raise RuntimeError("설치 후 검증에 실패했습니다.\n" + "\n".join(problems))
-    write_install_record(root)
+    write_install_record(root, ffmpeg_archive)
     progress("필수 구성요소 설치 완료", 1, 1)
 
 
@@ -753,6 +1028,7 @@ class InstallerWindow:
         self.accepted = tk.BooleanVar(value=False)
         self.status_key: str | None = "ready"
         self.last_progress_label: str | None = None
+        self.last_progress_percent: int | None = None
         self.install_finished = False
         frame = ttk.Frame(self.window, padding=22)
         frame.pack(fill="both", expand=True)
@@ -809,6 +1085,7 @@ class InstallerWindow:
     def _set_status(self, key: str) -> None:
         self.status_key = key
         self.last_progress_label = None
+        self.last_progress_percent = None
         self.status.set(self._ui(key))
 
     def _set_language(self) -> None:
@@ -823,7 +1100,9 @@ class InstallerWindow:
         self.disclosure.insert("1.0", installation_disclosure_text(language))
         self.disclosure.configure(state="disabled")
         if self.last_progress_label is not None:
-            self.status.set(translate_progress_label(self.last_progress_label, language))
+            translated = translate_progress_label(self.last_progress_label, language)
+            percent = self.last_progress_percent or 0
+            self.status.set(f"{translated} · {percent}%")
         elif self.status_key is not None:
             self.status.set(self._ui(self.status_key))
 
@@ -863,7 +1142,9 @@ class InstallerWindow:
     def _apply_progress(self, label: str, percent: int) -> None:
         self.status_key = None
         self.last_progress_label = label
-        self.status.set(translate_progress_label(label, self.language.get()))
+        self.last_progress_percent = percent
+        translated = translate_progress_label(label, self.language.get())
+        self.status.set(f"{translated} · {percent}%")
         self.progress.configure(value=percent)
 
     def start(self) -> None:

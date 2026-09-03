@@ -46,14 +46,18 @@ CAVP_DOWNLOAD_URL = (
     "diff_foley_ckpt/cavp_epoch66.ckpt?download=true"
 )
 
-FFMPEG_VERSION = "n8.1.2-44-g7c533d0f86-20260820"
-FFMPEG_SHA256 = "d311c8c7b86e06b54588e442652f963bae165bd4d8393e73cc9ebb445b025547"
-FFMPEG_SIZE = 70_835_392
+FFMPEG_VERSION = "BtbN latest FFmpeg 8.1 LGPL shared build"
+FFMPEG_VERSION_FAMILY = "ffmpeg version n8.1"
+FFMPEG_SHA256 = "Resolved from the official GitHub Release during installation"
+FFMPEG_SIZE = 0
 FFMPEG_SOURCE = "https://github.com/BtbN/FFmpeg-Builds"
+FFMPEG_RELEASE_API_URL = (
+    "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest"
+)
+FFMPEG_ASSET_NAME = "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip"
 FFMPEG_DOWNLOAD_URL = (
-    "https://github.com/BtbN/FFmpeg-Builds/releases/download/"
-    "autobuild-2026-08-20-13-45/"
-    "ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip"
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/"
+    + FFMPEG_ASSET_NAME
 )
 
 

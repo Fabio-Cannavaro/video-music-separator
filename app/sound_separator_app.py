@@ -431,31 +431,38 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
         f"{translate(language, 'legal_user_heading')}\n\n"
         f"{translate(language, 'user_notice')}"
     ]
+    record_path = root / "docs" / "runtime-assets.json"
+    if not record_path.is_file():
+        record_path = root / "runtime-assets.json"
+    record: dict = {}
+    if record_path.is_file():
+        try:
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            pass
+
     component_lines = [f"Video Music Separator: {APP_VERSION}"]
     for component in RUNTIME_COMPONENTS:
         version = component["version"]
+        sha256 = component["sha256"]
         if language == "ko" and component["name"] == "AV-CASS":
             version = "공식 영상 기반 체크포인트 (별도 버전 표기 없음)"
+        if component["name"] == "FFmpeg" and record:
+            version = record.get("ffmpeg_version", version)
+            ffmpeg_record = record.get("ffmpeg", {})
+            sha256 = ffmpeg_record.get("sha256", sha256)
         component_lines.extend(
             (
                 "",
                 f"{component['name']}: {version}",
-                f"SHA-256: {component['sha256']}",
+                f"SHA-256: {sha256}",
                 f"Source: {component['source']}",
             )
         )
-    record_path = root / "docs" / "runtime-assets.json"
-    if not record_path.is_file():
-        record_path = root / "runtime-assets.json"
-    if record_path.is_file():
-        try:
-            record = json.loads(record_path.read_text(encoding="utf-8"))
-            installed_at = record.get("installed_at", "")
-            if installed_at:
-                label = "설치 기록" if language == "ko" else "Installation record"
-                component_lines.extend(("", f"{label}: {installed_at}"))
-        except (OSError, ValueError, TypeError):
-            pass
+    installed_at = record.get("installed_at", "")
+    if installed_at:
+        label = "설치 기록" if language == "ko" else "Installation record"
+        component_lines.extend(("", f"{label}: {installed_at}"))
     runtime_title = translate(language, "legal_runtime_heading")
     sections.append(
         f"{runtime_title}\n{'=' * len(runtime_title)}\n\n"

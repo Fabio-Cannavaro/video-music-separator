@@ -16,8 +16,8 @@ $outputDir = if ($OutputDirectory) {
 } else {
     Join-Path $projectDir "dist\runtime-installer"
 }
-$workDir = Join-Path $projectDir "build\runtime-installer"
-$specDir = Join-Path $projectDir "build\spec"
+$workDir = Join-Path $projectDir "build\runtime-installer-work"
+$specDir = Join-Path $projectDir "build\runtime-installer-spec"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "빌드용 Python을 찾을 수 없습니다: $python"

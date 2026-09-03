@@ -12,10 +12,9 @@ $destinationDir = if ($DestinationDirectory) {
     Join-Path $projectDir "third_party\ffmpeg-lgpl"
 }
 
-$archiveName = "ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip"
-$downloadUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-20-13-45/$archiveName"
-$expectedSha256 = "D311C8C7B86E06B54588E442652F963BAE165BD4D8393E73CC9EBB445B025547"
-$expectedVersion = "n8.1.2-44-g7c533d0f86-20260820"
+$archiveName = "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip"
+$releaseApiUrl = "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest"
+$expectedVersionFamily = "ffmpeg version n8.1"
 
 function Test-LgplFfmpeg([string]$Root) {
     $binDir = Join-Path $Root "bin"
@@ -40,7 +39,7 @@ function Test-LgplFfmpeg([string]$Root) {
     $versionText = (& $ffmpeg -version 2>&1 | Out-String)
     return (
         $LASTEXITCODE -eq 0 -and
-        $versionText.Contains($expectedVersion) -and
+        $versionText.Contains($expectedVersionFamily) -and
         $versionText.Contains("--enable-shared") -and
         -not $versionText.Contains("--enable-gpl") -and
         -not $versionText.Contains("--enable-nonfree")
@@ -51,6 +50,18 @@ if (Test-LgplFfmpeg $destinationDir) {
     Write-Host "LGPL FFmpeg 준비 완료: $destinationDir"
     exit 0
 }
+
+$release = Invoke-RestMethod -Uri $releaseApiUrl -Headers @{ Accept = "application/vnd.github+json" }
+$asset = $release.assets | Where-Object { $_.name -eq $archiveName } | Select-Object -First 1
+if (-not $asset) {
+    throw "BtbN 공식 latest Release에서 FFmpeg 8.1 LGPL 공유 빌드를 찾지 못했습니다."
+}
+$downloadUrl = [string]$asset.browser_download_url
+$digestParts = ([string]$asset.digest).Split(':', 2)
+if ($digestParts.Count -ne 2 -or $digestParts[0] -ne "sha256" -or $digestParts[1].Length -ne 64) {
+    throw "BtbN FFmpeg Release의 SHA-256 정보가 올바르지 않습니다."
+}
+$expectedSha256 = $digestParts[1].ToUpperInvariant()
 
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("video-music-separator-ffmpeg-" + [guid]::NewGuid().ToString("N"))
 $archivePath = Join-Path $temporaryRoot $archiveName

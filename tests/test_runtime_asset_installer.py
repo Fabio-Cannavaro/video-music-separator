@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import argparse
+import json
 import sys
 import tempfile
 import unittest
@@ -30,6 +31,19 @@ class FakeResponse(io.BytesIO):
 
     def __exit__(self, exc_type, exc, traceback) -> None:
         self.close()
+
+
+class FakeProcess:
+    def __init__(self, payload: bytes, returncode: int = 0, error: bytes = b"") -> None:
+        self.stdout = io.BytesIO(payload)
+        self.stderr = io.BytesIO(error)
+        self.returncode = returncode
+
+    def wait(self) -> int:
+        return self.returncode
+
+    def kill(self) -> None:
+        self.returncode = -9
 
 
 def fake_asset(payload: bytes) -> installer.DownloadAsset:
@@ -120,7 +134,39 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertIn("b17ddbe76e6d42f4b4135eeb443b1c1644267e3e", cavp.url)
         self.assertEqual(cavp.size, 1_361_483_035)
         self.assertEqual(len(cavp.sha256), 64)
+        self.assertEqual(
+            installer.FFMPEG_ASSET_NAME,
+            "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip",
+        )
         self.assertIn("lgpl-shared", installer.FFMPEG_ARCHIVE.url)
+
+    def test_resolves_latest_official_ffmpeg_asset_and_digest(self) -> None:
+        digest = "a" * 64
+        download_url = (
+            "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/"
+            + installer.FFMPEG_ASSET_NAME
+        )
+        response = {
+            "assets": [
+                {
+                    "name": installer.FFMPEG_ASSET_NAME,
+                    "size": 70_830_527,
+                    "digest": f"sha256:{digest}",
+                    "browser_download_url": download_url,
+                }
+            ]
+        }
+        with patch.object(
+            installer.urllib.request,
+            "urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ) as urlopen:
+            asset = installer.resolve_ffmpeg_archive()
+        self.assertEqual(asset.size, 70_830_527)
+        self.assertEqual(asset.sha256, digest)
+        self.assertEqual(asset.url, download_url)
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, installer.FFMPEG_RELEASE_API_URL)
 
     def test_base_runtime_parts_are_below_github_asset_limit(self) -> None:
         self.assertEqual(len(installer.BASE_RUNTIME_ASSETS), 2)
@@ -144,26 +190,36 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_name:
             destination = Path(temp_name) / asset.relative_path
 
-            def fake_run(arguments, **kwargs):
-                if arguments[1:3] == ["auth", "status"]:
-                    return CompletedProcess(arguments, 0, "", "")
-                download_directory = Path(arguments[arguments.index("--dir") + 1])
-                (download_directory / "runtime.zip.001").write_bytes(payload)
-                return CompletedProcess(arguments, 0, "", "")
-
+            updates: list[tuple[str, int, int]] = []
             with (
                 patch.object(installer, "_github_cli", return_value="gh"),
-                patch.object(installer.subprocess, "run", side_effect=fake_run) as run,
+                patch.object(installer, "_github_login_is_valid", return_value=True),
+                patch.object(installer, "_github_release_asset_id", return_value=123),
+                patch.object(
+                    installer.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(payload),
+                ) as popen,
             ):
                 installer.download_private_runtime_asset(
-                    asset, destination, lambda *_: None
+                    asset,
+                    destination,
+                    lambda label, current, total: updates.append(
+                        (label, current, total)
+                    ),
                 )
 
             self.assertEqual(destination.read_bytes(), payload)
-            download_arguments = run.call_args_list[1].args[0]
-            self.assertEqual(download_arguments[:3], ["gh", "release", "download"])
-            self.assertIn(installer.BASE_RUNTIME_RELEASE_TAG, download_arguments)
-            self.assertIn(installer.BASE_RUNTIME_GITHUB_REPOSITORY, download_arguments)
+            download_arguments = popen.call_args.args[0]
+            self.assertEqual(download_arguments[:3], ["gh", "api", "--method"])
+            self.assertIn(
+                f"repos/{installer.BASE_RUNTIME_GITHUB_REPOSITORY}/releases/assets/123",
+                download_arguments,
+            )
+            self.assertTrue(
+                any("GitHub 인증 다운로드 중" in label for label, _, _ in updates)
+            )
+            self.assertTrue(any("무결성 확인 중" in label for label, _, _ in updates))
 
     def test_private_runtime_download_requires_github_cli(self) -> None:
         payload = b"runtime"
@@ -187,7 +243,7 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                     CompletedProcess(["gh"], 1, "", "not logged in"),
                     CompletedProcess(["gh"], 0, "", ""),
                     CompletedProcess(["gh"], 0, "", ""),
-                    CompletedProcess(["gh"], 1, "", "download stopped"),
+                    CompletedProcess(["gh"], 1, "", "release query stopped"),
                 )
             )
             with (
@@ -313,10 +369,20 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                     hashlib.sha256(payload).hexdigest(),
                 ),
             ):
-                installer.install_base_runtime(root, lambda *_: None)
+                updates: list[tuple[str, int, int]] = []
+                installer.install_base_runtime(
+                    root,
+                    lambda label, current, total: updates.append(
+                        (label, current, total)
+                    ),
+                )
                 self.assertTrue(installer.base_runtime_is_current(root))
             self.assertEqual(installer.validate_base_runtime(root), [])
             self.assertFalse((root / ".downloads" / "runtime.zip").exists())
+            labels = [label for label, _, _ in updates]
+            self.assertTrue(any("분할 파일을 결합하는 중" in label for label in labels))
+            self.assertTrue(any("결합 파일 무결성 확인 중" in label for label in labels))
+            self.assertTrue(any("압축을 푸는 중" in label for label in labels))
 
     def test_downloads_and_verifies_asset_before_replacing_target(self) -> None:
         payload = b"verified model bytes"
