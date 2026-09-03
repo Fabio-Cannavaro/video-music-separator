@@ -48,6 +48,10 @@ from release_info import (
 
 
 APP_TITLE = "영상 음악 분리·제거기 필수 구성요소 설치"
+APP_TITLES = {
+    "ko": APP_TITLE,
+    "en": "Video Music Separator Component Installer",
+}
 CHUNK_SIZE = 4 * 1024 * 1024
 USER_AGENT = f"video-music-separator-runtime-installer/{APP_VERSION}"
 
@@ -148,8 +152,131 @@ AI Python 실행환경은 먼저 인증 없이 GitHub Release에서 받습니다
 """
 
 
-def installation_disclosure_text() -> str:
-    return INSTALLATION_DISCLOSURE.strip()
+INSTALLATION_DISCLOSURE_EN = f"""Video Music Separator {APP_VERSION}
+
+This is not an official application of, affiliated with, or endorsed by the AV-CASS researchers or their institutions.
+
+Components to install (approximately 5.9 GB total download; approximately 15 GB of free disk space recommended during installation)
+• AI Python runtime, approximately 3.76 GB — github.com/Fabio-Cannavaro
+  {BASE_RUNTIME_RELEASE_BASE_URL}
+• AV-CASS, approximately 704 MB — drive.usercontent.google.com
+  {AVCASS_DOWNLOAD_URL}
+• CAVP, approximately 1.27 GB — huggingface.co
+  {CAVP_DOWNLOAD_URL}
+• FFmpeg LGPL shared build, approximately 68 MB — github.com/BtbN
+  {FFMPEG_DOWNLOAD_URL}
+
+Terms of use
+Each model and program is governed by the original rights holder's license and terms. The AV-CASS checkpoint does not state separate redistribution terms, so this installer does not include the model and downloads it directly from the location provided by the project.
+
+Privacy and network access
+Video and audio are processed only on this PC and are not uploaded by the installer or application. During installation, HTTPS download requests are sent to the servers listed above. Their operators may receive ordinary connection information such as the IP address, request time, download URL, User-Agent, and Range header used to resume a download. File names, media contents, and usage analytics are not transmitted.
+
+The AI Python runtime is first requested from the GitHub Release without authentication. A public Release requires neither a GitHub account nor GitHub CLI. If public access is denied, the installer treats the Release as private and uses the GitHub CLI login on this PC. If the login is missing or expired, GitHub web authentication starts during installation. The installer does not embed, directly read, or store the GitHub token; credential storage is handled by GitHub CLI.
+
+User responsibility
+The user is responsible for confirming the copyright and usage rights of the video and audio being processed and for the use of generated results.
+"""
+
+
+INSTALLER_UI = {
+    "ko": {
+        "ready": "설치를 시작할 준비가 됐습니다.",
+        "documents": "전체 라이선스·개인정보 문서 보기",
+        "accept": "위 이용조건, 외부 통신, 사용자 책임 안내를 확인하고 동의합니다.",
+        "start": "설치 시작",
+        "checking": "필수 구성요소를 확인하는 중…",
+        "warning": "안내를 확인하고 동의한 뒤 설치를 시작해 주세요.",
+        "failed": "설치에 실패했습니다.",
+        "completed": "필수 구성요소 설치와 검증이 완료됐습니다.",
+        "completed_dialog": "설치가 완료됐습니다. 이제 앱을 실행할 수 있습니다.",
+        "close": "닫기",
+        "legal_title": "라이선스·개인정보 문서",
+        "document_missing": "문서를 찾을 수 없습니다: {name}",
+    },
+    "en": {
+        "ready": "Ready to begin installation.",
+        "documents": "View all license and privacy documents",
+        "accept": "I have reviewed and accept the terms, network access,\nand user responsibility notices above.",
+        "start": "Start Installation",
+        "checking": "Checking required components…",
+        "warning": "Review and accept the notices before starting installation.",
+        "failed": "Installation failed.",
+        "completed": "Required components were installed and verified.",
+        "completed_dialog": "Installation is complete. The application is ready to run.",
+        "close": "Close",
+        "legal_title": "License and Privacy Documents",
+        "document_missing": "Document not found: {name}",
+    },
+}
+
+
+PROGRESS_TRANSLATIONS = (
+    ("GitHub 로그인 필요 · 웹 인증을 여는 중", "GitHub login required · Opening web authentication"),
+    ("GitHub 로그인 완료", "GitHub login complete"),
+    ("비공개 Release 인증 확인 중", "Checking private Release authentication"),
+    ("GitHub 인증 다운로드 중", "Downloading with GitHub authentication"),
+    ("분할 파일을 결합하는 중", "Combining split files"),
+    ("무결성 확인 중", "Verifying integrity"),
+    ("다운로드 중단", "Download interrupted"),
+    ("압축을 푸는 중", "Extracting"),
+    ("이미 설치됨", "Already installed"),
+    ("필수 구성요소 설치 완료", "Required components installed"),
+    ("설치 완료", "Installation complete"),
+    ("AI Python 실행환경", "AI Python runtime"),
+    ("AV-CASS 분리 모델", "AV-CASS separation model"),
+    ("CAVP 영상 인식 모델", "CAVP visual recognition model"),
+    ("FFmpeg LGPL 공유 빌드", "FFmpeg LGPL shared build"),
+)
+
+
+ERROR_TRANSLATIONS = (
+    ("GitHub CLI(gh)를 찾을 수 없습니다.", "GitHub CLI (gh) was not found."),
+    ("로그인해 주세요.", "Sign in and try again."),
+    ("GitHub 로그인을 완료하지 못했습니다.", "GitHub login was not completed."),
+    ("비공개 AI 실행환경을 내려받지 못했습니다.", "The private AI runtime could not be downloaded."),
+    ("다운로드한 FFmpeg 압축 파일의 구조가 예상과 다릅니다.", "The downloaded FFmpeg archive has an unexpected structure."),
+    ("지정된 LGPL 공유 FFmpeg 빌드를 확인하지 못했습니다.", "The specified LGPL shared FFmpeg build could not be verified."),
+    ("기본 앱이 없습니다.", "The main application is missing."),
+    ("설치 후 검증에 실패했습니다.", "Post-installation verification failed."),
+    ("설치 또는 검증 필요", "Installation or verification required"),
+    ("기본 파일 없음", "Required file missing"),
+)
+
+
+def installation_disclosure_text(language: str = "ko") -> str:
+    disclosure = INSTALLATION_DISCLOSURE_EN if language == "en" else INSTALLATION_DISCLOSURE
+    return disclosure.strip()
+
+
+def translate_progress_label(label: str, language: str) -> str:
+    if language != "en":
+        return label
+    translated = label
+    for korean, english in PROGRESS_TRANSLATIONS:
+        translated = translated.replace(korean, english)
+    return translated
+
+
+def translate_error_message(message: str, language: str) -> str:
+    if language != "en":
+        return message
+    translated = message
+    for korean, english in ERROR_TRANSLATIONS:
+        translated = translated.replace(korean, english)
+    return translated
+
+
+def localized_document_names(language: str) -> tuple[str, ...]:
+    suffix = ".en.md" if language == "en" else ".md"
+    return (
+        f"COPYRIGHT{suffix}",
+        "LICENSE",
+        f"MODEL_LICENSES{suffix}",
+        f"THIRD_PARTY_NOTICES{suffix}",
+        f"PRIVACY{suffix}",
+        f"FFMPEG_BUILD{suffix}",
+    )
 
 
 def application_directory() -> Path:
@@ -619,18 +746,37 @@ class InstallerWindow:
         self.ScrolledText = ScrolledText
         self.root_directory = root_directory
         self.window = tk.Tk()
-        self.window.title(APP_TITLE)
-        self.window.geometry("780x700")
+        self.window.geometry("820x740")
         self.window.resizable(False, False)
-        self.status = tk.StringVar(value="설치를 시작할 준비가 됐습니다.")
+        self.language = tk.StringVar(value="ko")
+        self.status = tk.StringVar()
         self.accepted = tk.BooleanVar(value=False)
-        self.detail = tk.StringVar(
-            value="AI 실행환경 약 3.76GB · AV-CASS 약 704MB · CAVP 약 1.27GB · FFmpeg 약 68MB"
-        )
+        self.status_key: str | None = "ready"
+        self.last_progress_label: str | None = None
+        self.install_finished = False
         frame = ttk.Frame(self.window, padding=22)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text=APP_TITLE, font=("맑은 고딕", 14, "bold")).pack(pady=(0, 10))
-        disclosure = self.ScrolledText(
+
+        language_frame = ttk.Frame(frame)
+        language_frame.pack(fill="x", pady=(0, 2))
+        ttk.Radiobutton(
+            language_frame,
+            text="한국어",
+            value="ko",
+            variable=self.language,
+            command=self._set_language,
+        ).pack(side="right")
+        ttk.Radiobutton(
+            language_frame,
+            text="English",
+            value="en",
+            variable=self.language,
+            command=self._set_language,
+        ).pack(side="right", padx=(0, 8))
+
+        self.title_label = ttk.Label(frame, font=("맑은 고딕", 14, "bold"))
+        self.title_label.pack(pady=(0, 10))
+        self.disclosure = self.ScrolledText(
             frame,
             height=22,
             wrap="word",
@@ -638,35 +784,52 @@ class InstallerWindow:
             pady=10,
             font=("맑은 고딕", 9),
         )
-        disclosure.insert("1.0", installation_disclosure_text())
-        disclosure.configure(state="disabled")
-        disclosure.pack(fill="both", expand=True)
-        ttk.Button(
+        self.disclosure.pack(fill="both", expand=True)
+        self.documents_button = ttk.Button(
             frame,
-            text="전체 라이선스·개인정보 문서 보기",
             command=self.show_documents,
-        ).pack(anchor="e", pady=(7, 0))
-        ttk.Checkbutton(
+        )
+        self.documents_button.pack(anchor="e", pady=(7, 0))
+        self.accept_check = ttk.Checkbutton(
             frame,
-            text="위 이용조건, 외부 통신, 사용자 책임 안내를 확인하고 동의합니다.",
             variable=self.accepted,
             command=self._update_button_state,
-        ).pack(anchor="w", pady=(10, 8))
+        )
+        self.accept_check.pack(anchor="w", pady=(10, 8))
         self.progress = ttk.Progressbar(frame, mode="determinate", maximum=100)
         self.progress.pack(fill="x")
         ttk.Label(frame, textvariable=self.status, wraplength=650).pack(pady=(8, 12))
-        self.button = ttk.Button(frame, text="설치 시작", command=self.start, state="disabled")
+        self.button = ttk.Button(frame, command=self.start, state="disabled")
         self.button.pack(ipadx=18, ipady=5)
+        self._set_language()
+
+    def _ui(self, key: str) -> str:
+        return INSTALLER_UI[self.language.get()][key]
+
+    def _set_status(self, key: str) -> None:
+        self.status_key = key
+        self.last_progress_label = None
+        self.status.set(self._ui(key))
+
+    def _set_language(self) -> None:
+        language = self.language.get()
+        self.window.title(APP_TITLES[language])
+        self.title_label.configure(text=APP_TITLES[language])
+        self.documents_button.configure(text=self._ui("documents"))
+        self.accept_check.configure(text=self._ui("accept"))
+        self.button.configure(text=self._ui("close" if self.install_finished else "start"))
+        self.disclosure.configure(state="normal")
+        self.disclosure.delete("1.0", "end")
+        self.disclosure.insert("1.0", installation_disclosure_text(language))
+        self.disclosure.configure(state="disabled")
+        if self.last_progress_label is not None:
+            self.status.set(translate_progress_label(self.last_progress_label, language))
+        elif self.status_key is not None:
+            self.status.set(self._ui(self.status_key))
 
     def show_documents(self) -> None:
-        document_names = (
-            "COPYRIGHT.md",
-            "LICENSE",
-            "MODEL_LICENSES.md",
-            "THIRD_PARTY_NOTICES.md",
-            "PRIVACY.md",
-            "FFMPEG_BUILD.md",
-        )
+        language = self.language.get()
+        document_names = localized_document_names(language)
         sections: list[str] = []
         for name in document_names:
             path = self.root_directory / "docs" / name
@@ -675,18 +838,20 @@ class InstallerWindow:
             if path.is_file():
                 content = path.read_text(encoding="utf-8", errors="replace").strip()
             else:
-                content = f"문서를 찾을 수 없습니다: {name}"
+                content = self._ui("document_missing").format(name=name)
             sections.append(f"{name}\n{'=' * len(name)}\n\n{content}")
 
         window = self.tk.Toplevel(self.window)
-        window.title("라이선스·개인정보 문서")
+        window.title(self._ui("legal_title"))
         window.geometry("850x680")
         window.minsize(650, 480)
         text = self.ScrolledText(window, wrap="word", padx=14, pady=14, font=("맑은 고딕", 9))
         text.pack(fill="both", expand=True, padx=10, pady=(10, 6))
         text.insert("1.0", "\n\n\n".join(sections))
         text.configure(state="disabled")
-        self.ttk.Button(window, text="닫기", command=window.destroy).pack(pady=(0, 10))
+        self.ttk.Button(window, text=self._ui("close"), command=window.destroy).pack(
+            pady=(0, 10)
+        )
 
     def _update_button_state(self) -> None:
         self.button.configure(state="normal" if self.accepted.get() else "disabled")
@@ -696,16 +861,18 @@ class InstallerWindow:
         self.window.after(0, self._apply_progress, label, percent)
 
     def _apply_progress(self, label: str, percent: int) -> None:
-        self.status.set(label)
+        self.status_key = None
+        self.last_progress_label = label
+        self.status.set(translate_progress_label(label, self.language.get()))
         self.progress.configure(value=percent)
 
     def start(self) -> None:
         if not self.accepted.get():
-            self.messagebox.showwarning(APP_TITLE, "안내를 확인하고 동의한 뒤 설치를 시작해 주세요.")
+            self.messagebox.showwarning(APP_TITLES[self.language.get()], self._ui("warning"))
             return
         self.button.configure(state="disabled")
         self.progress.configure(value=0)
-        self.status.set("필수 구성요소를 확인하는 중…")
+        self._set_status("checking")
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self) -> None:
@@ -717,15 +884,23 @@ class InstallerWindow:
         self.window.after(0, self._completed)
 
     def _failed(self, message: str) -> None:
-        self.status.set("설치에 실패했습니다.")
+        self._set_status("failed")
         self.button.configure(state="normal")
-        self.messagebox.showerror(APP_TITLE, message)
+        self.messagebox.showerror(
+            APP_TITLES[self.language.get()],
+            translate_error_message(message, self.language.get()),
+        )
 
     def _completed(self) -> None:
-        self.status.set("필수 구성요소 설치와 검증이 완료됐습니다.")
+        self.install_finished = True
+        self._set_status("completed")
         self.progress.configure(value=100)
-        self.button.configure(text="닫기", state="normal", command=self.window.destroy)
-        self.messagebox.showinfo(APP_TITLE, "설치가 완료됐습니다. 이제 앱을 실행할 수 있습니다.")
+        self.button.configure(
+            text=self._ui("close"), state="normal", command=self.window.destroy
+        )
+        self.messagebox.showinfo(
+            APP_TITLES[self.language.get()], self._ui("completed_dialog")
+        )
 
     def run(self) -> None:
         self.window.mainloop()

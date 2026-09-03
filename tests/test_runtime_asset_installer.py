@@ -70,6 +70,46 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertIn("저작권", disclosure)
         self.assertIn("공식 앱이 아니며", disclosure)
 
+    def test_english_disclosure_lists_the_same_downloads_and_terms(self) -> None:
+        disclosure = installer.installation_disclosure_text("en")
+        self.assertIn("approximately 5.9 GB", disclosure)
+        self.assertIn("AI Python runtime", disclosure)
+        self.assertIn("github.com/Fabio-Cannavaro", disclosure)
+        self.assertIn("drive.usercontent.google.com", disclosure)
+        self.assertIn("huggingface.co", disclosure)
+        self.assertIn("github.com/BtbN", disclosure)
+        self.assertIn("not an official application", disclosure)
+        self.assertIn("User responsibility", disclosure)
+
+    def test_installer_languages_have_matching_interface_keys(self) -> None:
+        self.assertEqual(
+            set(installer.INSTALLER_UI["ko"]),
+            set(installer.INSTALLER_UI["en"]),
+        )
+        self.assertEqual(
+            installer.localized_document_names("en"),
+            (
+                "COPYRIGHT.en.md",
+                "LICENSE",
+                "MODEL_LICENSES.en.md",
+                "THIRD_PARTY_NOTICES.en.md",
+                "PRIVACY.en.md",
+                "FFMPEG_BUILD.en.md",
+            ),
+        )
+
+    def test_progress_labels_switch_to_english(self) -> None:
+        self.assertEqual(
+            installer.translate_progress_label(
+                "AI Python 실행환경 1/2 · 비공개 Release 인증 확인 중", "en"
+            ),
+            "AI Python runtime 1/2 · Checking private Release authentication",
+        )
+        self.assertEqual(
+            installer.translate_progress_label("필수 구성요소 설치 완료", "en"),
+            "Required components installed",
+        )
+
     def test_manifest_pins_official_model_sources_and_hashes(self) -> None:
         self.assertIn("runtime-v0.2.0", installer.BASE_RUNTIME_ASSETS[0].url)
         self.assertEqual(len(installer.BASE_RUNTIME_ARCHIVE_SHA256), 64)
