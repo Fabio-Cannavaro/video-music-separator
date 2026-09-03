@@ -93,7 +93,7 @@ TRANSLATIONS = {
         "play_all": "전체 영상 재생",
         "stop_all": "전체 영상 정지",
         "playback_volume": "전체 재생 볼륨",
-        "licenses_sources": "라이선스·출처",
+        "licenses_sources": "앱 정보·라이선스",
         "creator_prefix": "앱 제작: ",
         "creator_suffix": " × OpenAI Codex",
         "preview_title": "영상 미리보기",
@@ -105,7 +105,7 @@ TRANSLATIONS = {
         "column_full_playback": "전체 재생에서",
         "save_copy": "사본 저장",
         "user_notice": USER_CONTENT_NOTICE,
-        "legal_title": "라이선스·출처·사용자 책임",
+        "legal_title": "앱 정보·라이선스·출처",
         "legal_license_intro": (
             "공식 라이선스 원문(영문)\n"
             "=========================\n\n"
@@ -214,7 +214,7 @@ TRANSLATIONS = {
         "play_all": "Play Full Video",
         "stop_all": "Stop Full Video",
         "playback_volume": "Playback Volume",
-        "licenses_sources": "Licenses & Sources",
+        "licenses_sources": "App Info & Licenses",
         "creator_prefix": "Created by: ",
         "creator_suffix": " × OpenAI Codex",
         "preview_title": "Video Preview",
@@ -226,7 +226,7 @@ TRANSLATIONS = {
         "column_full_playback": "In Full Playback",
         "save_copy": "Save Copy",
         "user_notice": ENGLISH_USER_CONTENT_NOTICE,
-        "legal_title": "Licenses, Sources & User Responsibility",
+        "legal_title": "App Information, Licenses & Sources",
         "legal_license_intro": (
             "Official License Texts\n"
             "======================\n\n"

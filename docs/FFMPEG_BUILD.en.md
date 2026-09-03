@@ -20,7 +20,7 @@ The exact binary version and checksum referenced by the stable entry URL change 
 - `--enable-gpl`, `--enable-version3`, and `--enable-static` are present.
 - `--enable-nonfree` is absent.
 
-Only the three executables that pass these checks are installed into the application's `ffmpeg/` directory. The exact installed version, final download URL, file size, and SHA-256 are written to `docs/runtime-assets.json` in the application folder and can also be viewed in the application's `Licenses & Sources` screen.
+Only the three executables that pass these checks are installed into the application's `ffmpeg/` directory. The exact installed version, final download URL, file size, and SHA-256 are written to `docs/runtime-assets.json` in the application folder and can also be viewed in the application's `App Info & Licenses` screen.
 
 For development and internal offline builds, `scripts/prepare_ffmpeg_gpl.ps1` downloads the same current official asset and performs the same checks.
 

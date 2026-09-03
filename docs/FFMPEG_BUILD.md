@@ -20,7 +20,7 @@
 - `--enable-gpl`, `--enable-version3`, `--enable-static`이 포함되어 있다.
 - `--enable-nonfree`가 포함되어 있지 않다.
 
-검증을 통과한 세 실행 파일만 앱의 `ffmpeg/` 폴더에 설치한다. 정확히 설치된 버전, 최종 다운로드 URL, 파일 크기와 SHA-256은 앱 폴더의 `docs/runtime-assets.json`에 기록되며 앱의 `라이선스·출처` 화면에서도 확인할 수 있다.
+검증을 통과한 세 실행 파일만 앱의 `ffmpeg/` 폴더에 설치한다. 정확히 설치된 버전, 최종 다운로드 URL, 파일 크기와 SHA-256은 앱 폴더의 `docs/runtime-assets.json`에 기록되며 앱의 `앱 정보·라이선스` 화면에서도 확인할 수 있다.
 
 개발·내부 오프라인 빌드에서는 `scripts/prepare_ffmpeg_gpl.ps1`가 같은 공식 최신 자산을 내려받아 동일한 검증을 수행한다.
 

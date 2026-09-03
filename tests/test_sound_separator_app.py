@@ -208,6 +208,15 @@ class MusicPartitionTests(unittest.TestCase):
     def test_korean_and_english_translation_tables_have_matching_keys(self) -> None:
         self.assertEqual(set(TRANSLATIONS["ko"]), set(TRANSLATIONS["en"]))
 
+    def test_app_information_labels_are_clear_in_both_languages(self) -> None:
+        self.assertEqual(TRANSLATIONS["ko"]["licenses_sources"], "앱 정보·라이선스")
+        self.assertEqual(TRANSLATIONS["ko"]["legal_title"], "앱 정보·라이선스·출처")
+        self.assertEqual(TRANSLATIONS["en"]["licenses_sources"], "App Info & Licenses")
+        self.assertEqual(
+            TRANSLATIONS["en"]["legal_title"],
+            "App Information, Licenses & Sources",
+        )
+
     def test_video_opened_status_uses_generic_music_separation_wording(self) -> None:
         self.assertEqual(
             TRANSLATIONS["ko"]["status_video_opened"],
