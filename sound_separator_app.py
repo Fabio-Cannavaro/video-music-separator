@@ -350,13 +350,20 @@ class SoundSeparatorApp(tk.Tk):
         root.columnconfigure(0, weight=1)
         root.rowconfigure(4, weight=1)
 
+        style = ttk.Style(self)
+        style.configure(
+            "Legal.TButton",
+            font=("Segoe UI", 10, "bold"),
+            padding=(10, 5),
+        )
+
         source = ttk.LabelFrame(root, text="1. 영상 선택", padding=10)
         source.grid(row=2, column=0, sticky="ew")
         source.columnconfigure(1, weight=1)
         ttk.Button(source, text="영상 열기", command=self.choose_video).grid(row=0, column=0, padx=(0, 8))
         self.video_var = tk.StringVar(value="선택된 영상 없음")
         ttk.Label(source, textvariable=self.video_var).grid(row=0, column=1, sticky="w")
-        ttk.Button(source, text="AV-CASS로 분리", command=self.analyze).grid(
+        ttk.Button(source, text="영상에서 음악 분리", command=self.analyze).grid(
             row=0, column=2, padx=(8, 0)
         )
         self.audiosep_compare_button = ttk.Button(
@@ -404,6 +411,8 @@ class SoundSeparatorApp(tk.Tk):
             root,
             text="라이선스·출처",
             command=self.show_legal_information,
+            style="Legal.TButton",
+            width=14,
         ).grid(row=0, column=0, sticky="nw", padx=(2, 0), pady=(8, 0))
 
         preview_frame = ttk.LabelFrame(root, text="영상 미리보기", padding=8)
