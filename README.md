@@ -1,17 +1,19 @@
-# 영상 음악 분리·제거기
+# 영상 음악 분리·제거기 / Video Music Separator
+
+[한국어](#한국어) | [English](#english)
+
+## 한국어
 
 영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님(목소리·효과음)` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
-
-A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music (Voice & Effects)` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
 
 - 현재 앱 버전: `0.2.0`
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
-## 설치 안내
+### 설치 안내
 
 처음 설치할 때는 아래의 두 실행 파일을 같은 폴더에 두고 **설치 파일을 먼저 실행**한다.
 
-### 1. 설치 전 확인
+#### 1. 설치 전 확인
 
 | 항목 | 요구사항 |
 | --- | --- |
@@ -23,7 +25,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 | Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 LGPL FFmpeg를 내려받는다. |
 | 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. |
 
-### 2. 설치에 필요한 두 파일
+#### 2. 설치에 필요한 두 파일
 
 | 파일 | 용도 |
 | --- | --- |
@@ -32,7 +34,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 두 EXE는 반드시 같은 폴더에 둔다. 기본 앱 ZIP에는 AI Python 환경·AV-CASS 코드·모델·FFmpeg가 들어 있지 않다.
 
-### 3. 설치 순서
+#### 3. 설치 순서
 
 1. 배포자가 제공한 기본 앱 ZIP을 새 폴더에 **전부 압축 해제**한다.
 2. 위의 두 EXE가 같은 폴더에 있는지 확인한다.
@@ -47,7 +49,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 > **현재 배포 상태:** 이 저장소는 비공개 배포 준비 단계다. 공개 Release 전에는 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사를 완료해야 한다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
-### 4. 설치 프로그램이 내려받는 항목
+#### 4. 설치 프로그램이 내려받는 항목
 
 1. 다음 항목을 지정 배포처에서 내려받는다.
    - AI Python 실행환경: 이 프로젝트의 Release에 고정된 두 분할 파일. 공개 Release는 인증 없이 받고, 공개 접근이 거부된 비공개 Release만 로컬 GitHub CLI 인증을 사용한다.
@@ -63,7 +65,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
 
-### 5. 설치 문제 해결
+#### 5. 설치 문제 해결
 
 - 공개 Release에서는 GitHub CLI가 필요 없다. 비공개 상태에서 `GitHub CLI를 찾을 수 없습니다` 오류가 나오면 GitHub CLI를 설치한 뒤 설치 프로그램을 다시 실행한다. 로그인이 없거나 만료된 경우에는 설치 프로그램이 웹 인증을 자동으로 시작하며, `Fabio-Cannavaro/video-music-separator`를 볼 수 있는 계정이어야 한다.
 - 설치 파일을 ZIP 안에서 직접 실행했거나 `Program Files`처럼 쓰기가 제한된 위치에 두었다면, 폴더 전체를 문서 폴더 같은 사용자 쓰기 가능 위치로 옮긴 뒤 다시 실행한다.
@@ -71,7 +73,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 - 체크섬 불일치는 파일을 임의로 사용하지 않기 위한 정상적인 중단이다. 검증을 우회하지 말고 배포 안내의 주소·버전이 최신인지 확인한다.
 - `NVIDIA GPU가 필요합니다` 오류가 나오면 지원되는 NVIDIA GPU와 정상 설치된 드라이버가 필요하다. 현재 CPU 전용 대체 실행은 제공하지 않는다.
 
-### 6. 설치 후 폴더 사용과 이동
+#### 6. 설치 후 폴더 사용과 이동
 
 설치가 끝나면 앱 폴더 안에 다음 구성요소가 생긴다.
 
@@ -87,7 +89,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 앱 자체의 위치를 바꾸려면 EXE만 따로 옮기지 말고 설치된 앱 폴더 전체를 함께 옮긴다. `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다.
 
-## 사용 방법
+### 사용 방법
 
 1. `영상 열기`로 클립을 선택한다.
 2. `영상에서 음악 분리`를 누른다.
@@ -102,7 +104,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 영상 옆에는 처리 중 `<영상이름>_sound_work` 임시 폴더가 생긴다. 원본 WAV는 한 번만 추출하며, `models/avcass` 아래에 `stems`, `previews`, `sounds.json`을 저장한다. 최종 MP4 저장과 파일 확인이 성공하면 이 임시 폴더 전체가 자동으로 삭제된다. 저장 실패·취소 또는 폴더 정리 실패 시에는 진단과 재시도를 위해 남겨 둔다.
 
-## 처리 구조
+### 처리 구조
 
 1. FFmpeg가 영상 오디오를 44.1kHz 스테레오 WAV로 추출한다.
 2. CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석해 음악과 비음악을 분리한다.
@@ -116,7 +118,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 처리 시간은 영상 길이와 GPU 상태에 따라 달라진다.
 
-## 저장소에 포함되지 않는 파일
+### 저장소에 포함되지 않는 파일
 
 이 저장소에는 앱 소스와 테스트만 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
 
@@ -127,7 +129,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 모델과 외부 도구의 이용·재배포 조건은 [MODEL_LICENSES.md](docs/MODEL_LICENSES.md)와 [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)를 먼저 확인해야 한다.
 
-## 개발자용 저장소 구조
+### 개발자용 저장소 구조
 
 - `app/`: 앱, 분리 워커와 런타임 설치 코드
 - `tests/`: 단위·통합 테스트
@@ -138,7 +140,7 @@ A Windows GUI for reducing or removing background music mixed into video audio. 
 
 루트의 `video-music-separator.exe`와 `video-music-separator-setup.exe`는 `scripts/build_executables.ps1`로 만드는 로컬 실행 파일이며 Git에는 포함하지 않는다. GitHub 표시와 라이선스 확인을 위해 `README.md`, `LICENSE`, `requirements.txt`는 루트에 유지한다.
 
-## 개발 실행
+### 개발 실행
 
 GUI 자체는 가벼운 Python 환경으로 실행하고, AI 추론은 휴대용 폴더의 별도 환경을 사용한다.
 
@@ -151,7 +153,7 @@ py -m venv --system-site-packages .venv
 
 `py`가 설치된 Python을 찾지 못하면 설치된 Python 실행 파일의 전체 경로로 첫 명령을 실행한다. AI 추론 기능을 사용하려면 별도로 준비한 휴대용 런타임과 모델 파일이 필요하다.
 
-## 빌드와 테스트
+### 빌드와 테스트
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
@@ -173,14 +175,14 @@ py -m venv --system-site-packages .venv
   ..\test-output\portable_avcass_smoke.json
 ```
 
-## 한계
+### 한계
 
 - 음악/비음악 분리는 세부 소리 이름별 독립 추출보다 안정적이지만 AI 분리이므로 100% 무누출을 보장하지 않는다.
 - 매우 작은 음악, 음악처럼 반복되는 효과음, 노래·신음처럼 음악과 사람 발성의 경계가 애매한 소리는 반대 트랙에 일부 남을 수 있다.
 - AV-CASS는 16kHz 모노로 장면과 소리를 판단하지만, 최종 출력은 그 판정 마스크를 원본 스테레오에 적용한다. 모델이 판단할 수 없는 8kHz 이상은 음악 아님 쪽에 보존한다.
 - 저장 전에는 반드시 음악 행과 음악 아님 행을 각각 들어보고, 음악 뮤트 전체 재생까지 확인해야 한다.
 
-## 입력 파일과 결과물 책임
+### 입력 파일과 결과물 책임
 
 이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 완벽한 대사·효과음 보존이나 음악 제거를 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
 
@@ -188,7 +190,7 @@ py -m venv --system-site-packages .venv
 
 영상 미리보기 왼쪽의 `라이선스·출처` 버튼에서 AV-CASS와 CAVP의 출처·논문, FFmpeg LGPL 빌드 정보, 제3자 고지와 포함된 라이선스 전문을 확인할 수 있다.
 
-## 라이선스
+### 라이선스
 
 자체 코드의 저작권 표시는 `Copyright © 2026 SONG HO PARK (@ms-0606, GitHub: Fabio-Cannavaro)`이다. 자세한 식별 정보와 적용 범위는 [저작권 고지](docs/COPYRIGHT.md)에 기록한다.
 
@@ -199,3 +201,205 @@ py -m venv --system-site-packages .venv
 AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성요소 자체에는 각 원 저작권자와 원 라이선스가 계속 적용된다. 실행 파일을 공개 배포하기 전에는 포함한 각 파일의 라이선스와 소스 제공 의무를 다시 확인하고, 해당 실행 파일과 정확히 대응하는 자체 코드의 Git 태그 또는 소스 ZIP을 같은 Release에서 제공해야 한다.
 
 공개 Release를 만들기 전에는 [DISTRIBUTION_CHECKLIST.md](docs/DISTRIBUTION_CHECKLIST.md)를 순서대로 확인한다.
+
+---
+
+## English
+
+A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music (Voice & Effects)` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
+
+- Current application version: `0.2.0`
+- Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
+
+### Installation Guide
+
+For the first installation, keep the following two executables in the same folder and **run the installer first**.
+
+#### 1. Before Installation
+
+| Item | Requirement |
+| --- | --- |
+| Operating system | 64-bit Windows. The current build and runtime checks were performed on Windows 11. |
+| GPU | An NVIDIA GPU with CUDA support is required. CPU-only execution is not supported. A verified minimum VRAM requirement has not yet been established. |
+| Disk space | The first installation downloads approximately 5.9 GB. Approximately 15 GB of free space is recommended while downloading, extracting, and installing. |
+| Internet | Required for the first installation, reinstallation, or runtime updates. Normal separation and saving do not require an internet connection after installation. |
+| GitHub authentication | Not required for a public Release. If the Release is private, GitHub CLI is required and the installer starts GitHub web authentication when necessary. |
+| Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and LGPL FFmpeg build. |
+| Installation location | Do not run the application from inside the ZIP. Extract the entire ZIP into a normal user-writable folder such as Documents. |
+
+#### 2. Required Installation Files
+
+| File | Purpose |
+| --- | --- |
+| `video-music-separator-setup.exe` | Run once to install the AI runtime, models, and FFmpeg. |
+| `video-music-separator.exe` | Run after installation to separate music from a video. |
+
+Both EXE files must remain in the same folder. The base application ZIP does not contain the AI Python environment, AV-CASS code, model files, or FFmpeg.
+
+#### 3. Installation Steps
+
+1. **Extract the entire application ZIP** supplied by the distributor into a new folder.
+2. Confirm that both EXE files listed above are in that folder.
+3. Compare the downloaded file checksum with the supplied SHA-256 value. Do not run the file if they differ.
+4. **Run `video-music-separator-setup.exe` first.**
+5. Select `한국어 / English` in the upper-right corner of the installer. Review the approximately 5.9 GB download size, download sources, model terms, privacy notice, and user responsibilities; then accept the notice and select `Start Installation`.
+6. If the AI runtime Release is private and the GitHub login is missing or expired, authenticate with an account that can access this repository in the GitHub CLI window and browser opened by the installer. The one-time code is copied to the clipboard automatically. This step is skipped for a public Release.
+7. Wait for all downloads and SHA-256 verification to finish.
+8. After the completion message appears, run `video-music-separator.exe`.
+
+The executables may be **unsigned builds** without a paid code-signing certificate. If Windows SmartScreen displays an `Unknown publisher` warning, first verify the repository, distribution URL, and SHA-256 value. Use `More info` to continue only when those details match. Do not run a file with a mismatched checksum or unclear origin.
+
+> **Current distribution status:** This repository is in the private distribution-preparation stage. Before a public Release, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account must be completed. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+
+#### 4. Components Downloaded by the Installer
+
+1. The installer downloads the following items from their specified distributors.
+   - AI Python runtime: two pinned split files from this project's Release. A public Release is downloaded without authentication; only a private Release that rejects public access uses local GitHub CLI authentication.
+   - AV-CASS `av_cass_checkpoint.pt`: the official AV-CASS Google Drive location
+   - CAVP `cavp_epoch66.ckpt`: the pinned commit in the official Diff-Foley Hugging Face repository
+   - FFmpeg: the pinned BtbN LGPL shared build
+2. It verifies each file's size and SHA-256 value, along with the FFmpeg version and build options.
+3. Interrupted downloads from public distributors resume from their `.part` files. Private GitHub Release downloads restart. Files replace their installation targets only after verification succeeds.
+
+The installer displays the download sources, applicable terms, network-access information, and user responsibilities. Installation begins only after the user reviews and accepts them. Video Music Separator is not an official application of, affiliated with, or endorsed by the AV-CASS researchers or their institutions.
+
+The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if an official URL changes or a file no longer matches its pinned checksum. Installation results and sources are recorded in `docs/runtime-assets.json` inside the application folder.
+
+The public application ZIP and separate AI runtime assets exclude the former AudioSep/BandIt code and weights and their GPL dependency, `pedalboard`. The exact installed Python package list is available in `docs/PYTHON_PACKAGES_NOTICES.md` inside the application ZIP, the machine-readable inventory in `docs/PYTHON_PACKAGES_INVENTORY.json`, and full license texts in `docs/licenses/python/`.
+
+#### 5. Installation Troubleshooting
+
+- GitHub CLI is not required for a public Release. If a private Release reports `GitHub CLI was not found`, install GitHub CLI and rerun the installer. If the login is missing or expired, the installer starts web authentication automatically. The account must be able to access `Fabio-Cannavaro/video-music-separator`.
+- If the installer was run from inside the ZIP or from a write-restricted location such as `Program Files`, move the entire folder to a user-writable location such as Documents and try again.
+- If a download is interrupted, rerun the same installer. Verified files are reused, and incomplete `.part` downloads resume where supported.
+- A checksum mismatch is an intentional safety stop. Do not bypass verification; confirm that the distribution URL and pinned version are current.
+- The `An NVIDIA GPU is required` error means a supported NVIDIA GPU and a correctly installed driver are required. No CPU-only fallback is currently provided.
+
+#### 6. Using and Moving the Installed Folder
+
+After installation, the application folder contains:
+
+- Application executable: `video-music-separator.exe`
+- Required-components installer: `video-music-separator-setup.exe`
+- LGPL shared FFmpeg executables and DLLs: `ffmpeg/`
+- AI Python environment: `audiosep/env/`
+- AV-CASS code and components: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
+- AV-CASS model: `audiosep/avcass/model/av_cass_checkpoint.pt`
+- CAVP model: `audiosep/avcass/model/cavp/cavp_epoch66.ckpt`
+
+On the same PC, do not copy this application folder beside every video. Keep it in one location and create a desktop shortcut to `video-music-separator.exe`. `Open Video` can select a video from any folder, and the work folder and saved copy are created beside the selected source video.
+
+To move the application itself, move the entire installed folder rather than either EXE alone. The `audiosep` folder name is retained for compatibility with the former portable runtime layout.
+
+### Usage
+
+1. Select a clip with `Open Video`.
+2. Select `Separate Music from Video`.
+3. Select `Listen` on either row to play the video with that separated track in the preview at the top of the application. Select the same button again to stop. Move the slider below the preview to seek directly to the desired position.
+4. Select `Mute` on the `Music (BGM)` row.
+5. Use `Play Full Video` to review the video with the music removed and the voice and effects preserved. Video frames follow the audio playback clock so sync does not drift during long playback.
+6. Select `Save Copy` at the bottom of the window to create `<source name>_music-removed.mp4`.
+
+Selecting `한국어 / English` to the right of the video preview immediately changes the window title, buttons, status messages, result table, warnings, and license/source window to the selected language.
+
+The master volume slider starts at 100 and applies to the source, muted mix, and both separated tracks. AV-CASS runtime paths are managed automatically inside the portable folder.
+
+During processing, a temporary `<video name>_sound_work` folder is created beside the video. The source WAV is extracted only once, and `stems`, `previews`, and `sounds.json` are stored under `models/avcass`. The entire temporary folder is deleted after the final MP4 is saved and verified successfully. It remains available for diagnosis and retry if saving is cancelled, fails, or cleanup fails.
+
+### Processing Pipeline
+
+1. FFmpeg extracts the video audio as a 44.1 kHz stereo WAV file.
+2. CAVP extracts visual features from the video frames, and AV-CASS analyzes those features together with the audio to separate music from non-music.
+3. A smooth music mask is derived from the AI result and applied to the original 44.1 kHz stereo signal.
+4. `music` is saved as the Music row, and `dialog + effects` as the Non-Music row.
+5. AV-CASS results are retained in a dedicated cache folder.
+6. Music and non-music are constructed to sum exactly to the source, preserving channel count, spatial image, and source phase.
+7. A collapsed result in which music is effectively identical to the full source and non-music is nearly silent is marked `Review Needed`.
+8. Music-muted export directly combines the non-music track with the video.
+9. Full playback with both tracks enabled uses the original audio.
+
+Processing time depends on video duration and GPU performance.
+
+### Files Not Included in the Repository
+
+This repository contains only the application source and tests. The following files are excluded because of their size and redistribution terms:
+
+- AV-CASS and CAVP model weights
+- Copies of the original model repositories and the Python inference environment
+- FFmpeg executables
+- Personal video/audio files, separation results, temporary work folders, and logs
+
+Review [MODEL_LICENSES.en.md](docs/MODEL_LICENSES.en.md) and [THIRD_PARTY_NOTICES.en.md](docs/THIRD_PARTY_NOTICES.en.md) before using or redistributing models and external tools.
+
+### Repository Layout for Developers
+
+- `app/`: application, separation worker, and runtime installer code
+- `tests/`: unit and integration tests
+- `scripts/`: development, build, distribution, and license-audit tools
+- `docs/`: privacy, model, FFmpeg, and third-party notices
+- `licenses/`: full license texts included with the application
+- `build/`, `dist/`: Git-ignored intermediate build and distribution output
+
+The root `video-music-separator.exe` and `video-music-separator-setup.exe` files are local executables produced by `scripts/build_executables.ps1` and are not committed to Git. `README.md`, `LICENSE`, and `requirements.txt` remain in the root for GitHub presentation and license verification.
+
+### Development
+
+The GUI runs in a lightweight Python environment, while AI inference uses a separate environment in the portable folder.
+
+```powershell
+cd video-music-separator
+py -m venv --system-site-packages .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe app\sound_separator_app.py
+```
+
+If `py` cannot find the installed Python interpreter, use the full path to the installed Python executable for the first command. AI inference requires a separately prepared portable runtime and model files.
+
+### Build and Test
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
+.\scripts\prepare_ffmpeg_lgpl.ps1
+.\scripts\build_executables.ps1
+.\scripts\build_runtime_installer.ps1
+.\scripts\build_portable.ps1
+```
+
+`build_executables.ps1` creates the single-file application EXE and installer EXE in the repository root. `build_runtime_installer.ps1` creates only the installer EXE and its matching `.sha256` file. The default `build_portable.ps1` result excludes AV-CASS/CAVP weights and FFmpeg and includes the installer. Use `build_portable.ps1 -BundleRuntimeAssets` for an internal offline bundle. Authenticode signing is applied only when a certificate thumbprint is supplied with `-CodeSigningCertificateThumbprint`; otherwise the build remains unsigned.
+
+`prepare_ffmpeg_lgpl.ps1` downloads and verifies the pinned BtbN FFmpeg 8.1 LGPL shared build for development and offline builds. The exact version, source commit, and build configuration are recorded in [FFMPEG_BUILD.en.md](docs/FFMPEG_BUILD.en.md).
+
+Run the portable smoke test as follows:
+
+```powershell
+.\dist\package\video-music-separator.exe --portable-smoke-test `
+  ..\sample.mp4 `
+  ..\test-output\portable_avcass_smoke.json
+```
+
+### Limitations
+
+- Music/non-music separation is more stable than independent extraction by detailed sound name, but no AI separation can guarantee zero leakage.
+- Very quiet music, rhythmically repeated effects, and sounds near the boundary between music and human vocalization—such as singing or moaning—may partially remain in the opposite track.
+- AV-CASS analyzes the scene and audio at 16 kHz mono, but the final output applies its decision mask to the original stereo signal. Frequencies above 8 kHz that the model cannot evaluate are preserved in the non-music track.
+- Always listen to both the Music and Non-Music rows and review full playback with music muted before saving.
+
+### Input and Output Responsibility
+
+The application processes user-selected files locally on the PC. Users must obtain the necessary rights to the input video, music, and speech and independently confirm their right to use or distribute generated results. AI separation does not guarantee perfect preservation of dialogue and effects or complete music removal, so review results before saving.
+
+The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, and GitHub/BtbN during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
+
+The `License & Sources` button to the left of the video preview displays AV-CASS and CAVP sources and papers, FFmpeg LGPL build information, third-party notices, and included full license texts.
+
+### License
+
+Copyright for the original project code is identified as `Copyright © 2026 SONG HO PARK (@ms-0606, GitHub: Fabio-Cannavaro)`. See the [copyright notice](docs/COPYRIGHT.en.md) for the detailed identity and scope.
+
+Original code created for this repository is provided under the standard **GNU General Public License version 3 only (`GPL-3.0-only`)**. Use, inspection, modification, free redistribution, and commercial sale are permitted. Distribution of an executable or modified version must preserve copyright and license notices, provide the complete corresponding source under GPLv3, and impose no additional restrictions.
+
+A modifier may own copyright in newly authored changes but does not acquire copyright in the original code. A modifier cannot revoke or prohibit another user's continuing right to use, modify, or redistribute the original and modified code distributed in compliance with the GPL. The exact terms are governed by the unmodified official [LICENSE](LICENSE) text.
+
+External components such as AV-CASS, CAVP, FFmpeg, Python packages, and model weights remain governed by their respective copyright holders and licenses. Before publicly distributing an executable, verify the license and source-provision obligations for every included file and provide the Git tag or source ZIP exactly corresponding to that executable in the same Release.
+
+Before creating a public Release, follow [DISTRIBUTION_CHECKLIST.md](docs/DISTRIBUTION_CHECKLIST.md) in order.
