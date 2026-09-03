@@ -224,8 +224,8 @@ class MusicPartitionTests(unittest.TestCase):
         mocked_open.assert_called_once_with(CREATOR_YOUTUBE_URL)
         self.assertEqual(CREATOR_YOUTUBE_URL, "https://www.youtube.com/@ms-0606")
 
-    def test_creator_line_is_indented_to_match_license_button_text(self) -> None:
-        self.assertEqual(CREATOR_LINE_INDENT, 26)
+    def test_creator_line_aligns_with_license_button_outer_edge(self) -> None:
+        self.assertEqual(CREATOR_LINE_INDENT, 0)
 
     def test_maps_worker_output_to_visible_progress_messages(self) -> None:
         self.assertEqual(
