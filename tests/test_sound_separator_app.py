@@ -72,7 +72,6 @@ class PlaybackCommandTests(unittest.TestCase):
         self.assertIn("-nodisp", command)
         self.assertIn("-vn", command)
         self.assertIn("-sn", command)
-        self.assertIn("-dn", command)
         self.assertNotIn("-sync", command)
         self.assertEqual(command[command.index("-volume") + 1], "63")
         self.assertIn("-ss", command)

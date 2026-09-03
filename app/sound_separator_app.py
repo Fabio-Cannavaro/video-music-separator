@@ -581,7 +581,6 @@ def build_ffplay_command(media_path: Path, volume: float, offset: float = 0.0) -
         "-autoexit",
         "-vn",
         "-sn",
-        "-dn",
         "-volume",
         str(clamp_volume(volume)),
     ]
