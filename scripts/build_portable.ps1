@@ -311,9 +311,23 @@ $archivePath = Join-Path $releaseDir "video-music-separator-$appVersion-$archive
 if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
     Remove-Item -LiteralPath $archivePath -Force
 }
-& tar.exe -a -c -f $archivePath -C $outputDir .
-if ($LASTEXITCODE -ne 0) {
-    throw "ZIP64 배포 압축 생성에 실패했습니다."
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::CreateFromDirectory(
+    [System.IO.Path]::GetFullPath($outputDir),
+    [System.IO.Path]::GetFullPath($archivePath),
+    [System.IO.Compression.CompressionLevel]::Optimal,
+    $false
+)
+$archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
+try {
+    $incompatibleEntry = $archive.Entries |
+        Where-Object { $_.FullName.StartsWith("./") -or $_.FullName.Contains("\") } |
+        Select-Object -First 1
+    if ($incompatibleEntry) {
+        throw "Windows 기본 압축 풀기와 호환되지 않는 ZIP 경로입니다: $($incompatibleEntry.FullName)"
+    }
+} finally {
+    $archive.Dispose()
 }
 $archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 "$archiveHash  $([System.IO.Path]::GetFileName($archivePath))" |

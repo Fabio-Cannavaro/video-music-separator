@@ -48,7 +48,9 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("CodeSigningCertificateThumbprint", installer_build)
         self.assertIn("Set-AuthenticodeSignature", installer_build)
         self.assertIn(".sha256", installer_build)
-        self.assertIn("tar.exe -a -c -f", portable_build)
+        self.assertIn("[System.IO.Compression.ZipFile]::CreateFromDirectory", portable_build)
+        self.assertIn('StartsWith("./")', portable_build)
+        self.assertNotIn("tar.exe -a -c -f", portable_build)
         self.assertIn("SHA256SUMS.txt", portable_build)
         self.assertIn("$archivePath.sha256", portable_build)
         self.assertIn("SIGNING_STATUS.txt", portable_build)
@@ -111,7 +113,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("#### 2. Download the Windows Installer", lines)
         self.assertIn("#### 6. Using and Moving the Installed Folder", lines)
         self.assertIn(
-            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0",
+            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r2",
             readme,
         )
         self.assertIn("Source code (zip)", readme)
