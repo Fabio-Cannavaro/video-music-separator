@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import urllib.error
 import urllib.request
 import uuid
 import zipfile
@@ -140,7 +141,7 @@ INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
 개인정보와 외부 통신
 영상과 음원은 PC에서만 처리되며 설치 프로그램이나 앱이 업로드하지 않습니다. 설치 중 위 서버에 HTTPS 다운로드 요청을 보냅니다. 서버 운영자는 IP 주소, 요청 시각, 다운로드 URL, User-Agent와 이어받기용 Range 헤더 같은 일반 접속 정보를 받을 수 있습니다. 파일명, 영상·음원 내용 및 사용 통계는 전송하지 않습니다.
 
-현재 비공개 테스트 빌드는 AI Python 실행환경을 받을 때 이 PC의 GitHub CLI(gh) 로그인 정보를 사용합니다. 로그인이 없거나 만료되었으면 설치 중 GitHub의 웹 인증을 시작합니다. 설치 파일은 GitHub 토큰을 포함하거나 직접 읽고 저장하지 않으며, 인증 정보 저장은 GitHub CLI가 처리합니다. GitHub CLI가 설치되어 있어야 하고 이 비공개 저장소를 볼 수 있는 계정으로 인증해야 합니다.
+AI Python 실행환경은 먼저 인증 없이 GitHub Release에서 받습니다. Release가 공개되어 있으면 GitHub 계정이나 GitHub CLI가 필요하지 않습니다. 공개 접근이 거부되면 비공개 상태로 보고 이 PC의 GitHub CLI(gh) 로그인을 사용하며, 로그인이 없거나 만료되었으면 설치 중 GitHub의 웹 인증을 시작합니다. 설치 파일은 GitHub 토큰을 포함하거나 직접 읽고 저장하지 않으며, 인증 정보 저장은 GitHub CLI가 처리합니다.
 
 사용자 책임
 처리할 영상·음원의 저작권과 이용 권리를 확인하고 결과물을 사용하는 책임은 사용자에게 있습니다.
@@ -352,6 +353,22 @@ def download_private_runtime_asset(
                 f"예상: {asset.sha256}\n실제: {actual_hash}"
             )
         os.replace(downloaded, destination)
+        destination.with_name(destination.name + ".part").unlink(missing_ok=True)
+
+
+def download_base_runtime_asset(
+    asset: DownloadAsset,
+    destination: Path,
+    progress: ProgressCallback,
+) -> None:
+    try:
+        download_asset(asset, destination, progress)
+        return
+    except urllib.error.HTTPError as error:
+        if error.code not in (401, 403, 404):
+            raise
+    progress(f"{asset.label} · 비공개 Release 인증 확인 중", 0, asset.size)
+    download_private_runtime_asset(asset, destination, progress)
 
 
 def validate_ffmpeg(directory: Path) -> bool:
@@ -443,7 +460,7 @@ def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
     part_paths: list[Path] = []
     for asset in BASE_RUNTIME_ASSETS:
         part_path = root / asset.relative_path
-        download_private_runtime_asset(asset, part_path, progress)
+        download_base_runtime_asset(asset, part_path, progress)
         part_paths.append(part_path)
 
     archive = downloads / BASE_RUNTIME_ARCHIVE

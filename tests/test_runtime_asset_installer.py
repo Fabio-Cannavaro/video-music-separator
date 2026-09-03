@@ -9,7 +9,7 @@ import unittest
 import zipfile
 from pathlib import Path
 from subprocess import CompletedProcess
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
@@ -182,6 +182,55 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                     installer.download_private_runtime_asset(
                         asset, destination, lambda *_: None
                     )
+
+    def test_public_runtime_download_does_not_require_github_login(self) -> None:
+        payload = b"public runtime"
+        asset = fake_asset(payload)
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+            with (
+                patch.object(installer, "download_asset") as public_download,
+                patch.object(installer, "download_private_runtime_asset") as private_download,
+            ):
+                installer.download_base_runtime_asset(
+                    asset, destination, lambda *_: None
+                )
+            public_download.assert_called_once()
+            private_download.assert_not_called()
+
+    def test_private_runtime_falls_back_to_github_login(self) -> None:
+        payload = b"private runtime"
+        asset = fake_asset(payload)
+        denied = installer.urllib.error.HTTPError(
+            asset.url, 404, "Not Found", {}, None
+        )
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+            with (
+                patch.object(installer, "download_asset", side_effect=denied),
+                patch.object(installer, "download_private_runtime_asset") as private_download,
+            ):
+                installer.download_base_runtime_asset(
+                    asset, destination, lambda *_: None
+                )
+            private_download.assert_called_once_with(
+                asset, destination, ANY
+            )
+
+    def test_runtime_network_failure_does_not_trigger_login(self) -> None:
+        payload = b"runtime"
+        asset = fake_asset(payload)
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+            with (
+                patch.object(installer, "download_asset", side_effect=OSError("offline")),
+                patch.object(installer, "download_private_runtime_asset") as private_download,
+            ):
+                with self.assertRaisesRegex(OSError, "offline"):
+                    installer.download_base_runtime_asset(
+                        asset, destination, lambda *_: None
+                    )
+            private_download.assert_not_called()
 
     def test_installs_combined_base_runtime_archive(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
