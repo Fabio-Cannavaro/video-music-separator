@@ -83,6 +83,10 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("### 2. 설치에 필요한 두 파일", readme)
         self.assertIn("### 6. 설치 후 폴더 사용과 이동", readme)
         self.assertNotIn("## 이동용 폴더", readme)
+        self.assertIn(
+            "CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석",
+            readme,
+        )
 
 
 if __name__ == "__main__":
