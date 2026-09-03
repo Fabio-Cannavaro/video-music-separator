@@ -31,9 +31,24 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("CodeSigningCertificateThumbprint", installer_build)
         self.assertIn("Set-AuthenticodeSignature", installer_build)
         self.assertIn(".sha256", installer_build)
-        self.assertIn("Compress-Archive", portable_build)
+        self.assertIn("tar.exe -a -c -f", portable_build)
         self.assertIn("SHA256SUMS.txt", portable_build)
         self.assertIn("$archivePath.sha256", portable_build)
+        self.assertIn("SIGNING_STATUS.txt", portable_build)
+        self.assertIn("audit_python_licenses.py", portable_build)
+        self.assertIn("prune_python_distribution.py", portable_build)
+        self.assertIn("--distribution pedalboard", portable_build)
+
+    def test_public_build_excludes_legacy_workers(self) -> None:
+        portable_build = (ROOT / "build_portable.ps1").read_text(encoding="utf-8")
+        self.assertNotIn(
+            'Copy-Item -LiteralPath (Join-Path $projectDir "audiosep_worker.py")',
+            portable_build,
+        )
+        self.assertNotIn(
+            'Copy-Item -LiteralPath (Join-Path $projectDir "bandit_worker.py")',
+            portable_build,
+        )
 
 
 if __name__ == "__main__":

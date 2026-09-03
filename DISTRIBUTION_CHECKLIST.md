@@ -3,13 +3,14 @@
 ## 공개 전 필수 확인
 
 - [ ] AV-CASS 권리자에게 공개 앱의 체크포인트 자동 다운로드와 이용 범위를 서면으로 확인한다.
-- [ ] 실제 `audiosep/env/`에 포함된 Python 패키지 전체의 이름·버전·라이선스·NOTICE를 목록화한다.
-- [ ] 배포 ZIP에 AV-CASS·CAVP 가중치와 FFmpeg 바이너리가 들어 있지 않은지 확인한다.
+- [x] 실제 `audiosep/env/`에 포함된 Python 패키지 전체의 이름·버전·라이선스·NOTICE를 자동 목록화한다.
+- [x] 공개 런타임에서 GPL `pedalboard`와 예전 AudioSep/BandIt 런타임을 제거한다.
+- [x] 배포 ZIP에 AV-CASS·CAVP 가중치와 FFmpeg 바이너리가 들어 있지 않은지 자동 검사한다.
 - [ ] 앱과 설치 파일에서 영상·음원이 외부로 전송되지 않는지 다시 검사한다.
 - [ ] `THIRD_PARTY_NOTICES`, `MODEL_LICENSES`, `PRIVACY`와 라이선스 전문이 배포 ZIP에 들어 있는지 확인한다.
 - [ ] `SHA256SUMS.txt`와 공개 ZIP의 `.sha256` 파일을 Release에 올린다.
 - [ ] 코드 서명 인증서가 있다면 앱 EXE와 설치 EXE에 Authenticode 서명을 적용하고 서명 상태를 확인한다.
-- [ ] 인증서가 없다면 미서명 설치 파일임을 다운로드 페이지에 명시한다.
+- [x] 인증서가 없으면 `SIGNING_STATUS.txt`에 미서명 상태를 명시한다.
 - [ ] 깨끗한 Windows 사용자 계정에서 압축 해제 → 동의 → 다운로드 → 분리 → 미리보기 → 사본 저장 → 제거까지 시험한다.
 
 ## 라이선스 표시

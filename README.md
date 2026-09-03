@@ -22,7 +22,7 @@
 
 이 저장소에는 앱 소스와 테스트만 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
 
-- AV-CASS, CAVP, BandIt, AudioSep 모델 가중치
+- AV-CASS와 CAVP 모델 가중치
 - 각 모델의 원본 저장소 사본과 Python 추론 환경
 - FFmpeg 실행 파일
 - 개인 영상·오디오, 분리 결과, 임시 작업 폴더와 로그
@@ -44,12 +44,10 @@
 - AV-CASS 코드와 구성요소: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
 - 설치 시 내려받는 AV-CASS 모델: `audiosep/avcass/model/av_cass_checkpoint.pt`
 - 설치 시 내려받는 CAVP 모델: `audiosep/avcass/model/cavp/cavp_epoch66.ckpt`
-- BandIt 코드와 설정: `audiosep/bandit/repo/`, `audiosep/bandit/hparams.yaml`
-- BandIt 모델: `audiosep/bandit/model/dnr-3s-mus64-l1snr-plus.ckpt`
-- AudioSep 코드와 모델: `audiosep/audiosep/repo/`, `audiosep/audiosep/model/pytorch_model.bin`
-- AudioSep 텍스트 인코더: `audiosep/audiosep/roberta-base/model.safetensors`
 
 `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다. 앱의 분리 모델은 AV-CASS이며 NVIDIA GPU가 필요하다. 기본 앱 패키지에는 AI Python 환경과 AV-CASS 실행 코드가 들어 있어야 한다. 설치할 때는 약 2.1GB의 모델·FFmpeg 다운로드를 위한 인터넷 연결이 필요하지만, 설치 완료 후 일반 사용에는 인터넷 연결이나 별도 Python 설치가 필요하지 않다.
+
+공개 ZIP은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 포함된 Python 패키지 목록은 ZIP 안의 `PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `licenses/python/`에서 확인할 수 있다.
 
 ## 필수 구성요소 자동 설치
 

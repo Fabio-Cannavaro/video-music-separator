@@ -40,9 +40,9 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 
 > Simian Luo, Chuanhao Yan, Chenxu Hu, and Hang Zhao. “Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models.” NeurIPS 2023. <https://arxiv.org/abs/2306.17203>
 
-## AudioSep and BandIt compatibility workers
+## AudioSep and BandIt compatibility source
 
-사용자 화면에는 노출되지 않는 이전 호환 작업자 코드가 남아 있다. 공개 배포본에 관련 코드나 가중치를 포함할 때는 실제 포함 버전의 고지와 라이선스를 다시 확인해야 한다.
+소스 저장소에는 사용자 화면에 노출되지 않는 이전 호환 작업자 코드가 남아 있지만, 공개 Windows ZIP에는 AudioSep/BandIt 코드·가중치와 `pedalboard`를 포함하지 않는다. 관련 기능을 다시 배포할 때는 실제 포함 버전의 고지와 라이선스를 별도로 확인해야 한다.
 
 - AudioSep: <https://github.com/Audio-AGI/AudioSep> — MIT License
 - BandIt v2: <https://github.com/kwatcharasupat/bandit-v2> — Apache License 2.0
@@ -64,7 +64,7 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 
 ## Python packages
 
-`requirements.txt`와 휴대용 AI 환경에서 설치되는 Python 패키지는 각 패키지의 자체 라이선스를 따른다. 공개 배포 전에는 실제 잠금 버전과 배포 폴더를 기준으로 고지 목록을 다시 생성해야 한다.
+`requirements.txt`와 휴대용 AI 환경에서 설치되는 Python 패키지는 각 패키지의 자체 라이선스를 따른다. 공개 Windows ZIP을 만들 때 실제 배포 폴더를 검사해 `PYTHON_PACKAGES_NOTICES.md`, `PYTHON_PACKAGES_INVENTORY.json`과 `licenses/python/`을 자동 생성한다.
 
 ## User-provided media
 

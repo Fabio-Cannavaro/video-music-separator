@@ -40,9 +40,9 @@ Paper:
 
 > Simian Luo, Chuanhao Yan, Chenxu Hu, and Hang Zhao. “Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models.” NeurIPS 2023. <https://arxiv.org/abs/2306.17203>
 
-## AudioSep and BandIt compatibility workers
+## AudioSep and BandIt compatibility source
 
-Legacy compatibility worker code that is not exposed in the user interface remains in the source tree. Before including related code or weights in a public distribution, recheck the notices and licenses for the exact versions being distributed.
+Legacy compatibility worker code that is not exposed in the user interface remains in the source tree. The public Windows ZIP excludes AudioSep/BandIt code, weights, and `pedalboard`. Recheck the notices and licenses for the exact versions before distributing those components again.
 
 - AudioSep: <https://github.com/Audio-AGI/AudioSep> — MIT License
 - BandIt v2: <https://github.com/kwatcharasupat/bandit-v2> — Apache License 2.0
@@ -64,7 +64,7 @@ The online installer does not contain the FFmpeg binary. During installation it 
 
 ## Python packages
 
-The Python packages listed in `requirements.txt` and installed in the portable AI environment are governed by their own licenses. Before a public release, regenerate the notice list from the exact locked versions and distribution folder.
+The Python packages listed in `requirements.txt` and installed in the portable AI environment are governed by their own licenses. The public Windows ZIP build scans the exact distribution folder and generates `PYTHON_PACKAGES_NOTICES.md`, `PYTHON_PACKAGES_INVENTORY.json`, and `licenses/python/`.
 
 ## User-provided media
 

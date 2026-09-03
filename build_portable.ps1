@@ -2,6 +2,7 @@ param(
     [string]$PythonPath = "",
     [string]$OutputDirectory = "",
     [string]$FFmpegDirectory = "",
+    [string]$AIRuntimeDirectory = "",
     [switch]$BundleRuntimeAssets,
     [string]$CodeSigningCertificateThumbprint = "",
     [string]$TimestampServer = "http://timestamp.digicert.com"
@@ -151,7 +152,39 @@ if (Test-Path -LiteralPath $portableFfmpeg -PathType Container) {
     }
     Remove-Item -LiteralPath $portableFfmpeg -Recurse -Force
 }
-New-Item -ItemType Directory -Path $portableAudioSep -Force | Out-Null
+
+if ($AIRuntimeDirectory) {
+    $sourceRuntime = [System.IO.Path]::GetFullPath($AIRuntimeDirectory)
+    $resolvedOutput = [System.IO.Path]::GetFullPath($outputDir).TrimEnd('\') + '\'
+    if ($sourceRuntime.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "AI 런타임 원본은 출력 폴더 밖에 있어야 합니다: $sourceRuntime"
+    }
+    foreach ($requiredDirectory in @("env", "avcass")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $sourceRuntime $requiredDirectory) -PathType Container)) {
+            throw "AI 런타임 원본에 필수 폴더가 없습니다: $requiredDirectory"
+        }
+    }
+    if (Test-Path -LiteralPath $portableAudioSep -PathType Container) {
+        $resolvedAudioSep = [System.IO.Path]::GetFullPath($portableAudioSep)
+        if (-not $resolvedAudioSep.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "AI 런타임 교체 대상이 출력 폴더 밖에 있습니다: $resolvedAudioSep"
+        }
+        Remove-Item -LiteralPath $portableAudioSep -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $portableAudioSep -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $sourceRuntime "env") -Destination $portableAudioSep -Recurse -Force
+    Copy-Item -LiteralPath (Join-Path $sourceRuntime "avcass") -Destination $portableAudioSep -Recurse -Force
+
+    $portableSitePackages = Join-Path $portableAudioSep "env\Lib\site-packages"
+    & $python (Join-Path $projectDir "prune_python_distribution.py") `
+        --site-packages $portableSitePackages `
+        --distribution pedalboard
+    if ($LASTEXITCODE -ne 0) {
+        throw "공개 런타임에서 GPL pedalboard 제거에 실패했습니다."
+    }
+} else {
+    New-Item -ItemType Directory -Path $portableAudioSep -Force | Out-Null
+}
 
 if ($BundleRuntimeAssets) {
     New-Item -ItemType Directory -Path $portableFfmpeg -Force | Out-Null
@@ -167,8 +200,6 @@ if ($BundleRuntimeAssets) {
         }
     }
 }
-Copy-Item -LiteralPath (Join-Path $projectDir "bandit_worker.py") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "audiosep_worker.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "avcass_worker.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "separation_quality.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDir -Force
@@ -181,6 +212,31 @@ Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.en.md") -Destination
 Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
+
+$pythonLicenseDir = Join-Path $outputDir "licenses\python"
+& $python (Join-Path $projectDir "audit_python_licenses.py") `
+    --site-packages (Join-Path $portableAudioSep "env\Lib\site-packages") `
+    --output (Join-Path $outputDir "PYTHON_PACKAGES_NOTICES.md") `
+    --license-output $pythonLicenseDir `
+    --json-output (Join-Path $outputDir "PYTHON_PACKAGES_INVENTORY.json")
+if ($LASTEXITCODE -ne 0) {
+    throw "Python 패키지 라이선스 목록 생성에 실패했습니다."
+}
+
+$appSignature = Get-AuthenticodeSignature -FilePath $portableExecutable
+$setupSignature = Get-AuthenticodeSignature -FilePath (Join-Path $outputDir "video-music-separator-setup.exe")
+$signingStatus = @(
+    "Video Music Separator code-signing status",
+    "video-music-separator.exe: $($appSignature.Status)",
+    "video-music-separator-setup.exe: $($setupSignature.Status)"
+)
+if ($CodeSigningCertificateThumbprint) {
+    $signingStatus += "Certificate thumbprint: $CodeSigningCertificateThumbprint"
+} else {
+    $signingStatus += "UNSIGNED BUILD"
+    $signingStatus += "이 앱과 설치 파일에는 Authenticode 코드 서명이 적용되지 않았습니다. Windows에서 게시자 경고가 표시될 수 있습니다."
+}
+$signingStatus | Set-Content -LiteralPath (Join-Path $outputDir "SIGNING_STATUS.txt") -Encoding UTF8
 
 $avCassBaseReady =
     (Test-Path -LiteralPath (Join-Path $portableAudioSep "env\python.exe") -PathType Leaf) -and
@@ -240,6 +296,31 @@ $checksumLines = @(
 )
 $checksumLines | Set-Content -LiteralPath (Join-Path $outputDir "SHA256SUMS.txt") -Encoding ascii
 
+$forbiddenPublicPaths = @(
+    (Join-Path $outputDir "ffmpeg"),
+    (Join-Path $portableAudioSep "audiosep"),
+    (Join-Path $portableAudioSep "bandit"),
+    (Join-Path $outputDir "audiosep_worker.py"),
+    (Join-Path $outputDir "bandit_worker.py"),
+    (Join-Path $portableAudioSep "avcass\model\av_cass_checkpoint.pt"),
+    (Join-Path $portableAudioSep "avcass\model\cavp\cavp_epoch66.ckpt"),
+    (Join-Path $portableAudioSep "env\Lib\site-packages\pedalboard"),
+    (Join-Path $portableAudioSep "env\Lib\site-packages\pedalboard-0.9.24.dist-info")
+)
+if (-not $BundleRuntimeAssets) {
+    $foundForbidden = @($forbiddenPublicPaths | Where-Object { Test-Path -LiteralPath $_ })
+    if ($foundForbidden.Count -gt 0) {
+        throw "공개 배포본에 금지된 런타임 파일이 남아 있습니다: $($foundForbidden -join ', ')"
+    }
+    $remainingModelFiles = @(
+        Get-ChildItem (Join-Path $portableAudioSep "avcass\model") -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in ".pt", ".pth", ".ckpt", ".safetensors", ".onnx", ".bin" }
+    )
+    if ($remainingModelFiles.Count -gt 0) {
+        throw "공개 배포본에 모델 또는 가중치 파일이 남아 있습니다: $($remainingModelFiles.FullName -join ', ')"
+    }
+}
+
 $versionLine = Select-String -LiteralPath (Join-Path $projectDir "release_info.py") -Pattern '^APP_VERSION = "([^"]+)"$'
 if (-not $versionLine) {
     throw "release_info.py에서 앱 버전을 읽지 못했습니다."
@@ -252,7 +333,10 @@ $archivePath = Join-Path $releaseDir "video-music-separator-$appVersion-$archive
 if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
     Remove-Item -LiteralPath $archivePath -Force
 }
-Compress-Archive -Path (Join-Path $outputDir "*") -DestinationPath $archivePath -CompressionLevel Optimal
+& tar.exe -a -c -f $archivePath -C $outputDir .
+if ($LASTEXITCODE -ne 0) {
+    throw "ZIP64 배포 압축 생성에 실패했습니다."
+}
 $archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 "$archiveHash  $([System.IO.Path]::GetFileName($archivePath))" |
     Set-Content -LiteralPath "$archivePath.sha256" -Encoding ascii
