@@ -114,6 +114,16 @@ class MusicPartitionTests(unittest.TestCase):
     def test_korean_and_english_translation_tables_have_matching_keys(self) -> None:
         self.assertEqual(set(TRANSLATIONS["ko"]), set(TRANSLATIONS["en"]))
 
+    def test_video_opened_status_uses_generic_music_separation_wording(self) -> None:
+        self.assertEqual(
+            TRANSLATIONS["ko"]["status_video_opened"],
+            "영상을 열었습니다. 음악 분리를 실행해 주세요.",
+        )
+        self.assertEqual(
+            TRANSLATIONS["en"]["status_video_opened"],
+            "Video opened. Run music separation.",
+        )
+
     @patch("sound_separator_app.webbrowser.open_new_tab")
     def test_creator_link_opens_ms_0606_youtube_channel(self, mocked_open) -> None:
         open_creator_youtube_channel()
