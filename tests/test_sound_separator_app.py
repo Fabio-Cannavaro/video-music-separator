@@ -26,6 +26,7 @@ from avcass_worker import (
 )
 
 from sound_separator_app import (
+    CREATOR_LINE_INDENT,
     CREATOR_YOUTUBE_URL,
     DEFAULT_MODEL_ID,
     DEFAULT_VOLUME,
@@ -223,10 +224,13 @@ class MusicPartitionTests(unittest.TestCase):
         mocked_open.assert_called_once_with(CREATOR_YOUTUBE_URL)
         self.assertEqual(CREATOR_YOUTUBE_URL, "https://www.youtube.com/@ms-0606")
 
+    def test_creator_line_is_indented_to_match_license_button_text(self) -> None:
+        self.assertEqual(CREATOR_LINE_INDENT, 26)
+
     def test_maps_worker_output_to_visible_progress_messages(self) -> None:
         self.assertEqual(
             worker_progress_message("avcass", "[run 2/4] 8.16-16.34초"),
-            "AV-CASS · 구간 2/4 분리 중…",
+            "구간 2/4 분리 중…",
         )
         self.assertIsNone(worker_progress_message("avcass", "일반 경고 메시지"))
 
@@ -235,8 +239,32 @@ class MusicPartitionTests(unittest.TestCase):
             worker_progress_message(
                 "avcass", "[run 2/4] 8.16-16.34초", language="en"
             ),
-            "AV-CASS · Separating segment 2/4…",
+            "Separating segment 2/4…",
         )
+
+    def test_blue_status_messages_do_not_show_avcass_name(self) -> None:
+        status_keys = (
+            "status_loaded_existing",
+            "status_model_selected",
+            "status_model_selected_short",
+            "status_prepare_audio",
+            "status_prepare_separation",
+            "status_separating",
+            "status_separation_started",
+            "status_separation_complete",
+            "progress_video_frames",
+            "progress_model_loading",
+            "progress_visual_model_loading",
+            "progress_segment",
+            "progress_finalize",
+            "progress_check_results",
+            "progress_create_preview",
+        )
+        for language in ("ko", "en"):
+            for key in status_keys:
+                with self.subTest(language=language, key=key):
+                    self.assertNotIn("AV-CASS", TRANSLATIONS[language][key])
+                    self.assertNotIn("{model}", TRANSLATIONS[language][key])
 
     def test_uses_avcass_as_the_default_model(self) -> None:
         self.assertEqual(DEFAULT_MODEL_ID, "avcass")
