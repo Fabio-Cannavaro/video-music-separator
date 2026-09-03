@@ -50,6 +50,10 @@ USER_CONTENT_NOTICE = (
     "처리할 영상·음원의 저작권과 이용 권리를 확인하고, 결과물을 사용하는 책임은 "
     "사용자에게 있습니다."
 )
+ENGLISH_USER_CONTENT_NOTICE = (
+    "You are responsible for confirming the copyright and usage rights of the video "
+    "and audio you process, and for how you use the results."
+)
 LEGAL_INFORMATION_FILES = (
     ("제3자 고지·출처·논문", "THIRD_PARTY_NOTICES.md"),
     ("FFmpeg LGPL 빌드 정보", "FFMPEG_BUILD.md"),
@@ -67,6 +71,268 @@ AUDIOSEP_QUERIES = {
     "ambient": ("앰비언트 음악", "ambient music"),
 }
 AUDIOSEP_COMPARISON_QUERY_IDS = ("music", "background", "cinematic")
+
+TRANSLATIONS = {
+    "ko": {
+        "app_title": APP_TITLE,
+        "language": "언어",
+        "stage_video": "1. 영상 선택",
+        "open_video": "영상 열기",
+        "no_video": "선택된 영상 없음",
+        "separate_music": "영상에서 음악 분리",
+        "audiosep_compare": "AudioSep 3종 비교",
+        "separation_model": "분리 모델: AV-CASS",
+        "play_all": "전체 영상 재생",
+        "stop_all": "전체 영상 정지",
+        "playback_volume": "전체 재생 볼륨",
+        "licenses_sources": "라이선스·출처",
+        "preview_title": "영상 미리보기",
+        "preview_placeholder": "재생하면 여기에 영상이 표시됩니다.",
+        "stage_results": "2. 음악 / 음악 아님 분리 결과",
+        "column_sound": "소리 구분",
+        "column_separation": "AI 분리",
+        "column_listen": "영상과 듣기",
+        "column_full_playback": "전체 재생에서",
+        "save_copy": "사본 저장",
+        "user_notice": USER_CONTENT_NOTICE,
+        "legal_title": "라이선스·출처·사용자 책임",
+        "legal_user_heading": "사용자 콘텐츠 안내",
+        "legal_third_party": "제3자 고지·출처·논문",
+        "legal_ffmpeg": "FFmpeg LGPL 빌드 정보",
+        "legal_app_license": "Video Music Separator 라이선스",
+        "legal_mit": "MIT License 전문",
+        "legal_apache": "Apache License 2.0 전문",
+        "legal_lgpl": "GNU LGPL v3 전문",
+        "legal_gpl": "GNU GPL v3 전문",
+        "file_missing": "파일을 찾을 수 없습니다: {path}",
+        "close": "닫기",
+        "dialog_video_select": "영상 선택",
+        "video_files": "영상 파일",
+        "all_files": "모든 파일",
+        "unsupported_video": "지원하지 않는 영상 형식입니다.",
+        "busy_wait": "현재 작업이 끝날 때까지 기다려 주세요.",
+        "model_busy": "현재 작업이 끝날 때까지 모델을 바꿀 수 없습니다.",
+        "query_busy": "현재 작업이 끝날 때까지 음악 유형을 바꿀 수 없습니다.",
+        "model_environment_missing": "선택한 모델의 실행 환경이 설치되지 않았습니다.",
+        "audiosep_environment_missing": "AudioSep 실행 환경이 설치되지 않았습니다.",
+        "model_not_installed": "선택한 모델은 아직 설치되지 않았습니다.",
+        "required_missing": "{label}을 찾을 수 없습니다.\n{path}",
+        "choose_video_first": "먼저 영상을 선택해 주세요.",
+        "analyze_first": "먼저 영상을 분석해 주세요.",
+        "select_mute_first": "뮤트할 소리를 하나 이상 표시해 주세요.",
+        "model_status": "선택 모델: {model} · {state}",
+        "state_before": "분석 전",
+        "state_complete_selected": "분석 완료 · 저장 후보로 선택됨",
+        "state_existing_preserved": "기존 결과 유지",
+        "state_failed": "분석 실패",
+        "status_choose_video": "영상을 선택해 주세요.",
+        "status_video_opened": "영상을 열었습니다. AV-CASS 분리를 실행해 주세요.",
+        "status_loaded_existing": "{model}의 기존 분리 결과를 불러왔습니다.",
+        "status_model_selected": "{model}을 선택했습니다. 선택 모델로 분리를 실행해 주세요.",
+        "status_model_selected_short": "{model}을 선택했습니다. 분리를 실행해 주세요.",
+        "status_task_failed": "작업에 실패했습니다.",
+        "status_prepare_audio": "{model} · 영상에서 소리를 준비하는 중…",
+        "status_prepare_separation": "{model} · 분리 작업을 준비하는 중…",
+        "status_separating": "{model}로 음악과 음악 아닌 소리를 분리하는 중입니다…",
+        "status_separation_started": "{model} 분리를 시작합니다…",
+        "status_separation_complete": "{model} 분리 완료. 음악 행을 뮤트해 결과를 확인해 주세요.",
+        "status_audiosep_compare_complete": "AudioSep 기본 음악·배경음악·영화 음악 비교가 완료됐습니다. 음악 유형을 바꿔 각 결과를 들어보세요.",
+        "status_audiosep_compare_running": "AudioSep 모델을 한 번 불러 3가지 음악 유형을 비교하는 중입니다…",
+        "status_playing_original": "원본 전체 믹스를 영상과 함께 재생합니다.",
+        "status_playing_muted": "{count}개 소리를 뮤트한 전체 믹스를 재생합니다.",
+        "status_prepare_muted_preview": "선택한 소리만 뮤트한 전체 영상 미리보기를 준비하는 중입니다…",
+        "status_save_cleanup_failed": "저장 완료 · 작업 폴더 정리 실패: {path}",
+        "status_save_complete": "저장 완료 · 작업 폴더 삭제 완료: {path}",
+        "status_saving": "뮤트한 소리를 제거하고 영상을 저장하는 중입니다…",
+        "progress_video_frames": "{model} · 영상 장면을 준비하는 중…",
+        "progress_model_loading": "{model} · 분리 모델을 불러오는 중…",
+        "progress_visual_model_loading": "{model} · 영상 인식 모델을 불러오는 중…",
+        "progress_segment": "{model} · 구간 {current}/{total} 분리 중…",
+        "progress_finalize": "{model} · 분리 결과를 정리하는 중…",
+        "progress_check_results": "{model} · 분리 결과를 확인하는 중…",
+        "progress_create_preview": "{model} · 미리보기 {current}/{total} 만드는 중…",
+        "empty_results": "영상을 연 뒤 선택한 모델로 분리를 실행해 주세요.",
+        "quality_ok": "완료",
+        "quality_review": "검토 필요",
+        "quality_failed": "추출 실패",
+        "quality_extracting": "자동 추출 중…",
+        "quality_not_extracted": "미추출",
+        "listen": "듣기",
+        "stop": "정지",
+        "mute": "뮤트",
+        "unmute": "뮤트 해제",
+        "event_music": "음악 (BGM)",
+        "event_non_music": "음악 아님 (목소리·효과음)",
+        "no_separated_track": "분리본이 없습니다.",
+        "confirm_mute_review": "{label}\n\n{note}\n\n그래도 이 소리를 뮤트할까요?",
+        "preview_open_failed": "영상 미리보기를 열 수 없습니다: {path}",
+        "preview_unavailable": "분리본 영상 미리보기를 찾을 수 없습니다. 다시 분석해 주세요.",
+        "saved_file_invalid": "저장된 MP4를 확인할 수 없습니다: {path}",
+        "save_cleanup_warning": "영상은 저장했지만 작업 폴더를 삭제하지 못했습니다.\n\n저장 파일: {target}\n작업 폴더: {work_dir}\n\n{error}",
+        "save_complete_dialog": "저장했습니다.\n{path}\n\n임시 작업 폴더도 삭제했습니다.",
+        "quality_reconstruction": "두 분리본을 합쳐도 원본과 충분히 일치하지 않습니다. 다시 분리해 주세요.",
+        "quality_source_like": "음악 트랙이 원본 전체와 사실상 같고 음악 아님 트랙은 거의 무음입니다. 원본에 목소리나 효과음이 있다면 분리가 실패한 결과입니다.",
+        "quality_unreadable": "분리 품질 검증값을 읽지 못했습니다. 두 트랙을 직접 확인해 주세요.",
+        "query_music": "기본 음악",
+        "query_background": "배경음악",
+        "query_cinematic": "영화 음악",
+        "query_instrumental": "악기 음악",
+        "query_ambient": "앰비언트 음악",
+        "required_avcass_repo": "AV-CASS 코드 폴더",
+        "required_avcass_deps": "AV-CASS 실행 구성요소",
+        "required_avcass_checkpoint": "AV-CASS 체크포인트",
+        "required_cavp_checkpoint": "CAVP 체크포인트",
+        "required_bandit_repo": "BandIt 폴더",
+        "required_bandit_config": "BandIt 설정",
+        "required_bandit_checkpoint": "BandIt 체크포인트",
+        "required_audiosep_repo": "AudioSep 폴더",
+        "required_audiosep_state": "AudioSep 상태 사전",
+        "required_audiosep_encoder": "AudioSep 텍스트 인코더",
+    },
+    "en": {
+        "app_title": "Video Music Separator",
+        "language": "Language",
+        "stage_video": "1. Select Video",
+        "open_video": "Open Video",
+        "no_video": "No video selected",
+        "separate_music": "Separate Music from Video",
+        "audiosep_compare": "Compare 3 AudioSep Types",
+        "separation_model": "Separation model: AV-CASS",
+        "play_all": "Play Full Video",
+        "stop_all": "Stop Full Video",
+        "playback_volume": "Playback Volume",
+        "licenses_sources": "Licenses & Sources",
+        "preview_title": "Video Preview",
+        "preview_placeholder": "The video will appear here during playback.",
+        "stage_results": "2. Music / Non-Music Separation Results",
+        "column_sound": "Sound Type",
+        "column_separation": "AI Separation",
+        "column_listen": "Listen with Video",
+        "column_full_playback": "In Full Playback",
+        "save_copy": "Save Copy",
+        "user_notice": ENGLISH_USER_CONTENT_NOTICE,
+        "legal_title": "Licenses, Sources & User Responsibility",
+        "legal_user_heading": "User Content Notice",
+        "legal_third_party": "Third-Party Notices, Sources & Papers",
+        "legal_ffmpeg": "FFmpeg LGPL Build Information",
+        "legal_app_license": "Video Music Separator License",
+        "legal_mit": "Full MIT License",
+        "legal_apache": "Full Apache License 2.0",
+        "legal_lgpl": "Full GNU LGPL v3",
+        "legal_gpl": "Full GNU GPL v3",
+        "file_missing": "File not found: {path}",
+        "close": "Close",
+        "dialog_video_select": "Select Video",
+        "video_files": "Video files",
+        "all_files": "All files",
+        "unsupported_video": "This video format is not supported.",
+        "busy_wait": "Please wait until the current task finishes.",
+        "model_busy": "You cannot change models until the current task finishes.",
+        "query_busy": "You cannot change the music type until the current task finishes.",
+        "model_environment_missing": "The runtime for the selected model is not installed.",
+        "audiosep_environment_missing": "The AudioSep runtime is not installed.",
+        "model_not_installed": "The selected model is not installed yet.",
+        "required_missing": "{label} was not found.\n{path}",
+        "choose_video_first": "Select a video first.",
+        "analyze_first": "Analyze a video first.",
+        "select_mute_first": "Mark at least one sound to mute.",
+        "model_status": "Selected model: {model} · {state}",
+        "state_before": "Not analyzed",
+        "state_complete_selected": "Analysis complete · Selected for saving",
+        "state_existing_preserved": "Previous result preserved",
+        "state_failed": "Analysis failed",
+        "status_choose_video": "Select a video.",
+        "status_video_opened": "Video opened. Run AV-CASS separation.",
+        "status_loaded_existing": "Loaded the existing {model} separation result.",
+        "status_model_selected": "Selected {model}. Run separation with the selected model.",
+        "status_model_selected_short": "Selected {model}. Run separation.",
+        "status_task_failed": "The task failed.",
+        "status_prepare_audio": "{model} · Preparing audio from the video…",
+        "status_prepare_separation": "{model} · Preparing separation…",
+        "status_separating": "{model} is separating music from non-music…",
+        "status_separation_started": "Starting {model} separation…",
+        "status_separation_complete": "{model} separation complete. Mute the music row to review the result.",
+        "status_audiosep_compare_complete": "The AudioSep music, background music, and cinematic score comparison is complete. Change the music type to listen to each result.",
+        "status_audiosep_compare_running": "Loading AudioSep once to compare three music types…",
+        "status_playing_original": "Playing the original full mix with video.",
+        "status_playing_muted": "Playing the full mix with {count} sound(s) muted.",
+        "status_prepare_muted_preview": "Preparing a full-video preview with the selected sounds muted…",
+        "status_save_cleanup_failed": "Saved · Could not clean the work folder: {path}",
+        "status_save_complete": "Saved · Deleted the work folder: {path}",
+        "status_saving": "Removing muted sounds and saving the video…",
+        "progress_video_frames": "{model} · Preparing video frames…",
+        "progress_model_loading": "{model} · Loading the separation model…",
+        "progress_visual_model_loading": "{model} · Loading the visual recognition model…",
+        "progress_segment": "{model} · Separating segment {current}/{total}…",
+        "progress_finalize": "{model} · Finalizing separation results…",
+        "progress_check_results": "{model} · Checking separation results…",
+        "progress_create_preview": "{model} · Creating preview {current}/{total}…",
+        "empty_results": "Open a video, then run separation with the selected model.",
+        "quality_ok": "Complete",
+        "quality_review": "Review Needed",
+        "quality_failed": "Extraction Failed",
+        "quality_extracting": "Extracting…",
+        "quality_not_extracted": "Not Extracted",
+        "listen": "Listen",
+        "stop": "Stop",
+        "mute": "Mute",
+        "unmute": "Unmute",
+        "event_music": "Music (BGM)",
+        "event_non_music": "Non-Music (Voice & Effects)",
+        "no_separated_track": "No separated track is available.",
+        "confirm_mute_review": "{label}\n\n{note}\n\nMute this sound anyway?",
+        "preview_open_failed": "Could not open the video preview: {path}",
+        "preview_unavailable": "The separated-track video preview was not found. Analyze the video again.",
+        "saved_file_invalid": "The saved MP4 could not be verified: {path}",
+        "save_cleanup_warning": "The video was saved, but the work folder could not be deleted.\n\nSaved file: {target}\nWork folder: {work_dir}\n\n{error}",
+        "save_complete_dialog": "Saved.\n{path}\n\nThe temporary work folder was also deleted.",
+        "quality_reconstruction": "The two separated tracks do not reconstruct the source closely enough. Run separation again.",
+        "quality_source_like": "The music track is nearly identical to the full source while the non-music track is almost silent. If the source contains voices or effects, separation likely failed.",
+        "quality_unreadable": "The separation quality metrics could not be read. Check both tracks directly.",
+        "query_music": "Music",
+        "query_background": "Background Music",
+        "query_cinematic": "Cinematic Score",
+        "query_instrumental": "Instrumental Music",
+        "query_ambient": "Ambient Music",
+        "required_avcass_repo": "AV-CASS code folder",
+        "required_avcass_deps": "AV-CASS runtime components",
+        "required_avcass_checkpoint": "AV-CASS checkpoint",
+        "required_cavp_checkpoint": "CAVP checkpoint",
+        "required_bandit_repo": "BandIt folder",
+        "required_bandit_config": "BandIt configuration",
+        "required_bandit_checkpoint": "BandIt checkpoint",
+        "required_audiosep_repo": "AudioSep folder",
+        "required_audiosep_state": "AudioSep state dictionary",
+        "required_audiosep_encoder": "AudioSep text encoder",
+    },
+}
+
+LEGAL_TITLE_KEYS = {
+    "THIRD_PARTY_NOTICES.md": "legal_third_party",
+    "FFMPEG_BUILD.md": "legal_ffmpeg",
+    "LICENSE": "legal_app_license",
+    "licenses/MIT.txt": "legal_mit",
+    "licenses/Apache-2.0.txt": "legal_apache",
+    "licenses/LGPL-3.0.txt": "legal_lgpl",
+    "licenses/GPL-3.0.txt": "legal_gpl",
+}
+
+ENGLISH_LEGAL_FILES = {
+    "THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.en.md",
+    "FFMPEG_BUILD.md": "FFMPEG_BUILD.en.md",
+}
+
+QUALITY_NOTE_KEYS = {
+    TRANSLATIONS["ko"]["quality_reconstruction"]: "quality_reconstruction",
+    TRANSLATIONS["ko"]["quality_source_like"]: "quality_source_like",
+    TRANSLATIONS["ko"]["quality_unreadable"]: "quality_unreadable",
+}
+
+
+def translate(language: str, key: str, **values: object) -> str:
+    table = TRANSLATIONS.get(language, TRANSLATIONS["ko"])
+    template = table.get(key, TRANSLATIONS["ko"][key])
+    return template.format(**values)
 
 
 def clamp_volume(value: float) -> int:
@@ -88,31 +354,62 @@ def playback_position(
     return min(max(0.0, duration), max(0.0, offset + now - started_at))
 
 
-def worker_progress_message(model_id: str, line: str) -> str | None:
+def worker_progress_key(
+    model_id: str, line: str
+) -> tuple[str, dict[str, object]] | None:
     label = MODEL_LABELS.get(model_id, model_id)
     if model_id == "avcass":
         if line.startswith("[setup] 영상 프레임"):
-            return f"{label} · 영상 장면을 준비하는 중…"
+            return "progress_video_frames", {"model": label}
         if line.startswith("[setup] AV-CASS"):
-            return f"{label} · 분리 모델을 불러오는 중…"
+            return "progress_model_loading", {"model": label}
         if line.startswith("[setup] CAVP"):
-            return f"{label} · 영상 인식 모델을 불러오는 중…"
+            return "progress_visual_model_loading", {"model": label}
         match = re.match(r"^\[run (\d+)/(\d+)\]", line)
         if match:
-            return f"{label} · 구간 {match.group(1)}/{match.group(2)} 분리 중…"
+            return "progress_segment", {
+                "model": label,
+                "current": match.group(1),
+                "total": match.group(2),
+            }
     if line.startswith("[done]"):
-        return f"{label} · 분리 결과를 정리하는 중…"
+        return "progress_finalize", {"model": label}
     return None
 
 
-def load_legal_information(root: Path) -> str:
-    sections = [f"사용자 콘텐츠 안내\n\n{USER_CONTENT_NOTICE}"]
+def worker_progress_message(
+    model_id: str, line: str, language: str = "ko"
+) -> str | None:
+    progress = worker_progress_key(model_id, line)
+    if progress is not None:
+        key, values = progress
+        return translate(
+            language,
+            key,
+            **values,
+        )
+    return None
+
+
+def load_legal_information(root: Path, language: str = "ko") -> str:
+    sections = [
+        f"{translate(language, 'legal_user_heading')}\n\n"
+        f"{translate(language, 'user_notice')}"
+    ]
     for title, relative_path in LEGAL_INFORMATION_FILES:
-        path = root / relative_path
+        title = translate(language, LEGAL_TITLE_KEYS[relative_path])
+        display_path = (
+            ENGLISH_LEGAL_FILES.get(relative_path, relative_path)
+            if language == "en"
+            else relative_path
+        )
+        path = root / display_path
+        if not path.is_file() and display_path != relative_path:
+            path = root / relative_path
         if path.is_file():
             content = path.read_text(encoding="utf-8").strip()
         else:
-            content = f"파일을 찾을 수 없습니다: {relative_path}"
+            content = translate(language, "file_missing", path=display_path)
         sections.append(f"{title}\n{'=' * len(title)}\n\n{content}")
     return "\n\n\n".join(sections)
 
@@ -299,7 +596,8 @@ def cleanup_work_directory(video_path: Path, work_dir: Path) -> bool:
 class SoundSeparatorApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title(APP_TITLE)
+        self.language_var = tk.StringVar(value="ko")
+        self.title(self._t("app_title"))
         self.geometry("1120x860")
         self.minsize(920, 740)
         self.video_path: Path | None = None
@@ -335,14 +633,86 @@ class SoundSeparatorApp(tk.Tk):
         self.model_var = tk.StringVar(value=self.active_model_id)
         self.audiosep_query_var = tk.StringVar(value="music")
         self.audiosep_query_label_var = tk.StringVar(
-            value=AUDIOSEP_QUERIES["music"][0]
+            value=self._query_label("music")
         )
+        self.model_state_key = "state_before"
         self.model_status_var = tk.StringVar(
-            value=f"선택 모델: {MODEL_LABELS[self.active_model_id]} · 분석 전"
+            value=self._model_status_text()
         )
         self.volume_var = tk.DoubleVar(value=DEFAULT_VOLUME)
-        self.status_var = tk.StringVar(value="영상을 선택해 주세요.")
+        self.status_key = "status_choose_video"
+        self.status_values: dict[str, object] = {}
+        self.status_var = tk.StringVar(value=self._t(self.status_key))
+        self.legal_window: tk.Toplevel | None = None
+        self.legal_text: ScrolledText | None = None
+        self.legal_close_button: ttk.Button | None = None
         self._build_ui()
+
+    def _t(self, key: str, **values: object) -> str:
+        return translate(self.language_var.get(), key, **values)
+
+    def _query_label(self, query_id: str) -> str:
+        return self._t(f"query_{query_id}")
+
+    def _event_label(self, event: SoundEvent) -> str:
+        key = {
+            "music": "event_music",
+            "non-music": "event_non_music",
+        }.get(event.event_id)
+        return self._t(key) if key else event.label
+
+    def _event_note(self, event: SoundEvent) -> str:
+        key = QUALITY_NOTE_KEYS.get(event.extraction_note)
+        return self._t(key) if key else event.extraction_note
+
+    def _set_status(self, key: str, **values: object) -> None:
+        self.status_key = key
+        self.status_values = values
+        self.status_var.set(self._t(key, **values))
+
+    def _model_status_text(self) -> str:
+        return self._t(
+            "model_status",
+            model=self._active_result_label(),
+            state=self._t(self.model_state_key),
+        )
+
+    def _set_model_status(self, state_key: str) -> None:
+        self.model_state_key = state_key
+        self.model_status_var.set(self._model_status_text())
+
+    def change_language(self) -> None:
+        self.title(self._t("app_title"))
+        self.source_frame.configure(text=self._t("stage_video"))
+        self.open_video_button.configure(text=self._t("open_video"))
+        self.separate_button.configure(text=self._t("separate_music"))
+        self.audiosep_compare_button.configure(text=self._t("audiosep_compare"))
+        self.model_label.configure(text=self._t("separation_model"))
+        self.play_all_button.configure(text=self._t("play_all"))
+        self.stop_all_button.configure(text=self._t("stop_all"))
+        self.volume_title_label.configure(text=self._t("playback_volume"))
+        self.legal_button.configure(text=self._t("licenses_sources"))
+        self.language_frame.configure(text=self._t("language"))
+        self.preview_frame.configure(text=self._t("preview_title"))
+        self.table_frame.configure(text=self._t("stage_results"))
+        for widget, key in self.table_header_labels:
+            widget.configure(text=self._t(key))
+        self.save_button.configure(text=self._t("save_copy"))
+        self.user_notice_label.configure(text=self._t("user_notice"))
+        if self.video_path is None:
+            self.video_var.set(self._t("no_video"))
+        if self.preview_photo is None:
+            self.preview_label.configure(text=self._t("preview_placeholder"))
+        self.audiosep_query_combo.configure(
+            values=tuple(self._query_label(query_id) for query_id in AUDIOSEP_QUERIES)
+        )
+        self.audiosep_query_label_var.set(
+            self._query_label(self.audiosep_query_var.get())
+        )
+        self.status_var.set(self._t(self.status_key, **self.status_values))
+        self.model_status_var.set(self._model_status_text())
+        self.refresh_rows()
+        self._refresh_legal_information()
 
     def _build_ui(self) -> None:
         root = ttk.Frame(self, padding=12)
@@ -350,45 +720,59 @@ class SoundSeparatorApp(tk.Tk):
         root.columnconfigure(0, weight=1)
         root.rowconfigure(4, weight=1)
 
-        source = ttk.LabelFrame(root, text="1. 영상 선택", padding=10)
-        source.grid(row=2, column=0, sticky="ew")
-        source.columnconfigure(1, weight=1)
-        ttk.Button(source, text="영상 열기", command=self.choose_video).grid(row=0, column=0, padx=(0, 8))
-        self.video_var = tk.StringVar(value="선택된 영상 없음")
-        ttk.Label(source, textvariable=self.video_var).grid(row=0, column=1, sticky="w")
-        ttk.Button(source, text="영상에서 음악 분리", command=self.analyze).grid(
+        self.source_frame = ttk.LabelFrame(root, text=self._t("stage_video"), padding=10)
+        self.source_frame.grid(row=2, column=0, sticky="ew")
+        self.source_frame.columnconfigure(1, weight=1)
+        self.open_video_button = ttk.Button(
+            self.source_frame, text=self._t("open_video"), command=self.choose_video
+        )
+        self.open_video_button.grid(row=0, column=0, padx=(0, 8))
+        self.video_var = tk.StringVar(value=self._t("no_video"))
+        ttk.Label(self.source_frame, textvariable=self.video_var).grid(row=0, column=1, sticky="w")
+        self.separate_button = ttk.Button(
+            self.source_frame, text=self._t("separate_music"), command=self.analyze
+        )
+        self.separate_button.grid(
             row=0, column=2, padx=(8, 0)
         )
         self.audiosep_compare_button = ttk.Button(
-            source,
-            text="AudioSep 3종 비교",
+            self.source_frame,
+            text=self._t("audiosep_compare"),
             command=self.analyze_audiosep_comparison,
         )
 
-        model_area = ttk.Frame(source)
+        model_area = ttk.Frame(self.source_frame)
         model_area.grid(row=1, column=0, columnspan=2, sticky="w", pady=(9, 0))
-        ttk.Label(model_area, text="분리 모델: AV-CASS").pack(side="left")
+        self.model_label = ttk.Label(model_area, text=self._t("separation_model"))
+        self.model_label.pack(side="left")
         self.audiosep_query_combo = ttk.Combobox(
             model_area,
             state="disabled",
             width=13,
             textvariable=self.audiosep_query_label_var,
-            values=tuple(label for label, _query in AUDIOSEP_QUERIES.values()),
+            values=tuple(self._query_label(query_id) for query_id in AUDIOSEP_QUERIES),
         )
         self.audiosep_query_combo.bind(
             "<<ComboboxSelected>>", self.select_audiosep_query
         )
         self._update_audiosep_query_control()
-        ttk.Label(source, textvariable=self.model_status_var, foreground="#555555").grid(
+        ttk.Label(self.source_frame, textvariable=self.model_status_var, foreground="#555555").grid(
             row=2, column=0, columnspan=4, sticky="w", pady=(7, 0)
         )
 
         actions = ttk.Frame(root)
         actions.grid(row=3, column=0, sticky="ew", pady=(10, 6))
-        ttk.Button(actions, text="전체 영상 재생", command=self.preview_original).pack(side="left")
-        ttk.Button(actions, text="전체 영상 정지", command=self.stop_original_preview).pack(side="left", padx=4)
+        self.play_all_button = ttk.Button(
+            actions, text=self._t("play_all"), command=self.preview_original
+        )
+        self.play_all_button.pack(side="left")
+        self.stop_all_button = ttk.Button(
+            actions, text=self._t("stop_all"), command=self.stop_original_preview
+        )
+        self.stop_all_button.pack(side="left", padx=4)
         ttk.Separator(actions, orient="vertical").pack(side="left", fill="y", padx=8)
-        ttk.Label(actions, text="전체 재생 볼륨").pack(side="left")
+        self.volume_title_label = ttk.Label(actions, text=self._t("playback_volume"))
+        self.volume_title_label.pack(side="left")
         ttk.Scale(
             actions,
             from_=0,
@@ -400,12 +784,13 @@ class SoundSeparatorApp(tk.Tk):
         self.volume_label = ttk.Label(actions, width=4, text=str(DEFAULT_VOLUME))
         self.volume_label.pack(side="left")
 
-        ttk.Button(
+        self.legal_button = ttk.Button(
             root,
-            text="라이선스·출처",
+            text=self._t("licenses_sources"),
             command=self.show_legal_information,
             width=16,
-        ).grid(
+        )
+        self.legal_button.grid(
             row=0,
             column=0,
             sticky="nw",
@@ -415,10 +800,33 @@ class SoundSeparatorApp(tk.Tk):
             ipady=4,
         )
 
-        preview_frame = ttk.LabelFrame(root, text="영상 미리보기", padding=8)
-        preview_frame.grid(row=0, column=0, pady=(0, 8))
+        self.language_frame = ttk.LabelFrame(
+            root, text=self._t("language"), padding=(10, 6)
+        )
+        self.language_frame.grid(
+            row=0, column=0, sticky="ne", padx=(0, 12), pady=(8, 0)
+        )
+        ttk.Radiobutton(
+            self.language_frame,
+            text="한국어",
+            value="ko",
+            variable=self.language_var,
+            command=self.change_language,
+        ).pack(anchor="w")
+        ttk.Radiobutton(
+            self.language_frame,
+            text="English",
+            value="en",
+            variable=self.language_var,
+            command=self.change_language,
+        ).pack(anchor="w")
+
+        self.preview_frame = ttk.LabelFrame(
+            root, text=self._t("preview_title"), padding=8
+        )
+        self.preview_frame.grid(row=0, column=0, pady=(0, 8))
         preview_surface = tk.Frame(
-            preview_frame,
+            self.preview_frame,
             width=PREVIEW_WIDTH,
             height=PREVIEW_HEIGHT,
             background="#111111",
@@ -427,13 +835,13 @@ class SoundSeparatorApp(tk.Tk):
         preview_surface.pack_propagate(False)
         self.preview_label = tk.Label(
             preview_surface,
-            text="재생하면 여기에 영상이 표시됩니다.",
+            text=self._t("preview_placeholder"),
             background="#111111",
             foreground="#D0D0D0",
         )
         self.preview_label.pack(fill="both", expand=True)
 
-        playback_position_area = ttk.Frame(preview_frame)
+        playback_position_area = ttk.Frame(self.preview_frame)
         playback_position_area.pack(fill="x", pady=(7, 0))
         self.preview_seek_scale = ttk.Scale(
             playback_position_area,
@@ -473,22 +881,32 @@ class SoundSeparatorApp(tk.Tk):
             pady=9,
         ).grid(row=0, column=0, sticky="ew")
 
-        table_frame = ttk.LabelFrame(root, text="2. 음악 / 음악 아님 분리 결과", padding=8)
-        table_frame.grid(row=4, column=0, sticky="nsew")
-        table_frame.columnconfigure(0, weight=1)
-        table_frame.rowconfigure(1, weight=1)
+        self.table_frame = ttk.LabelFrame(root, text=self._t("stage_results"), padding=8)
+        self.table_frame.grid(row=4, column=0, sticky="nsew")
+        self.table_frame.columnconfigure(0, weight=1)
+        self.table_frame.rowconfigure(1, weight=1)
 
-        header = ttk.Frame(table_frame, padding=(6, 3))
+        header = ttk.Frame(self.table_frame, padding=(6, 3))
         header.grid(row=0, column=0, sticky="ew", padx=(0, 14))
         header.columnconfigure(0, weight=1)
-        ttk.Label(header, text="소리 구분", anchor="w").grid(row=0, column=0, sticky="ew")
-        ttk.Label(header, text="AI 분리", width=16, anchor="center").grid(row=0, column=1)
-        ttk.Label(header, text="영상과 듣기", width=13, anchor="center").grid(row=0, column=2)
-        ttk.Label(header, text="전체 재생에서", width=13, anchor="center").grid(row=0, column=3)
+        sound_header = ttk.Label(header, text=self._t("column_sound"), anchor="w")
+        sound_header.grid(row=0, column=0, sticky="ew")
+        separation_header = ttk.Label(header, text=self._t("column_separation"), width=16, anchor="center")
+        separation_header.grid(row=0, column=1)
+        listen_header = ttk.Label(header, text=self._t("column_listen"), width=16, anchor="center")
+        listen_header.grid(row=0, column=2)
+        playback_header = ttk.Label(header, text=self._t("column_full_playback"), width=16, anchor="center")
+        playback_header.grid(row=0, column=3)
+        self.table_header_labels = (
+            (sound_header, "column_sound"),
+            (separation_header, "column_separation"),
+            (listen_header, "column_listen"),
+            (playback_header, "column_full_playback"),
+        )
 
-        self.rows_canvas = tk.Canvas(table_frame, highlightthickness=0)
+        self.rows_canvas = tk.Canvas(self.table_frame, highlightthickness=0)
         self.rows_canvas.grid(row=1, column=0, sticky="nsew")
-        scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.rows_canvas.yview)
+        scroll = ttk.Scrollbar(self.table_frame, orient="vertical", command=self.rows_canvas.yview)
         scroll.grid(row=1, column=1, sticky="ns")
         self.rows_canvas.configure(yscrollcommand=scroll.set)
         self.rows_frame = ttk.Frame(self.rows_canvas)
@@ -502,51 +920,84 @@ class SoundSeparatorApp(tk.Tk):
         footer.columnconfigure(2, weight=1)
         self.save_button = ttk.Button(
             footer,
-            text="사본 저장",
+            text=self._t("save_copy"),
             command=self.save_video,
             width=16,
         )
         self.save_button.grid(row=0, column=1, ipadx=6, ipady=4)
-        ttk.Label(
+        self.user_notice_label = ttk.Label(
             root,
-            text=USER_CONTENT_NOTICE,
+            text=self._t("user_notice"),
             foreground="#666666",
             anchor="center",
             wraplength=900,
-        ).grid(row=6, column=0, sticky="ew", pady=(7, 0))
+        )
+        self.user_notice_label.grid(row=6, column=0, sticky="ew", pady=(7, 0))
 
     def show_legal_information(self) -> None:
+        if self.legal_window is not None and self.legal_window.winfo_exists():
+            self.legal_window.lift()
+            return
         window = tk.Toplevel(self)
-        window.title("라이선스·출처·사용자 책임")
+        self.legal_window = window
+        window.title(self._t("legal_title"))
         window.geometry("860x680")
         window.minsize(650, 480)
         window.transient(self)
+        window.protocol("WM_DELETE_WINDOW", self._close_legal_information)
 
-        text = ScrolledText(
+        self.legal_text = ScrolledText(
             window,
             wrap="word",
             padx=14,
             pady=14,
             font=("Segoe UI", 10),
         )
-        text.pack(fill="both", expand=True, padx=10, pady=(10, 6))
-        text.insert("1.0", load_legal_information(application_root()))
-        text.configure(state="disabled")
-        ttk.Button(window, text="닫기", command=window.destroy).pack(pady=(0, 10))
+        self.legal_text.pack(fill="both", expand=True, padx=10, pady=(10, 6))
+        self.legal_close_button = ttk.Button(
+            window, text=self._t("close"), command=self._close_legal_information
+        )
+        self.legal_close_button.pack(pady=(0, 10))
+        self._refresh_legal_information()
+
+    def _refresh_legal_information(self) -> None:
+        if self.legal_window is None or not self.legal_window.winfo_exists():
+            return
+        self.legal_window.title(self._t("legal_title"))
+        if self.legal_text is not None:
+            self.legal_text.configure(state="normal")
+            self.legal_text.delete("1.0", "end")
+            self.legal_text.insert(
+                "1.0",
+                load_legal_information(application_root(), self.language_var.get()),
+            )
+            self.legal_text.configure(state="disabled")
+        if self.legal_close_button is not None:
+            self.legal_close_button.configure(text=self._t("close"))
+
+    def _close_legal_information(self) -> None:
+        if self.legal_window is not None and self.legal_window.winfo_exists():
+            self.legal_window.destroy()
+        self.legal_window = None
+        self.legal_text = None
+        self.legal_close_button = None
 
     def choose_video(self) -> None:
         if self.busy:
-            messagebox.showinfo(APP_TITLE, "현재 작업이 끝날 때까지 기다려 주세요.")
+            messagebox.showinfo(self._t("app_title"), self._t("busy_wait"))
             return
         selected = filedialog.askopenfilename(
-            title="영상 선택",
-            filetypes=[("영상 파일", "*.mp4 *.mov *.mkv *.avi *.webm *.m4v"), ("모든 파일", "*.*")],
+            title=self._t("dialog_video_select"),
+            filetypes=[
+                (self._t("video_files"), "*.mp4 *.mov *.mkv *.avi *.webm *.m4v"),
+                (self._t("all_files"), "*.*"),
+            ],
         )
         if not selected:
             return
         path = Path(selected)
         if path.suffix.lower() not in VIDEO_EXTENSIONS:
-            messagebox.showerror(APP_TITLE, "지원하지 않는 영상 형식입니다.")
+            messagebox.showerror(self._t("app_title"), self._t("unsupported_video"))
             return
         self.video_path = path
         self.work_dir = path.parent / f"{path.stem}_sound_work"
@@ -561,10 +1012,8 @@ class SoundSeparatorApp(tk.Tk):
         self.video_var.set(str(path))
         self.events.clear()
         self.refresh_rows()
-        self.model_status_var.set(
-            f"선택 모델: {MODEL_LABELS[self.active_model_id]} · 분석 전"
-        )
-        self.status_var.set("영상을 열었습니다. AV-CASS 분리를 실행해 주세요.")
+        self._set_model_status("state_before")
+        self._set_status("status_video_opened")
 
     def _bandit_is_available(self) -> bool:
         return all(path.exists() for path in bandit_runtime_paths(self.portable_runtime))
@@ -605,11 +1054,13 @@ class SoundSeparatorApp(tk.Tk):
         requested = self.model_var.get()
         if self.busy:
             self.model_var.set(self.active_model_id)
-            messagebox.showinfo(APP_TITLE, "현재 작업이 끝날 때까지 모델을 바꿀 수 없습니다.")
+            messagebox.showinfo(self._t("app_title"), self._t("model_busy"))
             return
         if not self._model_is_available(requested):
             self.model_var.set(self.active_model_id)
-            messagebox.showwarning(APP_TITLE, "선택한 모델의 실행 환경이 설치되지 않았습니다.")
+            messagebox.showwarning(
+                self._t("app_title"), self._t("model_environment_missing")
+            )
             return
 
         self.stop_preview(refresh=False)
@@ -623,16 +1074,15 @@ class SoundSeparatorApp(tk.Tk):
         self.events = self.model_results.get(result_key, [])
         self.refresh_rows()
         if self.events:
-            state = "분석 완료 · 저장 후보로 선택됨"
-            self.status_var.set(
-                f"{self._active_result_label()}의 기존 분리 결과를 불러왔습니다."
+            self._set_model_status("state_complete_selected")
+            self._set_status(
+                "status_loaded_existing", model=self._active_result_label()
             )
         else:
-            state = "분석 전"
-            self.status_var.set(
-                f"{self._active_result_label()}을 선택했습니다. 선택 모델로 분리를 실행해 주세요."
+            self._set_model_status("state_before")
+            self._set_status(
+                "status_model_selected", model=self._active_result_label()
             )
-        self.model_status_var.set(f"선택 모델: {self._active_result_label()} · {state}")
 
     def _active_result_key(self) -> str:
         if self.active_model_id == "audiosep":
@@ -648,7 +1098,7 @@ class SoundSeparatorApp(tk.Tk):
     def _active_result_label(self) -> str:
         if self.active_model_id != "audiosep":
             return MODEL_LABELS[self.active_model_id]
-        label = AUDIOSEP_QUERIES[self.audiosep_query_var.get()][0]
+        label = self._query_label(self.audiosep_query_var.get())
         return f"AudioSep · {label}"
 
     def _update_audiosep_query_control(self) -> None:
@@ -664,9 +1114,9 @@ class SoundSeparatorApp(tk.Tk):
     def select_audiosep_query(self, _event=None) -> None:
         if self.busy:
             self.audiosep_query_label_var.set(
-                AUDIOSEP_QUERIES[self.audiosep_query_var.get()][0]
+                self._query_label(self.audiosep_query_var.get())
             )
-            messagebox.showinfo(APP_TITLE, "현재 작업이 끝날 때까지 음악 유형을 바꿀 수 없습니다.")
+            messagebox.showinfo(self._t("app_title"), self._t("query_busy"))
             return
         if self.active_model_id != "audiosep":
             return
@@ -674,14 +1124,14 @@ class SoundSeparatorApp(tk.Tk):
         selected_id = next(
             (
                 query_id
-                for query_id, (label, _query) in AUDIOSEP_QUERIES.items()
-                if label == selected_label
+                for query_id in AUDIOSEP_QUERIES
+                if self._query_label(query_id) == selected_label
             ),
             None,
         )
         if selected_id is None:
             self.audiosep_query_label_var.set(
-                AUDIOSEP_QUERIES[self.audiosep_query_var.get()][0]
+                self._query_label(self.audiosep_query_var.get())
             )
             return
         self.audiosep_query_var.set(selected_id)
@@ -694,44 +1144,49 @@ class SoundSeparatorApp(tk.Tk):
         )
         self.events = self.model_results.get(result_key, [])
         self.refresh_rows()
-        state = "분석 완료 · 저장 후보로 선택됨" if self.events else "분석 전"
-        self.model_status_var.set(
-            f"선택 모델: {self._active_result_label()} · {state}"
-        )
         if self.events:
-            self.status_var.set(
-                f"{self._active_result_label()}의 기존 분리 결과를 불러왔습니다."
+            self._set_model_status("state_complete_selected")
+            self._set_status(
+                "status_loaded_existing", model=self._active_result_label()
             )
         else:
-            self.status_var.set(
-                f"{self._active_result_label()}을 선택했습니다. 분리를 실행해 주세요."
+            self._set_model_status("state_before")
+            self._set_status(
+                "status_model_selected_short", model=self._active_result_label()
             )
 
-    def _run_background(self, label: str, operation) -> None:
+    def _run_background(
+        self, label_key: str, operation, **label_values: object
+    ) -> None:
         if self.busy:
-            messagebox.showinfo(APP_TITLE, "현재 작업이 끝날 때까지 기다려 주세요.")
+            messagebox.showinfo(self._t("app_title"), self._t("busy_wait"))
             return
         self.busy = True
-        self.status_var.set(label)
+        self._set_status(label_key, **label_values)
 
         def runner() -> None:
             try:
                 operation()
             except Exception as exc:
                 message = str(exc)
-                self.after(0, lambda: messagebox.showerror(APP_TITLE, message))
-                self.after(0, lambda: self.status_var.set("작업에 실패했습니다."))
+                self.after(
+                    0,
+                    lambda: messagebox.showerror(self._t("app_title"), message),
+                )
+                self.after(0, lambda: self._set_status("status_task_failed"))
             finally:
                 self.busy = False
 
         threading.Thread(target=runner, daemon=True).start()
 
-    def _show_progress(self, message: str) -> None:
-        self.after(0, lambda text=message: self.status_var.set(text))
+    def _show_progress(self, key: str, **values: object) -> None:
+        self.after(0, lambda: self._set_status(key, **values))
 
     def analyze(self) -> None:
         if not self.video_path or not self.source_wav or not self.work_dir:
-            messagebox.showwarning(APP_TITLE, "먼저 영상을 선택해 주세요.")
+            messagebox.showwarning(
+                self._t("app_title"), self._t("choose_video_first")
+            )
             return
 
         video_path = self.video_path
@@ -750,10 +1205,10 @@ class SoundSeparatorApp(tk.Tk):
 
         def operation() -> None:
             if not self.source_ready:
-                self._show_progress(f"{model_label} · 영상에서 소리를 준비하는 중…")
+                self._show_progress("status_prepare_audio", model=model_label)
                 extract_audio(video_path, source_wav)
                 self.source_ready = True
-            self._show_progress(f"{model_label} · 분리 작업을 준비하는 중…")
+            self._show_progress("status_prepare_separation", model=model_label)
             duration = probe_duration(source_wav)
             pending_events = build_partition_events(
                 duration, music_query=audiosep_query
@@ -770,9 +1225,7 @@ class SoundSeparatorApp(tk.Tk):
             self.after(0, show_pending)
             self.after(
                 0,
-                lambda: self.status_var.set(
-                    f"{model_label}로 음악과 음악 아닌 소리를 분리하는 중입니다…"
-                ),
+                lambda: self._set_status("status_separating", model=model_label),
             )
             try:
                 completed_events = self._separate_partition(
@@ -790,9 +1243,8 @@ class SoundSeparatorApp(tk.Tk):
                     if self._active_result_key() == result_key:
                         self.events = self.model_results.get(result_key, [])
                         self.refresh_rows()
-                        state = "기존 결과 유지" if self.events else "분석 실패"
-                        self.model_status_var.set(
-                            f"선택 모델: {model_label} · {state}"
+                        self._set_model_status(
+                            "state_existing_preserved" if self.events else "state_failed"
                         )
 
                 self.after(0, restore_previous)
@@ -807,23 +1259,27 @@ class SoundSeparatorApp(tk.Tk):
                     self.result_dir = result_dir
                     self.events = completed_events
                     self.refresh_rows()
-                    self.model_status_var.set(
-                        f"선택 모델: {model_label} · 분석 완료 · 저장 후보로 선택됨"
-                    )
-                    self.status_var.set(
-                        f"{model_label} 분리 완료. 다른 모델과 비교하거나 음악 행을 뮤트해 확인해 주세요."
+                    self._set_model_status("state_complete_selected")
+                    self._set_status(
+                        "status_separation_complete", model=model_label
                     )
 
             self.after(0, finish)
 
-        self._run_background(f"{model_label} 분리를 시작합니다…", operation)
+        self._run_background(
+            "status_separation_started", operation, model=model_label
+        )
 
     def analyze_audiosep_comparison(self) -> None:
         if not self.video_path or not self.source_wav or not self.work_dir:
-            messagebox.showwarning(APP_TITLE, "먼저 영상을 선택해 주세요.")
+            messagebox.showwarning(
+                self._t("app_title"), self._t("choose_video_first")
+            )
             return
         if not self._audiosep_is_available():
-            messagebox.showerror(APP_TITLE, "AudioSep 실행 환경이 설치되지 않았습니다.")
+            messagebox.showerror(
+                self._t("app_title"), self._t("audiosep_environment_missing")
+            )
             return
 
         video_path = self.video_path
@@ -836,10 +1292,10 @@ class SoundSeparatorApp(tk.Tk):
 
         def operation() -> None:
             if not self.source_ready:
-                self._show_progress("AudioSep · 영상에서 소리를 준비하는 중…")
+                self._show_progress("status_prepare_audio", model="AudioSep")
                 extract_audio(video_path, source_wav)
                 self.source_ready = True
-            self._show_progress("AudioSep · 분리 작업을 준비하는 중…")
+            self._show_progress("status_prepare_separation", model="AudioSep")
             duration = probe_duration(source_wav)
             jobs = []
             result_specs = []
@@ -904,18 +1360,13 @@ class SoundSeparatorApp(tk.Tk):
                     self.result_dir = model_result_directory(work_dir, active_key)
                     self.events = completed_results[active_key]
                     self.refresh_rows()
-                self.model_status_var.set(
-                    f"선택 모델: {self._active_result_label()} · 분석 완료 · 저장 후보로 선택됨"
-                )
-                self.status_var.set(
-                    "AudioSep 기본 음악·배경음악·영화 음악 비교가 완료됐습니다. "
-                    "음악 유형을 바꿔 각 결과를 들어보세요."
-                )
+                self._set_model_status("state_complete_selected")
+                self._set_status("status_audiosep_compare_complete")
 
             self.after(0, finish)
 
         self._run_background(
-            "AudioSep 모델을 한 번 불러 3가지 음악 유형을 비교하는 중입니다…",
+            "status_audiosep_compare_running",
             operation,
         )
 
@@ -931,7 +1382,7 @@ class SoundSeparatorApp(tk.Tk):
         if not self.events:
             ttk.Label(
                 self.rows_frame,
-                text="영상을 연 뒤 선택한 모델로 분리를 실행해 주세요.",
+                text=self._t("empty_results"),
                 padding=12,
             ).pack(anchor="w")
             return
@@ -939,22 +1390,22 @@ class SoundSeparatorApp(tk.Tk):
             row = ttk.Frame(self.rows_frame, padding=(6, 5))
             row.pack(fill="x")
             row.columnconfigure(0, weight=1)
-            ttk.Label(row, text=event.label, anchor="w").grid(row=0, column=0, sticky="ew")
+            ttk.Label(row, text=self._event_label(event), anchor="w").grid(row=0, column=0, sticky="ew")
             if event.extracted_path:
                 extraction_state = {
-                    "ok": "완료",
-                    "review": "검토 필요",
-                    "failed": "추출 실패",
-                }.get(event.extraction_quality, "완료")
+                    "ok": self._t("quality_ok"),
+                    "review": self._t("quality_review"),
+                    "failed": self._t("quality_failed"),
+                }.get(event.extraction_quality, self._t("quality_ok"))
             elif self.auto_extracting:
-                extraction_state = "자동 추출 중…"
+                extraction_state = self._t("quality_extracting")
             else:
-                extraction_state = "미추출"
+                extraction_state = self._t("quality_not_extracted")
             ttk.Label(row, text=extraction_state, width=16, anchor="center").grid(row=0, column=1)
             playing = self._player_is_running() and self.player_kind == "extracted" and self.player_event_id == event.event_id
             listen_button = ttk.Button(
                 row,
-                text="정지" if playing else "듣기",
+                text=self._t("stop") if playing else self._t("listen"),
                 width=9,
                 command=lambda event_id=event.event_id: self.toggle_event_preview(event_id),
             )
@@ -963,7 +1414,7 @@ class SoundSeparatorApp(tk.Tk):
                 listen_button.state(["disabled"])
             ttk.Button(
                 row,
-                text="뮤트 해제" if event.muted else "뮤트",
+                text=self._t("unmute") if event.muted else self._t("mute"),
                 width=9,
                 command=lambda event_id=event.event_id: self.toggle_event_mute(event_id),
             ).grid(row=0, column=3)
@@ -975,20 +1426,27 @@ class SoundSeparatorApp(tk.Tk):
 
     def toggle_event_mute(self, event_id: str) -> None:
         if self.busy:
-            messagebox.showinfo(APP_TITLE, "현재 작업이 끝날 때까지 기다려 주세요.")
+            messagebox.showinfo(self._t("app_title"), self._t("busy_wait"))
             return
         event = self._event_by_id(event_id)
         if event is None:
             return
         if event.extraction_quality == "failed":
-            messagebox.showwarning(APP_TITLE, event.extraction_note or "분리본이 없습니다.")
+            messagebox.showwarning(
+                self._t("app_title"),
+                self._event_note(event) or self._t("no_separated_track"),
+            )
             return
         if (
             event.extraction_quality == "review"
             and not event.muted
             and not messagebox.askyesno(
-                APP_TITLE,
-                f"{event.label}\n\n{event.extraction_note}\n\n그래도 이 소리를 뮤트할까요?",
+                self._t("app_title"),
+                self._t(
+                    "confirm_mute_review",
+                    label=self._event_label(event),
+                    note=self._event_note(event),
+                ),
             )
         ):
             return
@@ -1020,7 +1478,7 @@ class SoundSeparatorApp(tk.Tk):
         capture = cv2.VideoCapture(str(source))
         if not capture.isOpened():
             capture.release()
-            raise RuntimeError(f"영상 미리보기를 열 수 없습니다: {source}")
+            raise RuntimeError(self._t("preview_open_failed", path=source))
         capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
         self.video_capture = capture
         self.video_position = offset
@@ -1136,12 +1594,14 @@ class SoundSeparatorApp(tk.Tk):
 
     def preview_original(self) -> None:
         if not self.video_path or not self.video_path.exists():
-            messagebox.showinfo(APP_TITLE, "먼저 영상을 선택해 주세요.")
+            messagebox.showinfo(
+                self._t("app_title"), self._t("choose_video_first")
+            )
             return
         muted = [event for event in self.events if event.muted]
         if not muted:
             self._start_audio_preview(self.video_path, "original")
-            self.status_var.set("원본 전체 믹스를 영상과 함께 재생합니다.")
+            self._set_status("status_playing_original")
             return
         if not self.result_dir:
             return
@@ -1150,7 +1610,7 @@ class SoundSeparatorApp(tk.Tk):
             self._active_result_key(), True
         ):
             self._start_audio_preview(target, "original")
-            self.status_var.set(f"{len(muted)}개 소리를 뮤트한 전체 믹스를 재생합니다.")
+            self._set_status("status_playing_muted", count=len(muted))
             return
         video_path = self.video_path
         events = list(self.events)
@@ -1160,9 +1620,14 @@ class SoundSeparatorApp(tk.Tk):
             export_video(video_path, target, events)
             self.model_preview_dirty[result_key] = False
             self.after(0, lambda: self._start_audio_preview(target, "original"))
-            self.after(0, lambda: self.status_var.set(f"{len(muted)}개 소리를 뮤트한 전체 믹스를 재생합니다."))
+            self.after(
+                0,
+                lambda: self._set_status(
+                    "status_playing_muted", count=len(muted)
+                ),
+            )
 
-        self._run_background("선택한 소리만 뮤트한 전체 영상 미리보기를 준비하는 중입니다…", operation)
+        self._run_background("status_prepare_muted_preview", operation)
 
     def toggle_event_preview(self, event_id: str) -> None:
         event = self._event_by_id(event_id)
@@ -1175,7 +1640,9 @@ class SoundSeparatorApp(tk.Tk):
             return
         preview_path = preview_path_for_event(self.result_dir, event)
         if not preview_path.exists():
-            messagebox.showinfo(APP_TITLE, "분리본 영상 미리보기를 찾을 수 없습니다. 다시 분석해 주세요.")
+            messagebox.showinfo(
+                self._t("app_title"), self._t("preview_unavailable")
+            )
             return
         self._start_audio_preview(preview_path, "extracted", event_id)
 
@@ -1216,7 +1683,7 @@ class SoundSeparatorApp(tk.Tk):
         self.preview_photo = None
         self.preview_label.configure(
             image="",
-            text="재생하면 여기에 영상이 표시됩니다.",
+            text=self._t("preview_placeholder"),
         )
         if refresh:
             self.refresh_rows()
@@ -1256,10 +1723,10 @@ class SoundSeparatorApp(tk.Tk):
             ) = avcass_runtime_paths(self.portable_runtime)
             required = (
                 (python_path, "AI Python"),
-                (repo, "AV-CASS 코드 폴더"),
-                (deps, "AV-CASS 실행 구성요소"),
-                (checkpoint, "AV-CASS 체크포인트"),
-                (cavp_checkpoint, "CAVP 체크포인트"),
+                (repo, self._t("required_avcass_repo")),
+                (deps, self._t("required_avcass_deps")),
+                (checkpoint, self._t("required_avcass_checkpoint")),
+                (cavp_checkpoint, self._t("required_cavp_checkpoint")),
             )
             result = (
                 python_path,
@@ -1275,9 +1742,9 @@ class SoundSeparatorApp(tk.Tk):
             )
             required = (
                 (python_path, "AI Python"),
-                (repo, "BandIt 폴더"),
-                (hparams, "BandIt 설정"),
-                (checkpoint, "BandIt 체크포인트"),
+                (repo, self._t("required_bandit_repo")),
+                (hparams, self._t("required_bandit_config")),
+                (checkpoint, self._t("required_bandit_checkpoint")),
             )
             result = (python_path, repo, hparams, checkpoint)
         elif model_id == "audiosep":
@@ -1286,21 +1753,26 @@ class SoundSeparatorApp(tk.Tk):
             )
             required = (
                 (python_path, "AI Python"),
-                (repo, "AudioSep 폴더"),
-                (checkpoint, "AudioSep 상태 사전"),
+                (repo, self._t("required_audiosep_repo")),
+                (checkpoint, self._t("required_audiosep_state")),
                 (
                     runtime_root / "roberta-base" / "model.safetensors",
-                    "AudioSep 텍스트 인코더",
+                    self._t("required_audiosep_encoder"),
                 ),
             )
             result = (python_path, repo, checkpoint, runtime_root)
         else:
-            messagebox.showerror(APP_TITLE, "선택한 모델은 아직 설치되지 않았습니다.")
+            messagebox.showerror(
+                self._t("app_title"), self._t("model_not_installed")
+            )
             return None
 
         for path, label in required:
             if not path.exists():
-                messagebox.showerror(APP_TITLE, f"{label}을 찾을 수 없습니다.\n{path}")
+                messagebox.showerror(
+                    self._t("app_title"),
+                    self._t("required_missing", label=label, path=path),
+                )
                 return None
         return result
 
@@ -1393,16 +1865,15 @@ class SoundSeparatorApp(tk.Tk):
         else:
             raise ValueError(f"지원하지 않는 분리 모델입니다: {model_id}")
 
-        run_worker_command(
-            command,
-            lambda line: (
-                self._show_progress(message)
-                if (message := worker_progress_message(model_id, line))
-                else None
-            ),
-        )
+        def show_worker_progress(line: str) -> None:
+            progress = worker_progress_key(model_id, line)
+            if progress is not None:
+                key, values = progress
+                self._show_progress(key, **values)
+
+        run_worker_command(command, show_worker_progress)
         self._show_progress(
-            f"{MODEL_LABELS.get(model_id, model_id)} · 분리 결과를 확인하는 중…"
+            "progress_check_results", model=MODEL_LABELS.get(model_id, model_id)
         )
         return self._load_partition_results(
             duration,
@@ -1435,14 +1906,17 @@ class SoundSeparatorApp(tk.Tk):
             quality, note = assess_partition_metrics(metrics)
         except (OSError, ValueError, TypeError, json.JSONDecodeError):
             quality = "review"
-            note = "분리 품질 검증값을 읽지 못했습니다. 두 트랙을 직접 확인해 주세요."
+            note = TRANSLATIONS["ko"]["quality_unreadable"]
         for event in events:
             event.extraction_quality = quality
             event.extraction_note = note
         progress_label = self._active_result_label()
         for index, event in enumerate(events, start=1):
             self._show_progress(
-                f"{progress_label} · 미리보기 {index}/{len(events)} 만드는 중…"
+                "progress_create_preview",
+                model=progress_label,
+                current=index,
+                total=len(events),
             )
             create_preview_video(
                 video_path,
@@ -1453,11 +1927,13 @@ class SoundSeparatorApp(tk.Tk):
 
     def save_video(self) -> None:
         if not self.video_path or not self.work_dir or not self.events:
-            messagebox.showwarning(APP_TITLE, "먼저 영상을 분석해 주세요.")
+            messagebox.showwarning(self._t("app_title"), self._t("analyze_first"))
             return
         muted = [event for event in self.events if event.muted]
         if not muted:
-            messagebox.showinfo(APP_TITLE, "뮤트할 소리를 하나 이상 표시해 주세요.")
+            messagebox.showinfo(
+                self._t("app_title"), self._t("select_mute_first")
+            )
             return
         video_path = self.video_path
         work_dir = self.work_dir
@@ -1468,18 +1944,28 @@ class SoundSeparatorApp(tk.Tk):
         def operation() -> None:
             export_video(video_path, target, events)
             if not target.is_file() or target.stat().st_size <= 0:
-                raise RuntimeError(f"저장된 MP4를 확인할 수 없습니다: {target}")
+                raise RuntimeError(self._t("saved_file_invalid", path=target))
 
             try:
                 if work_dir is not None:
                     cleanup_work_directory(video_path, work_dir)
             except (OSError, RuntimeError) as exc:
-                message = (
-                    f"영상은 저장했지만 작업 폴더를 삭제하지 못했습니다.\n\n"
-                    f"저장 파일: {target}\n작업 폴더: {work_dir}\n\n{exc}"
+                message = self._t(
+                    "save_cleanup_warning",
+                    target=target,
+                    work_dir=work_dir,
+                    error=exc,
                 )
-                self.after(0, lambda: self.status_var.set(f"저장 완료 · 작업 폴더 정리 실패: {target}"))
-                self.after(0, lambda: messagebox.showwarning(APP_TITLE, message))
+                self.after(
+                    0,
+                    lambda: self._set_status(
+                        "status_save_cleanup_failed", path=target
+                    ),
+                )
+                self.after(
+                    0,
+                    lambda: messagebox.showwarning(self._t("app_title"), message),
+                )
                 return
 
             def finish() -> None:
@@ -1492,18 +1978,16 @@ class SoundSeparatorApp(tk.Tk):
                     self.model_preview_dirty.clear()
                     self.source_ready = False
                     self.refresh_rows()
-                    self.model_status_var.set(
-                        f"선택 모델: {self._active_result_label()} · 분석 전"
-                    )
-                self.status_var.set(f"저장 완료 · 작업 폴더 삭제 완료: {target}")
+                    self._set_model_status("state_before")
+                self._set_status("status_save_complete", path=target)
                 messagebox.showinfo(
-                    APP_TITLE,
-                    f"저장했습니다.\n{target}\n\n임시 작업 폴더도 삭제했습니다.",
+                    self._t("app_title"),
+                    self._t("save_complete_dialog", path=target),
                 )
 
             self.after(0, finish)
 
-        self._run_background("뮤트한 소리를 제거하고 영상을 저장하는 중입니다…", operation)
+        self._run_background("status_saving", operation)
 
     def destroy(self) -> None:
         if self.volume_restart_after_id:

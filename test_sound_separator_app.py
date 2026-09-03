@@ -15,6 +15,7 @@ from avcass_worker import INFERENCE_HOP, INFERENCE_LENGTH, inference_starts
 from sound_separator_app import (
     DEFAULT_MODEL_ID,
     DEFAULT_VOLUME,
+    TRANSLATIONS,
     VISIBLE_MODEL_IDS,
     SoundSeparatorApp,
     assess_partition_metrics,
@@ -103,12 +104,23 @@ class PlaybackCommandTests(unittest.TestCase):
 
 
 class MusicPartitionTests(unittest.TestCase):
+    def test_korean_and_english_translation_tables_have_matching_keys(self) -> None:
+        self.assertEqual(set(TRANSLATIONS["ko"]), set(TRANSLATIONS["en"]))
+
     def test_maps_worker_output_to_visible_progress_messages(self) -> None:
         self.assertEqual(
             worker_progress_message("avcass", "[run 2/4] 8.16-16.34초"),
             "AV-CASS · 구간 2/4 분리 중…",
         )
         self.assertIsNone(worker_progress_message("avcass", "일반 경고 메시지"))
+
+    def test_maps_worker_output_to_english_progress_messages(self) -> None:
+        self.assertEqual(
+            worker_progress_message(
+                "avcass", "[run 2/4] 8.16-16.34초", language="en"
+            ),
+            "AV-CASS · Separating segment 2/4…",
+        )
 
     def test_uses_avcass_as_the_default_model(self) -> None:
         self.assertEqual(DEFAULT_MODEL_ID, "avcass")
@@ -288,6 +300,12 @@ class MusicPartitionTests(unittest.TestCase):
             (root / "FFMPEG_BUILD.md").write_text(
                 "FFmpeg LGPL shared build", encoding="utf-8"
             )
+            (root / "THIRD_PARTY_NOTICES.en.md").write_text(
+                "English AV-CASS and CAVP sources", encoding="utf-8"
+            )
+            (root / "FFMPEG_BUILD.en.md").write_text(
+                "English FFmpeg LGPL shared build", encoding="utf-8"
+            )
             (root / "LICENSE").write_text("app license", encoding="utf-8")
             (root / "licenses" / "MIT.txt").write_text("MIT", encoding="utf-8")
             (root / "licenses" / "Apache-2.0.txt").write_text(
@@ -297,6 +315,7 @@ class MusicPartitionTests(unittest.TestCase):
             (root / "licenses" / "GPL-3.0.txt").write_text("GPL", encoding="utf-8")
 
             information = load_legal_information(root)
+            english_information = load_legal_information(root, language="en")
 
         self.assertIn("저작권과 이용 권리", information)
         self.assertIn("AV-CASS and CAVP sources", information)
@@ -305,6 +324,11 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("FFmpeg LGPL shared build", information)
         self.assertIn("LGPL", information)
         self.assertIn("GPL", information)
+        self.assertIn("User Content Notice", english_information)
+        self.assertIn("You are responsible", english_information)
+        self.assertIn("Third-Party Notices, Sources & Papers", english_information)
+        self.assertIn("English AV-CASS and CAVP sources", english_information)
+        self.assertIn("English FFmpeg LGPL shared build", english_information)
 
 
 class WorkDirectoryCleanupTests(unittest.TestCase):

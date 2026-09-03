@@ -119,7 +119,9 @@ Copy-Item -LiteralPath (Join-Path $projectDir "separation_quality.py") -Destinat
 Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "MODEL_LICENSES.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.md") -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.md") -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
 
 $avCassReady =
@@ -152,6 +154,7 @@ $usage = @"
 실행: video-music-separator.exe
 
 영상을 연 뒤 '영상에서 음악 분리'를 누르세요.
+영상 미리보기 오른쪽에서 한국어 또는 English 인터페이스를 선택할 수 있습니다.
 AV-CASS는 속도보다 분리 품질과 원본 스테레오 보존을 우선합니다.
 AV-CASS는 영상 장면까지 분석하며 NVIDIA GPU가 필요합니다.
 앱 맨 위의 작은 영상 화면에서 전체 믹스와 각 분리본을 영상과 함께 확인할 수 있습니다.
