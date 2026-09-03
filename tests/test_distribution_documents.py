@@ -45,6 +45,9 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("SHA256SUMS.txt", portable_build)
         self.assertIn("$archivePath.sha256", portable_build)
         self.assertIn("SIGNING_STATUS.txt", portable_build)
+        self.assertIn("git -C $projectDir rev-parse HEAD", portable_build)
+        self.assertIn("git -C $projectDir status --porcelain --untracked-files=no", portable_build)
+        self.assertIn('Join-Path $outputDocsDir "SOURCE_COMMIT.txt"', portable_build)
         self.assertIn("audit_python_licenses.py", portable_build)
         self.assertIn('Join-Path $outputDir "audiosep"', portable_build)
         self.assertIn('--onefile', executable_build)
@@ -105,11 +108,19 @@ class DistributionDocumentTests(unittest.TestCase):
             readme,
         )
         self.assertIn("Source code (zip)", readme)
+        self.assertIn("video-music-separator-0.2.0-windows-x64.zip.sha256", readme)
+        self.assertIn("빌드·배포 스크립트, 문서와 라이선스 전문", readme)
+        self.assertIn("build and distribution scripts, documentation, and full license texts", readme)
         self.assertNotIn("## 이동용 폴더", readme)
         self.assertIn(
             "CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석",
             readme,
         )
+
+        privacy = (DOCS / "PRIVACY.md").read_text(encoding="utf-8")
+        privacy_en = (DOCS / "PRIVACY.en.md").read_text(encoding="utf-8")
+        self.assertIn("`docs/runtime-assets.json`", privacy)
+        self.assertIn("`docs/runtime-assets.json`", privacy_en)
 
 
 if __name__ == "__main__":

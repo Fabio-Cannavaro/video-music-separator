@@ -29,6 +29,18 @@ $ffmpegRoot = if ($FFmpegDirectory) {
 }
 $ffmpegDir = Join-Path $ffmpegRoot "bin"
 
+$sourceCommit = (& git -C $projectDir rev-parse HEAD 2>$null | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or -not $sourceCommit) {
+    throw "배포본에 기록할 Git 소스 커밋을 확인하지 못했습니다."
+}
+$trackedChanges = (& git -C $projectDir status --porcelain --untracked-files=no 2>$null | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) {
+    throw "배포 전 Git 작업 트리 상태를 확인하지 못했습니다."
+}
+if ($trackedChanges) {
+    throw "정확히 대응하는 소스를 기록하려면 추적 파일의 변경을 먼저 커밋해 주세요."
+}
+
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "빌드용 Python을 찾을 수 없습니다: $python"
 }
@@ -168,6 +180,12 @@ Copy-Item -LiteralPath (Join-Path $appDir "separation_quality.py") -Destination 
 Copy-Item -Path (Join-Path $docsDir "*") -Destination $outputDocsDir -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDocsDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDocsDir -Recurse -Force
+$sourceCommitText = @(
+    "Repository: https://github.com/Fabio-Cannavaro/video-music-separator",
+    "Source commit: $sourceCommit",
+    "Project code license: GPL-3.0-only"
+)
+$sourceCommitText | Set-Content -LiteralPath (Join-Path $outputDocsDir "SOURCE_COMMIT.txt") -Encoding UTF8
 
 $pythonLicenseDir = Join-Path $outputDocsDir "licenses\python"
 $auditSitePackages = if ($BundleRuntimeAssets) {

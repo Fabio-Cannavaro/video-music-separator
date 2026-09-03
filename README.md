@@ -29,7 +29,12 @@
 
 [Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0)
 
-위 릴리스의 `Assets`에서 `video-music-separator-0.2.0-windows-x64.zip`을 내려받는다. GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
+위 릴리스의 `Assets`에서 다음 두 파일을 함께 내려받는다.
+
+- 설치 ZIP: `video-music-separator-0.2.0-windows-x64.zip`
+- ZIP 체크섬: `video-music-separator-0.2.0-windows-x64.zip.sha256`
+
+GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
 
 설치 ZIP에는 `video-music-separator-setup.exe`와 `video-music-separator.exe`가 함께 들어 있다. 두 EXE는 반드시 같은 폴더에 두며, AI Python 환경·AV-CASS 코드·모델·FFmpeg는 설치 프로그램이 별도로 내려받는다.
 
@@ -119,7 +124,7 @@
 
 ### 저장소에 포함되지 않는 파일
 
-이 저장소에는 앱 소스와 테스트만 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
+이 저장소에는 앱 소스, 테스트, 빌드·배포 스크립트, 문서와 라이선스 전문이 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
 
 - AV-CASS와 CAVP 모델 가중치
 - 각 모델의 원본 저장소 사본과 Python 추론 환경
@@ -230,7 +235,12 @@ For the first installation, keep the following two executables in the same folde
 
 [Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0)
 
-Under `Assets` in the Release above, download `video-music-separator-0.2.0-windows-x64.zip`. The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
+Under `Assets` in the Release above, download both of the following files:
+
+- Installer ZIP: `video-music-separator-0.2.0-windows-x64.zip`
+- ZIP checksum: `video-music-separator-0.2.0-windows-x64.zip.sha256`
+
+The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
 
 The installation ZIP contains both `video-music-separator-setup.exe` and `video-music-separator.exe`. Keep both EXE files in the same folder. The installer separately downloads the AI Python environment, AV-CASS code, model files, and FFmpeg.
 
@@ -320,7 +330,7 @@ Processing time depends on video duration and GPU performance.
 
 ### Files Not Included in the Repository
 
-This repository contains only the application source and tests. The following files are excluded because of their size and redistribution terms:
+This repository contains the application source, tests, build and distribution scripts, documentation, and full license texts. The following files are excluded because of their size and redistribution terms:
 
 - AV-CASS and CAVP model weights
 - Copies of the original model repositories and the Python inference environment

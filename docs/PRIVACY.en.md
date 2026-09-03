@@ -32,7 +32,7 @@ The installer pins and verifies the URL, expected size, and SHA-256 of the AI ru
 - Temporary separation files are stored beside the source in `<video name>_sound_work`.
 - The temporary work folder is deleted after a copy is saved and verified successfully.
 - Temporary files may remain for recovery and diagnosis after a save or verification failure.
-- Sources, versions, and checksums of installed components are recorded in `runtime-assets.json` in the application folder.
+- Sources, versions, and checksums of installed components are recorded in `docs/runtime-assets.json` in the application folder.
 
 ## User responsibility
 
