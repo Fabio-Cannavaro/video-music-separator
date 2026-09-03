@@ -14,7 +14,9 @@ from pathlib import Path
 
 AVCASS_SAMPLE_RATE = 16000
 INFERENCE_LENGTH = 130816
-DEFAULT_OVERLAP_SAMPLES = 256
+DEFAULT_OVERLAP_SECONDS = 1.0
+DEFAULT_OVERLAP_SAMPLES = round(DEFAULT_OVERLAP_SECONDS * AVCASS_SAMPLE_RATE)
+DEFAULT_BLEND_MODE = "cosine"
 INFERENCE_HOP = INFERENCE_LENGTH - DEFAULT_OVERLAP_SAMPLES
 INFERENCE_STEPS = 250
 VIDEO_FPS = 4
@@ -37,14 +39,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--overlap-seconds",
         type=float,
-        default=DEFAULT_OVERLAP_SAMPLES / AVCASS_SAMPLE_RATE,
-        help="청크 사이 겹침 길이. 기본값은 기존 256샘플 동작을 유지합니다.",
+        default=DEFAULT_OVERLAP_SECONDS,
+        help="청크 사이 겹침 길이. 기본값은 청취 검증된 1초 OLA입니다.",
     )
     parser.add_argument(
         "--blend-mode",
         choices=("average", "cosine"),
-        default="average",
-        help="겹친 청크 결합 방식. 기본값 average는 기존 결과와 같습니다.",
+        default=DEFAULT_BLEND_MODE,
+        help="겹친 청크 결합 방식. 기본값은 cosine-squared OLA입니다.",
     )
     parser.add_argument(
         "--high-band-extension",

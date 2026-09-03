@@ -16,6 +16,9 @@ sys.path.insert(0, str(ROOT / "app"))
 
 from audiosep_worker import load_jobs
 from avcass_worker import (
+    DEFAULT_BLEND_MODE,
+    DEFAULT_OVERLAP_SAMPLES,
+    DEFAULT_OVERLAP_SECONDS,
     INFERENCE_HOP,
     INFERENCE_LENGTH,
     configure_yapf_cache,
@@ -403,8 +406,13 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertEqual(starts[-1], long_length - INFERENCE_LENGTH)
         self.assertGreaterEqual(len(starts), 2)
 
-    def test_avcass_chunk_starts_accept_larger_experimental_overlap(self) -> None:
-        overlap = 16000
+    def test_avcass_defaults_to_one_second_cosine_ola(self) -> None:
+        self.assertEqual(DEFAULT_OVERLAP_SECONDS, 1.0)
+        self.assertEqual(DEFAULT_OVERLAP_SAMPLES, 16000)
+        self.assertEqual(DEFAULT_BLEND_MODE, "cosine")
+
+    def test_avcass_chunk_starts_accept_explicit_overlap(self) -> None:
+        overlap = DEFAULT_OVERLAP_SAMPLES
         audio_length = INFERENCE_LENGTH * 3
         starts = inference_starts(audio_length, overlap)
         self.assertEqual(starts[1], INFERENCE_LENGTH - overlap)
