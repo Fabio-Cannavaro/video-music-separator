@@ -29,10 +29,10 @@
 
 [Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r2)
 
-위 릴리스의 `Assets`에서 다음 두 파일을 함께 내려받는다.
+위 릴리스의 `Assets`에서 설치 ZIP 하나만 내려받으면 된다.
 
-- 설치 ZIP: `video-music-separator-0.2.0-windows-x64.zip`
-- ZIP 체크섬: `video-music-separator-0.2.0-windows-x64.zip.sha256`
+- 필수 설치 ZIP: `video-music-separator-0.2.0-windows-x64.zip`
+- 선택 사항(무결성 확인용): `video-music-separator-0.2.0-windows-x64.zip.sha256`
 
 GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
 
@@ -42,7 +42,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 1. 배포자가 제공한 기본 앱 ZIP을 새 폴더에 **전부 압축 해제**한다.
 2. 위의 두 EXE가 같은 폴더에 있는지 확인한다.
-3. 함께 제공된 SHA-256 값과 내려받은 파일의 체크섬이 같은지 확인한다. 값이 다르면 실행하지 않는다.
+3. 무결성을 직접 확인하려면 선택 파일인 `.sha256`도 받아 ZIP의 체크섬과 비교한다. 이 확인은 설치 필수 단계가 아니며, 확인한 값이 다르면 실행하지 않는다.
 4. **`video-music-separator-setup.exe`를 먼저 실행한다.**
 5. 설치 화면 오른쪽 위에서 `한국어 / English`를 선택할 수 있다. 약 5.9GB의 다운로드 용량, 다운로드 출처, 모델 이용조건, 개인정보 안내와 사용자 책임을 읽고 동의한 뒤 `설치 시작`을 누른다.
 6. AI 실행환경 Release가 비공개이고 로그인이 없거나 만료되었다면 설치 프로그램이 여는 GitHub CLI 창과 웹브라우저에서 이 저장소에 접근할 수 있는 계정으로 인증한다. 일회용 코드는 클립보드에 자동 복사된다. 공개 Release에서는 이 단계가 생략된다.
@@ -235,10 +235,10 @@ For the first installation, keep the following two executables in the same folde
 
 [Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r2)
 
-Under `Assets` in the Release above, download both of the following files:
+Under `Assets` in the Release above, only the installer ZIP is required.
 
-- Installer ZIP: `video-music-separator-0.2.0-windows-x64.zip`
-- ZIP checksum: `video-music-separator-0.2.0-windows-x64.zip.sha256`
+- Required installer ZIP: `video-music-separator-0.2.0-windows-x64.zip`
+- Optional integrity check: `video-music-separator-0.2.0-windows-x64.zip.sha256`
 
 The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
 
@@ -248,7 +248,7 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 
 1. **Extract the entire application ZIP** supplied by the distributor into a new folder.
 2. Confirm that both EXE files listed above are in that folder.
-3. Compare the downloaded file checksum with the supplied SHA-256 value. Do not run the file if they differ.
+3. To verify integrity yourself, optionally download the `.sha256` file and compare it with the ZIP checksum. This is not required for installation; if the values differ, do not run the file.
 4. **Run `video-music-separator-setup.exe` first.**
 5. Select `한국어 / English` in the upper-right corner of the installer. Review the approximately 5.9 GB download size, download sources, model terms, privacy notice, and user responsibilities; then accept the notice and select `Start Installation`.
 6. If the AI runtime Release is private and the GitHub login is missing or expired, authenticate with an account that can access this repository in the GitHub CLI window and browser opened by the installer. The one-time code is copied to the clipboard automatically. This step is skipped for a public Release.
