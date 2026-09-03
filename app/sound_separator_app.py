@@ -39,6 +39,7 @@ APP_TITLE = "영상 음악 분리·제거기"
 PREVIEW_WIDTH = 420
 PREVIEW_HEIGHT = 236
 PREVIEW_FPS = 30
+PREVIEW_PROCESS_STOP_TIMEOUT = 0.5
 DEFAULT_VOLUME = 100
 DEFAULT_MODEL_ID = "avcass"
 CREATOR_YOUTUBE_URL = "https://www.youtube.com/@ms-0606"
@@ -395,6 +396,25 @@ def next_preview_delay_ms(started_at: float, now: float, fps: float) -> int:
     return max(1, round((deadline - now) * 1000.0))
 
 
+def terminate_preview_process(
+    process: subprocess.Popen[bytes] | None,
+    timeout: float = PREVIEW_PROCESS_STOP_TIMEOUT,
+) -> None:
+    if process is None or process.poll() is not None:
+        return
+    try:
+        process.terminate()
+        process.wait(timeout=timeout)
+        return
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    try:
+        process.kill()
+        process.wait(timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def worker_progress_key(
     model_id: str, line: str
 ) -> tuple[str, dict[str, object]] | None:
@@ -743,6 +763,7 @@ class SoundSeparatorApp(tk.Tk):
         self.player_started_at = 0.0
         self.player_offset = 0.0
         self.player_duration = 0.0
+        self.playback_generation = 0
         self.player_poll_after_id: str | None = None
         self.volume_restart_after_id: str | None = None
         self.video_capture: cv2.VideoCapture | None = None
@@ -1629,12 +1650,15 @@ class SoundSeparatorApp(tk.Tk):
         self.player_offset = offset
         self.player_started_at = time.monotonic()
         self.refresh_rows()
-        self.player_poll_after_id = self.after(250, self._poll_player)
+        generation = self.playback_generation
+        self.player_poll_after_id = self.after(
+            250, lambda: self._poll_player(generation)
+        )
         self.video_poll_after_id = self.after(
             next_preview_delay_ms(
                 self.player_started_at, time.monotonic(), self.preview_fps
             ),
-            self._poll_video_frame,
+            lambda: self._poll_video_frame(generation),
         )
 
     def _configure_preview_seek(self, duration: float, position: float) -> None:
@@ -1692,8 +1716,10 @@ class SoundSeparatorApp(tk.Tk):
         if newest is not None:
             self._display_video_frame(newest)
 
-    def _poll_video_frame(self) -> None:
+    def _poll_video_frame(self, generation: int | None = None) -> None:
         self.video_poll_after_id = None
+        if generation is not None and generation != self.playback_generation:
+            return
         if not self._player_is_running():
             return
         position = playback_position(
@@ -1709,7 +1735,7 @@ class SoundSeparatorApp(tk.Tk):
             next_preview_delay_ms(
                 self.player_started_at, time.monotonic(), self.preview_fps
             ),
-            self._poll_video_frame,
+            lambda: self._poll_video_frame(generation),
         )
 
     def _begin_preview_seek(self, _event=None) -> None:
@@ -1796,6 +1822,7 @@ class SoundSeparatorApp(tk.Tk):
             self.stop_preview()
 
     def stop_preview(self, refresh: bool = True) -> None:
+        self.playback_generation += 1
         if self.player_poll_after_id:
             try:
                 self.after_cancel(self.player_poll_after_id)
@@ -1808,12 +1835,18 @@ class SoundSeparatorApp(tk.Tk):
             except tk.TclError:
                 pass
             self.video_poll_after_id = None
+        if self.volume_restart_after_id:
+            try:
+                self.after_cancel(self.volume_restart_after_id)
+            except tk.TclError:
+                pass
+            self.volume_restart_after_id = None
         if self.video_capture is not None:
             self.video_capture.release()
         self.video_capture = None
-        if self.player and self.player.poll() is None:
-            self.player.terminate()
+        previous_player = self.player
         self.player = None
+        terminate_preview_process(previous_player)
         self.player_kind = None
         self.player_event_id = None
         self.player_source = None
@@ -1834,12 +1867,16 @@ class SoundSeparatorApp(tk.Tk):
         if refresh:
             self.refresh_rows()
 
-    def _poll_player(self) -> None:
+    def _poll_player(self, generation: int | None = None) -> None:
         self.player_poll_after_id = None
+        if generation is not None and generation != self.playback_generation:
+            return
         if not self._player_is_running():
             self.stop_preview()
             return
-        self.player_poll_after_id = self.after(250, self._poll_player)
+        self.player_poll_after_id = self.after(
+            250, lambda: self._poll_player(generation)
+        )
 
     def _schedule_volume_update(self, value: str) -> None:
         self.volume_label.configure(text=str(clamp_volume(float(value))))

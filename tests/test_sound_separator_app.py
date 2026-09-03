@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -44,11 +45,84 @@ from sound_separator_app import (
     playback_position,
     preview_path_for_event,
     run_worker_command,
+    terminate_preview_process,
     worker_progress_message,
 )
 
 
 class PlaybackCommandTests(unittest.TestCase):
+    def test_waits_for_previous_player_to_exit_before_restarting(self) -> None:
+        class Process:
+            def __init__(self) -> None:
+                self.terminated = False
+                self.wait_timeouts: list[float] = []
+
+            def poll(self):
+                return None
+
+            def terminate(self) -> None:
+                self.terminated = True
+
+            def wait(self, timeout: float):
+                self.wait_timeouts.append(timeout)
+                return 0
+
+            def kill(self) -> None:
+                raise AssertionError("정상 종료된 프로세스를 강제 종료하면 안 됩니다.")
+
+        process = Process()
+        terminate_preview_process(process)
+        self.assertTrue(process.terminated)
+        self.assertEqual(process.wait_timeouts, [0.5])
+
+    def test_force_kills_a_preview_player_that_does_not_terminate(self) -> None:
+        class Process:
+            def __init__(self) -> None:
+                self.killed = False
+                self.wait_count = 0
+
+            def poll(self):
+                return None
+
+            def terminate(self) -> None:
+                pass
+
+            def wait(self, timeout: float):
+                self.wait_count += 1
+                if self.wait_count == 1:
+                    raise subprocess.TimeoutExpired("ffplay", timeout)
+                return 0
+
+            def kill(self) -> None:
+                self.killed = True
+
+        process = Process()
+        terminate_preview_process(process)
+        self.assertTrue(process.killed)
+        self.assertEqual(process.wait_count, 2)
+
+    def test_stale_video_callback_cannot_touch_a_restarted_player(self) -> None:
+        app = SimpleNamespace(
+            playback_generation=8,
+            video_poll_after_id="old-callback",
+            _player_is_running=lambda: (_ for _ in ()).throw(
+                AssertionError("이전 재생 콜백이 새 플레이어를 건드렸습니다.")
+            ),
+        )
+        SoundSeparatorApp._poll_video_frame(app, generation=7)
+        self.assertIsNone(app.video_poll_after_id)
+
+    def test_stale_player_callback_cannot_stop_a_restarted_player(self) -> None:
+        app = SimpleNamespace(
+            playback_generation=8,
+            player_poll_after_id="old-callback",
+            _player_is_running=lambda: (_ for _ in ()).throw(
+                AssertionError("이전 재생 콜백이 새 플레이어를 건드렸습니다.")
+            ),
+        )
+        SoundSeparatorApp._poll_player(app, generation=7)
+        self.assertIsNone(app.player_poll_after_id)
+
     def test_streams_worker_output_for_live_progress(self) -> None:
         lines: list[str] = []
         run_worker_command(
