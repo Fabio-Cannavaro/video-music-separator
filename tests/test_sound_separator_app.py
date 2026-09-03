@@ -468,13 +468,13 @@ class MusicPartitionTests(unittest.TestCase):
                 "AV-CASS and CAVP sources", encoding="utf-8"
             )
             (root / "FFMPEG_BUILD.md").write_text(
-                "FFmpeg LGPL shared build", encoding="utf-8"
+                "FFmpeg GPL Essentials build", encoding="utf-8"
             )
             (root / "THIRD_PARTY_NOTICES.en.md").write_text(
                 "English AV-CASS and CAVP sources", encoding="utf-8"
             )
             (root / "FFMPEG_BUILD.en.md").write_text(
-                "English FFmpeg LGPL shared build", encoding="utf-8"
+                "English FFmpeg GPL Essentials build", encoding="utf-8"
             )
             (root / "PRIVACY.md").write_text(
                 "영상과 음원은 로컬 PC에서 처리", encoding="utf-8"
@@ -500,7 +500,7 @@ class MusicPartitionTests(unittest.TestCase):
                 json.dumps(
                     {
                         "installed_at": "2026-09-04T00:00:00+00:00",
-                        "ffmpeg_version": "ffmpeg version n8.1.3-test",
+                        "ffmpeg_version": "ffmpeg version 9.0.1-test",
                         "ffmpeg": {"sha256": "f" * 64},
                     }
                 ),
@@ -517,7 +517,7 @@ class MusicPartitionTests(unittest.TestCase):
 
         self.assertIn("저작권과 이용 권리", information)
         self.assertIn("AV-CASS and CAVP sources", information)
-        self.assertIn("FFmpeg LGPL shared build", information)
+        self.assertIn("FFmpeg GPL Essentials build", information)
         self.assertNotIn("app license", information)
         self.assertIn("공식 라이선스 원문(영문)", license_texts)
         self.assertIn("저작권과 이용 권리", combined_display)
@@ -530,15 +530,15 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("GPL", license_texts)
         self.assertIn("Video Music Separator: 0.2.0", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
-        self.assertIn("ffmpeg version n8.1.3-test", information)
+        self.assertIn("ffmpeg version 9.0.1-test", information)
         self.assertIn("f" * 64, information)
         self.assertIn("2026-09-04T00:00:00+00:00", information)
         self.assertIn("영상과 음원은 로컬 PC에서 처리", information)
         self.assertIn("AI Python 실행환경", information)
         self.assertIn("출처:", information)
-        self.assertIn("설치 중 공식 GitHub Release에서 확인", no_record_information)
+        self.assertIn("설치 중 Gyan 공식 체크섬에서 확인", no_record_information)
         self.assertNotIn(
-            "Resolved from the official GitHub Release during installation",
+            "Resolved from Gyan's official checksum during installation",
             no_record_information,
         )
         self.assertIn(
@@ -550,7 +550,7 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("You are responsible", english_information)
         self.assertIn("Third-Party Notices, Sources & Papers", english_information)
         self.assertIn("English AV-CASS and CAVP sources", english_information)
-        self.assertIn("English FFmpeg LGPL shared build", english_information)
+        self.assertIn("English FFmpeg GPL Essentials build", english_information)
         self.assertIn("official license terms", english_license_texts)
         self.assertIn("app license", english_license_texts)
 

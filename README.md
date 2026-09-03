@@ -22,7 +22,7 @@
 | 저장 공간 | 첫 설치 때 약 5.9GB를 내려받으며, 압축 해제와 설치 중에는 약 15GB의 여유 공간을 권장한다. |
 | 인터넷 | 첫 설치, 재설치 또는 런타임 업데이트 때 필요하다. 설치가 끝난 뒤 일반적인 영상 분리·저장에는 필요하지 않다. |
 | GitHub 인증 | 공개 Release에서는 필요 없다. Release가 비공개이면 GitHub CLI가 필요하고, 설치 프로그램이 필요한 경우 GitHub 웹 인증을 시작한다. |
-| Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 BtbN 공식 최신 FFmpeg 8.1 LGPL 공유 빌드를 내려받는다. |
+| Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 Gyan 공식 최신 FFmpeg GPL Essentials 정적 빌드를 내려받는다. |
 | 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. |
 
 #### 2. Windows 설치 파일 다운로드
@@ -59,13 +59,13 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
    - AI Python 실행환경: 이 프로젝트의 Release에 고정된 두 분할 파일. 공개 Release는 인증 없이 받고, 공개 접근이 거부된 비공개 Release만 로컬 GitHub CLI 인증을 사용한다.
    - AV-CASS `av_cass_checkpoint.pt`: AV-CASS 공식 Google Drive
    - CAVP `cavp_epoch66.ckpt`: Diff-Foley 공식 Hugging Face의 고정 커밋
-   - FFmpeg: BtbN 공식 `latest` Release의 FFmpeg 8.1 LGPL 공유 빌드
-2. AI 실행환경과 모델은 고정된 크기·SHA-256을 확인한다. FFmpeg는 공식 GitHub Release API에서 현재 파일의 크기·SHA-256을 받아 검증하고, 버전·빌드 옵션도 확인한다.
+   - FFmpeg: Gyan 공식 최신 FFmpeg release essentials GPLv3 정적 빌드
+2. AI 실행환경과 모델은 고정된 크기·SHA-256을 확인한다. FFmpeg는 Gyan 공식 `.ver`·`.sha256`과 최종 다운로드 URL에서 현재 버전·크기·SHA-256을 확인하고, 빌드 옵션도 검증한다.
 3. 공개 배포처의 중단된 다운로드는 `.part` 파일에서 이어받는다. 비공개 GitHub Release 다운로드는 다시 시작하며, 모든 파일은 검증이 끝난 뒤에만 실제 설치 위치로 교체한다.
 
 설치 화면에는 다운로드 출처, 적용되는 이용조건, 외부 통신 정보와 사용자 책임이 표시된다. 사용자가 이를 확인하고 동의해야 설치를 시작할 수 있다. Video Music Separator는 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며 제휴하거나 보증받지 않았다.
 
-설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 공식 Release의 체크섬·LGPL 공유 빌드 조건과 다르면 설치를 중단한다. 다운로드, GitHub 인증, 분할 파일 결합, 무결성 확인, 압축 해제, 파일 배치, 최종 검증은 단계별 퍼센트로 표시한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
+설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 Gyan의 공식 버전·체크섬·최종 다운로드 URL 및 GPL Essentials 빌드 조건과 다르면 설치를 중단한다. 다운로드, GitHub 인증, 분할 파일 결합, 무결성 확인, 압축 해제, 파일 배치, 최종 검증은 단계별 퍼센트로 표시한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
 
 공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
 
@@ -83,7 +83,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 - 앱 실행 파일: `video-music-separator.exe`
 - 필수 구성요소 설치 파일: `video-music-separator-setup.exe`
-- LGPL 공유 FFmpeg 실행 파일과 DLL: `ffmpeg/`
+- GPL Essentials FFmpeg 실행 파일: `ffmpeg/`
 - AI Python 환경: `audiosep/env/`
 - AV-CASS 코드와 구성요소: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
 - AV-CASS 모델: `audiosep/avcass/model/av_cass_checkpoint.pt`
@@ -161,7 +161,7 @@ py -m venv --system-site-packages .venv
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
-.\scripts\prepare_ffmpeg_lgpl.ps1
+.\scripts\prepare_ffmpeg_gpl.ps1
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
 .\scripts\build_portable.ps1
@@ -169,7 +169,7 @@ py -m venv --system-site-packages .venv
 
 `build_executables.ps1`는 루트에 단일 파일형 앱 EXE와 설치 EXE를 만든다. `build_runtime_installer.ps1`는 설치 EXE와 대응하는 `.sha256` 파일만 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 내부용 오프라인 묶음이 필요하면 `build_portable.ps1 -BundleRuntimeAssets`를 사용한다. 인증서 지문을 `-CodeSigningCertificateThumbprint`로 제공한 경우에만 Authenticode 서명을 적용하며, 인증서가 없으면 미서명 상태로 빌드한다.
 
-`prepare_ffmpeg_lgpl.ps1`는 개발·오프라인 빌드용 BtbN 공식 `latest` FFmpeg 8.1 LGPL 공유 빌드를 찾고, 해당 Release의 SHA-256과 빌드 옵션을 검증한다. 설치된 정확한 버전과 체크섬은 `docs/runtime-assets.json`에 기록하며, 검증 방식과 출처는 [FFMPEG_BUILD.md](docs/FFMPEG_BUILD.md)에 설명한다.
+`prepare_ffmpeg_gpl.ps1`는 개발·오프라인 빌드용 Gyan 공식 최신 FFmpeg GPL Essentials 정적 빌드를 찾고, 공식 `.ver`·`.sha256`, 실제 다운로드 URL과 빌드 옵션을 검증한다. 설치된 정확한 버전과 체크섬은 `docs/runtime-assets.json`에 기록하며, 검증 방식과 출처는 [FFMPEG_BUILD.md](docs/FFMPEG_BUILD.md)에 설명한다.
 
 휴대용 실동작 검사는 다음처럼 실행한다.
 
@@ -190,9 +190,9 @@ py -m venv --system-site-packages .venv
 
 이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 완벽한 대사·효과음 보존이나 음악 제거를 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
 
-앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face와 GitHub/BtbN에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
+앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face, GitHub와 Gyan에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
 
-영상 미리보기 왼쪽의 `라이선스·출처` 버튼을 누르면 한 화면에서 AV-CASS와 CAVP의 출처·논문, FFmpeg LGPL 빌드 정보와 제3자 고지를 한국어로 확인할 수 있다. 그 아래에는 GPL·LGPL·MIT·Apache의 변경되지 않은 공식 영문 원문이 이어진다.
+영상 미리보기 왼쪽의 `라이선스·출처` 버튼을 누르면 한 화면에서 AV-CASS와 CAVP의 출처·논문, FFmpeg GPL 빌드 정보와 제3자 고지를 한국어로 확인할 수 있다. 그 아래에는 GPL·LGPL·MIT·Apache의 변경되지 않은 공식 영문 원문이 이어진다.
 
 ### 라이선스
 
@@ -228,7 +228,7 @@ For the first installation, keep the following two executables in the same folde
 | Disk space | The first installation downloads approximately 5.9 GB. Approximately 15 GB of free space is recommended while downloading, extracting, and installing. |
 | Internet | Required for the first installation, reinstallation, or runtime updates. Normal separation and saving do not require an internet connection after installation. |
 | GitHub authentication | Not required for a public Release. If the Release is private, GitHub CLI is required and the installer starts GitHub web authentication when necessary. |
-| Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and the current official BtbN FFmpeg 8.1 LGPL shared build. |
+| Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and the current official Gyan FFmpeg GPL Essentials static build. |
 | Installation location | Do not run the application from inside the ZIP. Extract the entire ZIP into a normal user-writable folder such as Documents. |
 
 #### 2. Download the Windows Installer
@@ -265,13 +265,13 @@ The executables may be **unsigned builds** without a paid code-signing certifica
    - AI Python runtime: two pinned split files from this project's Release. A public Release is downloaded without authentication; only a private Release that rejects public access uses local GitHub CLI authentication.
    - AV-CASS `av_cass_checkpoint.pt`: the official AV-CASS Google Drive location
    - CAVP `cavp_epoch66.ckpt`: the pinned commit in the official Diff-Foley Hugging Face repository
-   - FFmpeg: the FFmpeg 8.1 LGPL shared build from BtbN's official `latest` Release
-2. It verifies the pinned sizes and SHA-256 values of the AI runtime and models. For FFmpeg, it obtains the current asset size and SHA-256 from the official GitHub Release API and also verifies the version and build options.
+   - FFmpeg: Gyan's current official FFmpeg release essentials GPLv3 static build
+2. It verifies the pinned sizes and SHA-256 values of the AI runtime and models. For FFmpeg, it resolves the current version, size, and SHA-256 from Gyan's official `.ver`, `.sha256`, and final download URL, then verifies the build options.
 3. Interrupted downloads from public distributors resume from their `.part` files. Private GitHub Release downloads restart. Files replace their installation targets only after verification succeeds.
 
 The installer displays the download sources, applicable terms, network-access information, and user responsibilities. Installation begins only after the user reviews and accepts them. Video Music Separator is not an official application of, affiliated with, or endorsed by the AV-CASS researchers or their institutions.
 
-The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if the AI runtime or models no longer match their pinned checksums, or if FFmpeg does not match its official Release checksum and LGPL shared-build requirements. Downloads, GitHub authentication, split-file combining, integrity checks, extraction, file placement, and final verification display a percentage for each stage. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
+The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if the AI runtime or models no longer match their pinned checksums, or if FFmpeg does not match Gyan's official version, checksum, final download URL, and GPL Essentials build requirements. Downloads, GitHub authentication, split-file combining, integrity checks, extraction, file placement, and final verification display a percentage for each stage. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
 
 The public application ZIP and separate AI runtime assets exclude the former AudioSep/BandIt code and weights and their GPL dependency, `pedalboard`. The exact installed Python package list is available in `docs/PYTHON_PACKAGES_NOTICES.md` inside the application ZIP, the machine-readable inventory in `docs/PYTHON_PACKAGES_INVENTORY.json`, and full license texts in `docs/licenses/python/`.
 
@@ -289,7 +289,7 @@ After installation, the application folder contains:
 
 - Application executable: `video-music-separator.exe`
 - Required-components installer: `video-music-separator-setup.exe`
-- LGPL shared FFmpeg executables and DLLs: `ffmpeg/`
+- GPL Essentials FFmpeg executables: `ffmpeg/`
 - AI Python environment: `audiosep/env/`
 - AV-CASS code and components: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
 - AV-CASS model: `audiosep/avcass/model/av_cass_checkpoint.pt`
@@ -367,7 +367,7 @@ If `py` cannot find the installed Python interpreter, use the full path to the i
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
-.\scripts\prepare_ffmpeg_lgpl.ps1
+.\scripts\prepare_ffmpeg_gpl.ps1
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
 .\scripts\build_portable.ps1
@@ -375,7 +375,7 @@ If `py` cannot find the installed Python interpreter, use the full path to the i
 
 `build_executables.ps1` creates the single-file application EXE and installer EXE in the repository root. `build_runtime_installer.ps1` creates only the installer EXE and its matching `.sha256` file. The default `build_portable.ps1` result excludes AV-CASS/CAVP weights and FFmpeg and includes the installer. Use `build_portable.ps1 -BundleRuntimeAssets` for an internal offline bundle. Authenticode signing is applied only when a certificate thumbprint is supplied with `-CodeSigningCertificateThumbprint`; otherwise the build remains unsigned.
 
-`prepare_ffmpeg_lgpl.ps1` resolves the official BtbN `latest` FFmpeg 8.1 LGPL shared build for development and offline builds, then verifies the SHA-256 supplied by that Release and the build options. The installed version and checksum are recorded in `docs/runtime-assets.json`; the source and verification method are described in [FFMPEG_BUILD.en.md](docs/FFMPEG_BUILD.en.md).
+`prepare_ffmpeg_gpl.ps1` resolves Gyan's current official FFmpeg GPL Essentials static build for development and offline builds, then verifies the official `.ver` and `.sha256` metadata, final download URL, and build options. The installed version and checksum are recorded in `docs/runtime-assets.json`; the source and verification method are described in [FFMPEG_BUILD.en.md](docs/FFMPEG_BUILD.en.md).
 
 Run the portable smoke test as follows:
 
@@ -396,7 +396,7 @@ Run the portable smoke test as follows:
 
 The application processes user-selected files locally on the PC. Users must obtain the necessary rights to the input video, music, and speech and independently confirm their right to use or distribute generated results. AI separation does not guarantee perfect preservation of dialogue and effects or complete music removal, so review results before saving.
 
-The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, and GitHub/BtbN during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
+The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, GitHub, and Gyan during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
 
 The `Licenses & Sources` button to the left of the video preview opens one scrollable page. In Korean mode, Korean notices and sources appear first, followed by the unmodified official GPL, LGPL, MIT, and Apache license texts.
 

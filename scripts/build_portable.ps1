@@ -25,7 +25,7 @@ $python = if ($PythonPath) { $PythonPath } else { Join-Path $projectDir ".venv\S
 $ffmpegRoot = if ($FFmpegDirectory) {
     [System.IO.Path]::GetFullPath($FFmpegDirectory)
 } else {
-    Join-Path $projectDir "third_party\ffmpeg-lgpl"
+    Join-Path $projectDir "third_party\ffmpeg-gpl"
 }
 $ffmpegDir = Join-Path $ffmpegRoot "bin"
 
@@ -48,9 +48,9 @@ if (-not $AIRuntimeDirectory) {
     throw "라이선스 목록 생성을 위한 정리된 AI 런타임 원본을 -AIRuntimeDirectory로 지정해 주세요."
 }
 if ($BundleRuntimeAssets -and -not $FFmpegDirectory -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
-    & (Join-Path $scriptDir "prepare_ffmpeg_lgpl.ps1") -DestinationDirectory $ffmpegRoot
+    & (Join-Path $scriptDir "prepare_ffmpeg_gpl.ps1") -DestinationDirectory $ffmpegRoot
     if ($LASTEXITCODE -ne 0) {
-        throw "LGPL FFmpeg 준비에 실패했습니다."
+        throw "GPL FFmpeg 준비에 실패했습니다."
     }
 }
 if ($BundleRuntimeAssets -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
@@ -60,18 +60,12 @@ if ($BundleRuntimeAssets -and -not (Test-Path -LiteralPath $ffmpegDir -PathType 
 $requiredFfmpegFiles = @(
     "ffmpeg.exe",
     "ffprobe.exe",
-    "ffplay.exe",
-    "avcodec-62.dll",
-    "avformat-62.dll",
-    "avfilter-11.dll",
-    "avutil-60.dll",
-    "swresample-6.dll",
-    "swscale-9.dll"
+    "ffplay.exe"
 )
 if ($BundleRuntimeAssets) {
     foreach ($name in $requiredFfmpegFiles) {
         if (-not (Test-Path -LiteralPath (Join-Path $ffmpegDir $name) -PathType Leaf)) {
-            throw "LGPL 공유 FFmpeg 구성 파일을 찾을 수 없습니다: $name"
+            throw "GPL FFmpeg 구성 파일을 찾을 수 없습니다: $name"
         }
     }
 
@@ -80,11 +74,13 @@ if ($BundleRuntimeAssets) {
         throw "FFmpeg 버전을 확인하지 못했습니다."
     }
     if (
-        -not $ffmpegVersionText.Contains("--enable-shared") -or
-        $ffmpegVersionText.Contains("--enable-gpl") -or
+        -not $ffmpegVersionText.Contains("-essentials_build-www.gyan.dev") -or
+        -not $ffmpegVersionText.Contains("--enable-gpl") -or
+        -not $ffmpegVersionText.Contains("--enable-version3") -or
+        -not $ffmpegVersionText.Contains("--enable-static") -or
         $ffmpegVersionText.Contains("--enable-nonfree")
     ) {
-        throw "배포에는 GPL/nonfree 옵션이 없는 LGPL 공유 FFmpeg만 사용할 수 있습니다."
+        throw "배포에는 nonfree 옵션이 없는 Gyan GPL Essentials FFmpeg만 사용할 수 있습니다."
     }
 }
 
@@ -254,7 +250,7 @@ AV-CASS는 영상 장면까지 분석하며 NVIDIA GPU가 필요합니다.
 앱 맨 위의 작은 영상 화면에서 전체 믹스와 각 분리본을 영상과 함께 확인할 수 있습니다.
 음악 행을 뮤트한 뒤 전체 영상을 재생하고, 원본 옆에 _음악제거 사본으로 저장할 수 있습니다.
 두 행의 듣기/정지, 행별 뮤트/해제, 공통 볼륨 조절 기능이 포함되어 있습니다.
-처음 한 번 video-music-separator-setup.exe를 실행하면 AV-CASS, CAVP와 LGPL FFmpeg를
+처음 한 번 video-music-separator-setup.exe를 실행하면 AV-CASS, CAVP와 GPL FFmpeg를
 각 공식 배포처에서 자동으로 내려받고 SHA-256을 확인합니다. 설치할 때는 인터넷 연결이 필요합니다.
 설치가 끝난 뒤 앱 사용에는 인터넷 연결이나 별도 Python 설치가 필요하지 않습니다.
 

@@ -46,19 +46,14 @@ CAVP_DOWNLOAD_URL = (
     "diff_foley_ckpt/cavp_epoch66.ckpt?download=true"
 )
 
-FFMPEG_VERSION = "BtbN latest FFmpeg 8.1 LGPL shared build"
-FFMPEG_VERSION_FAMILY = "ffmpeg version n8.1"
-FFMPEG_SHA256 = "Resolved from the official GitHub Release during installation"
+FFMPEG_VERSION = "Gyan latest FFmpeg release essentials GPLv3 static build"
+FFMPEG_SHA256 = "Resolved from Gyan's official checksum during installation"
 FFMPEG_SIZE = 0
-FFMPEG_SOURCE = "https://github.com/BtbN/FFmpeg-Builds"
-FFMPEG_RELEASE_API_URL = (
-    "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest"
-)
-FFMPEG_ASSET_NAME = "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip"
-FFMPEG_DOWNLOAD_URL = (
-    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/"
-    + FFMPEG_ASSET_NAME
-)
+FFMPEG_SOURCE = "https://www.gyan.dev/ffmpeg/builds/"
+FFMPEG_ASSET_NAME = "ffmpeg-release-essentials.zip"
+FFMPEG_DOWNLOAD_URL = FFMPEG_SOURCE + FFMPEG_ASSET_NAME
+FFMPEG_CHECKSUM_URL = FFMPEG_DOWNLOAD_URL + ".sha256"
+FFMPEG_VERSION_URL = FFMPEG_DOWNLOAD_URL + ".ver"
 
 
 RUNTIME_COMPONENTS = (

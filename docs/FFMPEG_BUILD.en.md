@@ -1,32 +1,35 @@
-# FFmpeg LGPL build information
+# FFmpeg GPL build information
 
-This application runs FFmpeg as a separate command-line program and does not link FFmpeg into the application code. The online installer does not contain FFmpeg binaries; it downloads them directly from BtbN's official GitHub Release during installation.
+This application runs FFmpeg as separate command-line programs and does not link FFmpeg into the application code. The default online installer does not contain FFmpeg binaries; it downloads them directly from Gyan's official distribution server to the user's PC during installation.
 
 ## Installation target
 
-- Distributor: BtbN/FFmpeg-Builds
-- Release: `latest`
-- File: `ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip`
-- Version family: FFmpeg 8.1
-- Applicable license: GNU Lesser General Public License version 3
-- Release metadata: <https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest>
-- Binary download: <https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip>
-- Distribution project: <https://github.com/BtbN/FFmpeg-Builds>
+- Distributor: Gyan Doshi's FFmpeg builds for Windows
+- Channel: current `release essentials`
+- Stable entry URL: <https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip>
+- Version metadata: <https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.ver>
+- SHA-256 metadata: <https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256>
+- Distribution information: <https://www.gyan.dev/ffmpeg/builds/>
 - FFmpeg source: <https://github.com/FFmpeg/FFmpeg>
+- Applicable license: GNU General Public License version 3
 
-The exact binary version and checksum referenced by `latest` may change when BtbN publishes a new build. The installer reads the selected asset's actual size and `sha256` digest from the official GitHub Release API and compares them with the downloaded file. It then runs `ffmpeg -version` and verifies all of the following conditions:
+The exact binary version and checksum referenced by the stable entry URL change when Gyan publishes a new release. The installer first reads `.ver` and `.sha256`, then verifies that the final redirect is exactly `packages/ffmpeg-<version>-essentials_build.zip` and obtains its response size. After download, it compares SHA-256 and checks the `-version` output of `ffmpeg`, `ffprobe`, and `ffplay` for all of the following conditions:
 
-- The output belongs to the `ffmpeg version n8.1` family.
-- `--enable-shared` is present.
-- `--enable-gpl` and `--enable-nonfree` are absent.
-- All required executables and shared DLLs are present.
+- All three executables report the exact version in `.ver`.
+- Gyan's `essentials_build` identifier is present.
+- `--enable-gpl`, `--enable-version3`, and `--enable-static` are present.
+- `--enable-nonfree` is absent.
 
-Only files that pass these checks are installed into the application's `ffmpeg/` directory. The exact installed version, download URL, file size, and SHA-256 are written to `docs/runtime-assets.json` in the application folder and can also be viewed in the application's `License & Sources` screen.
+Only the three executables that pass these checks are installed into the application's `ffmpeg/` directory. The exact installed version, final download URL, file size, and SHA-256 are written to `docs/runtime-assets.json` in the application folder and can also be viewed in the application's `Licenses & Sources` screen.
 
-For development and internal offline builds, `scripts/prepare_ffmpeg_lgpl.ps1` resolves the same official Release asset and verifies its SHA-256 and build options.
+For development and internal offline builds, `scripts/prepare_ffmpeg_gpl.ps1` downloads the same current official asset and performs the same checks.
+
+## Distribution scope and obligations
+
+The default online installation ZIP does not contain FFmpeg binaries. The user's installer downloads them directly from Gyan, so the project's default ZIP does not itself redistribute the FFmpeg binaries.
+
+An internal offline bundle made with `build_portable.ps1 -BundleRuntimeAssets` does contain FFmpeg binaries. Before distributing such a bundle publicly, separately satisfy the GPL obligations, including preserving the GPLv3 text and copyright notices and providing the complete corresponding source and build instructions for the included FFmpeg binary and its build dependencies.
 
 ## Modifications
 
-This project does not modify the downloaded FFmpeg binary or source. Internal offline bundles also use the executables and shared libraries exactly as distributed in the original build's `bin` folder.
-
-If a separate public distribution includes FFmpeg binaries, re-check the obligation to provide this document, the full LGPL and GPL texts, third-party notices, and source corresponding exactly to FFmpeg and its build dependencies.
+This project does not modify the downloaded FFmpeg binary or source. Internal offline bundles use the three executables exactly as distributed.

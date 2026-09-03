@@ -19,12 +19,23 @@ import runtime_asset_installer as installer
 
 
 class FakeResponse(io.BytesIO):
-    def __init__(self, payload: bytes, status: int = 200) -> None:
+    def __init__(
+        self,
+        payload: bytes,
+        status: int = 200,
+        url: str = "https://example.invalid/response",
+        headers: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(payload)
         self.status = status
+        self.url = url
+        self.headers = headers or {}
 
     def getcode(self) -> int:
         return self.status
+
+    def geturl(self) -> str:
+        return self.url
 
     def __enter__(self):
         return self
@@ -78,7 +89,8 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertIn("github.com/Fabio-Cannavaro", disclosure)
         self.assertIn("drive.usercontent.google.com", disclosure)
         self.assertIn("huggingface.co", disclosure)
-        self.assertIn("github.com/BtbN", disclosure)
+        self.assertIn("www.gyan.dev", disclosure)
+        self.assertIn("GPL Essentials", disclosure)
         self.assertIn("IP 주소", disclosure)
         self.assertIn("업로드하지 않습니다", disclosure)
         self.assertIn("저작권", disclosure)
@@ -91,7 +103,8 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertIn("github.com/Fabio-Cannavaro", disclosure)
         self.assertIn("drive.usercontent.google.com", disclosure)
         self.assertIn("huggingface.co", disclosure)
-        self.assertIn("github.com/BtbN", disclosure)
+        self.assertIn("www.gyan.dev", disclosure)
+        self.assertIn("GPL Essentials", disclosure)
         self.assertIn("not an official application", disclosure)
         self.assertIn("User responsibility", disclosure)
 
@@ -136,37 +149,88 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertEqual(len(cavp.sha256), 64)
         self.assertEqual(
             installer.FFMPEG_ASSET_NAME,
-            "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip",
+            "ffmpeg-release-essentials.zip",
         )
-        self.assertIn("lgpl-shared", installer.FFMPEG_ARCHIVE.url)
+        self.assertEqual(
+            installer.FFMPEG_ARCHIVE.url,
+            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+        )
 
     def test_resolves_latest_official_ffmpeg_asset_and_digest(self) -> None:
         digest = "a" * 64
+        version = "9.0.1"
         download_url = (
-            "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/"
-            + installer.FFMPEG_ASSET_NAME
+            "https://www.gyan.dev/ffmpeg/builds/packages/"
+            f"ffmpeg-{version}-essentials_build.zip"
         )
-        response = {
-            "assets": [
-                {
-                    "name": installer.FFMPEG_ASSET_NAME,
-                    "size": 70_830_527,
-                    "digest": f"sha256:{digest}",
-                    "browser_download_url": download_url,
-                }
-            ]
-        }
+        responses = (
+            FakeResponse(digest.encode("ascii")),
+            FakeResponse(version.encode("ascii")),
+            FakeResponse(
+                b"",
+                url=download_url,
+                headers={"Content-Length": "111253802"},
+            ),
+        )
         with patch.object(
             installer.urllib.request,
             "urlopen",
-            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+            side_effect=responses,
         ) as urlopen:
             asset = installer.resolve_ffmpeg_archive()
-        self.assertEqual(asset.size, 70_830_527)
+        self.assertEqual(asset.size, 111_253_802)
         self.assertEqual(asset.sha256, digest)
         self.assertEqual(asset.url, download_url)
-        request = urlopen.call_args.args[0]
-        self.assertEqual(request.full_url, installer.FFMPEG_RELEASE_API_URL)
+        self.assertEqual(asset.version, version)
+        self.assertEqual(
+            asset.relative_path,
+            ".downloads/ffmpeg-9.0.1-essentials_build.zip",
+        )
+        requests = [call.args[0] for call in urlopen.call_args_list]
+        self.assertEqual(requests[0].full_url, installer.FFMPEG_CHECKSUM_URL)
+        self.assertEqual(requests[1].full_url, installer.FFMPEG_VERSION_URL)
+        self.assertEqual(requests[2].full_url, installer.FFMPEG_DOWNLOAD_URL)
+        self.assertEqual(requests[2].method, "HEAD")
+
+    def test_validates_matching_gpl_essentials_static_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            directory = Path(temp_name)
+            for name in installer.FFMPEG_REQUIRED_FILES:
+                (directory / name).write_bytes(b"exe")
+
+            def version_result(command, **_kwargs):
+                program = Path(command[0]).stem
+                return CompletedProcess(
+                    command,
+                    0,
+                    (
+                        f"{program} version 9.0.1-essentials_build-www.gyan.dev\n"
+                        "configuration: --enable-gpl --enable-version3 "
+                        "--enable-static\n"
+                    ),
+                    "",
+                )
+
+            with patch.object(installer.subprocess, "run", side_effect=version_result):
+                self.assertTrue(installer.validate_ffmpeg(directory, "9.0.1"))
+                self.assertFalse(installer.validate_ffmpeg(directory, "9.1"))
+
+    def test_rejects_nonfree_ffmpeg_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            directory = Path(temp_name)
+            for name in installer.FFMPEG_REQUIRED_FILES:
+                (directory / name).write_bytes(b"exe")
+            version_text = (
+                "ffmpeg version 9.0.1-essentials_build-www.gyan.dev\n"
+                "configuration: --enable-gpl --enable-version3 --enable-static "
+                "--enable-nonfree\n"
+            )
+            with patch.object(
+                installer.subprocess,
+                "run",
+                return_value=CompletedProcess([], 0, version_text, ""),
+            ):
+                self.assertFalse(installer.validate_ffmpeg(directory, "9.0.1"))
 
     def test_base_runtime_parts_are_below_github_asset_limit(self) -> None:
         self.assertEqual(len(installer.BASE_RUNTIME_ASSETS), 2)

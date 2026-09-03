@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -41,12 +42,12 @@ from release_info import (
     CAVP_VERSION,
     FFMPEG_DOWNLOAD_URL,
     FFMPEG_ASSET_NAME,
-    FFMPEG_RELEASE_API_URL,
+    FFMPEG_CHECKSUM_URL,
     FFMPEG_SHA256,
     FFMPEG_SIZE,
     FFMPEG_SOURCE,
     FFMPEG_VERSION,
-    FFMPEG_VERSION_FAMILY,
+    FFMPEG_VERSION_URL,
 )
 
 
@@ -68,6 +69,7 @@ class DownloadAsset:
     sha256: str
     size: int
     source: str
+    version: str = ""
 
 
 MODEL_ASSETS = (
@@ -106,7 +108,7 @@ BASE_RUNTIME_ASSETS = tuple(
 
 FFMPEG_ARCHIVE = DownloadAsset(
     asset_id="ffmpeg",
-    label="FFmpeg LGPL 공유 빌드",
+    label="FFmpeg GPL Essentials 빌드",
     url=FFMPEG_DOWNLOAD_URL,
     relative_path=f".downloads/{FFMPEG_ASSET_NAME}",
     sha256=FFMPEG_SHA256,
@@ -117,12 +119,6 @@ FFMPEG_REQUIRED_FILES = (
     "ffmpeg.exe",
     "ffprobe.exe",
     "ffplay.exe",
-    "avcodec-62.dll",
-    "avformat-62.dll",
-    "avfilter-11.dll",
-    "avutil-60.dll",
-    "swresample-6.dll",
-    "swscale-9.dll",
 )
 
 ProgressCallback = Callable[[str, int, int], None]
@@ -139,7 +135,7 @@ INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
   {AVCASS_DOWNLOAD_URL}
 • CAVP 약 1.27GB — huggingface.co
   {CAVP_DOWNLOAD_URL}
-• FFmpeg LGPL 공유 빌드 약 68MB — github.com/BtbN
+• FFmpeg GPL Essentials 빌드 약 106MB — www.gyan.dev
   {FFMPEG_DOWNLOAD_URL}
 
 이용조건
@@ -166,7 +162,7 @@ Components to install (approximately 5.9 GB total download; approximately 15 GB 
   {AVCASS_DOWNLOAD_URL}
 • CAVP, approximately 1.27 GB — huggingface.co
   {CAVP_DOWNLOAD_URL}
-• FFmpeg LGPL shared build, approximately 68 MB — github.com/BtbN
+• FFmpeg GPL Essentials build, approximately 106 MB — www.gyan.dev
   {FFMPEG_DOWNLOAD_URL}
 
 Terms of use
@@ -220,7 +216,7 @@ PROGRESS_TRANSLATIONS = (
     ("GitHub 로그인 완료", "GitHub login complete"),
     ("비공개 Release 인증 확인 중", "Checking private Release authentication"),
     ("GitHub 인증 다운로드 중", "Downloading with GitHub authentication"),
-    ("GitHub Release 정보 확인 중", "Checking GitHub Release information"),
+    ("최신 배포 정보 확인 중", "Checking latest release information"),
     ("분할 파일을 결합하는 중", "Combining split files"),
     ("결합 파일 무결성 확인 중", "Verifying combined-file integrity"),
     ("무결성 확인 중", "Verifying integrity"),
@@ -234,7 +230,7 @@ PROGRESS_TRANSLATIONS = (
     ("AI Python 실행환경", "AI Python runtime"),
     ("AV-CASS 분리 모델", "AV-CASS separation model"),
     ("CAVP 영상 인식 모델", "CAVP visual recognition model"),
-    ("FFmpeg LGPL 공유 빌드", "FFmpeg LGPL shared build"),
+    ("FFmpeg GPL Essentials 빌드", "FFmpeg GPL Essentials build"),
 )
 
 
@@ -243,10 +239,10 @@ ERROR_TRANSLATIONS = (
     ("로그인해 주세요.", "Sign in and try again."),
     ("GitHub 로그인을 완료하지 못했습니다.", "GitHub login was not completed."),
     ("비공개 AI 실행환경을 내려받지 못했습니다.", "The private AI runtime could not be downloaded."),
-    ("BtbN 공식 latest Release에서 FFmpeg 8.1 LGPL 공유 빌드 정보를 확인하지 못했습니다.", "The FFmpeg 8.1 LGPL shared-build information could not be read from BtbN's official latest Release."),
-    ("BtbN FFmpeg Release 자산 정보가 올바르지 않습니다.", "The BtbN FFmpeg Release asset information is invalid."),
+    ("Gyan 공식 최신 FFmpeg GPL Essentials 정보를 확인하지 못했습니다.", "The latest official Gyan FFmpeg GPL Essentials information could not be read."),
+    ("Gyan FFmpeg 배포 정보가 올바르지 않습니다.", "The Gyan FFmpeg release information is invalid."),
     ("다운로드한 FFmpeg 압축 파일의 구조가 예상과 다릅니다.", "The downloaded FFmpeg archive has an unexpected structure."),
-    ("지정된 LGPL 공유 FFmpeg 빌드를 확인하지 못했습니다.", "The specified LGPL shared FFmpeg build could not be verified."),
+    ("지정된 GPL Essentials FFmpeg 빌드를 확인하지 못했습니다.", "The specified GPL Essentials FFmpeg build could not be verified."),
     ("기본 앱이 없습니다.", "The main application is missing."),
     ("설치 후 검증에 실패했습니다.", "Post-installation verification failed."),
     ("설치 또는 검증 필요", "Installation or verification required"),
@@ -596,80 +592,89 @@ def download_base_runtime_asset(
 
 
 def resolve_ffmpeg_archive() -> DownloadAsset:
-    request = urllib.request.Request(
-        FFMPEG_RELEASE_API_URL,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": USER_AGENT,
-        },
-    )
-    try:
+    def read_metadata(url: str) -> str:
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(request, timeout=60) as response:
-            release = json.load(response)
-        matching = [
-            item
-            for item in release.get("assets", [])
-            if item.get("name") == FFMPEG_ASSET_NAME
-        ]
-        item = matching[0]
-        digest_text = str(item["digest"])
-        digest_type, digest = digest_text.split(":", 1)
-        size = int(item["size"])
-        url = str(item["browser_download_url"])
+            payload = response.read(4097)
+        if len(payload) > 4096:
+            raise ValueError("metadata response is too large")
+        return payload.decode("utf-8").strip()
+
+    try:
+        digest = read_metadata(FFMPEG_CHECKSUM_URL).lower()
+        version = read_metadata(FFMPEG_VERSION_URL)
+        head_request = urllib.request.Request(
+            FFMPEG_DOWNLOAD_URL,
+            headers={"User-Agent": USER_AGENT},
+            method="HEAD",
+        )
+        with urllib.request.urlopen(head_request, timeout=60) as response:
+            url = response.geturl()
+            size = int(response.headers["Content-Length"])
     except (
-        IndexError,
         KeyError,
-        TypeError,
+        UnicodeDecodeError,
         ValueError,
-        json.JSONDecodeError,
         OSError,
     ) as error:
         raise RuntimeError(
-            "BtbN 공식 latest Release에서 FFmpeg 8.1 LGPL 공유 빌드 정보를 "
-            "확인하지 못했습니다."
+            "Gyan 공식 최신 FFmpeg GPL Essentials 정보를 확인하지 못했습니다."
         ) from error
+    expected_url = f"{FFMPEG_SOURCE}packages/ffmpeg-{version}-essentials_build.zip"
     if (
-        digest_type.lower() != "sha256"
-        or len(digest) != 64
-        or any(character not in "0123456789abcdefABCDEF" for character in digest)
+        not re.fullmatch(r"[0-9a-f]{64}", digest)
+        or not re.fullmatch(r"\d+\.\d+(?:\.\d+)?", version)
         or size <= 0
-        or not url.startswith("https://github.com/BtbN/FFmpeg-Builds/")
+        or url != expected_url
     ):
-        raise RuntimeError("BtbN FFmpeg Release 자산 정보가 올바르지 않습니다.")
+        raise RuntimeError("Gyan FFmpeg 배포 정보가 올바르지 않습니다.")
     return DownloadAsset(
         asset_id="ffmpeg",
-        label="FFmpeg LGPL 공유 빌드",
+        label="FFmpeg GPL Essentials 빌드",
         url=url,
-        relative_path=f".downloads/{FFMPEG_ASSET_NAME}",
-        sha256=digest.lower(),
+        relative_path=f".downloads/ffmpeg-{version}-essentials_build.zip",
+        sha256=digest,
         size=size,
         source=FFMPEG_SOURCE,
+        version=version,
     )
 
 
-def validate_ffmpeg(directory: Path) -> bool:
+def validate_ffmpeg(directory: Path, expected_version: str = "") -> bool:
     if any(not (directory / name).is_file() for name in FFMPEG_REQUIRED_FILES):
         return False
-    try:
-        result = subprocess.run(
-            [str(directory / "ffmpeg.exe"), "-version"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=20,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    version_text = result.stdout + result.stderr
-    return (
-        result.returncode == 0
-        and FFMPEG_VERSION_FAMILY in version_text
-        and "--enable-shared" in version_text
-        and "--enable-gpl" not in version_text
-        and "--enable-nonfree" not in version_text
-    )
+    for program in FFMPEG_REQUIRED_FILES:
+        try:
+            result = subprocess.run(
+                [str(directory / program), "-version"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=20,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return False
+        version_text = result.stdout + result.stderr
+        lines = version_text.splitlines()
+        first_line = lines[0] if lines else ""
+        if (
+            result.returncode != 0
+            or "-essentials_build-www.gyan.dev" not in first_line
+            or "--enable-gpl" not in version_text
+            or "--enable-version3" not in version_text
+            or "--enable-static" not in version_text
+            or "--enable-nonfree" in version_text
+            or (
+                expected_version
+                and not first_line.startswith(
+                    f"{Path(program).stem} version {expected_version}-"
+                )
+            )
+        ):
+            return False
+    return True
 
 
 def _extract_zip_with_progress(
@@ -726,15 +731,14 @@ def _copy_directory_with_progress(
 
 def install_ffmpeg(root: Path, progress: ProgressCallback) -> DownloadAsset | None:
     destination = root / "ffmpeg"
-    progress("FFmpeg · 설치 검증 중", 0, 1)
-    if validate_ffmpeg(destination):
-        progress("FFmpeg · 설치 검증 중", 1, 1)
-        progress("FFmpeg LGPL 공유 빌드 · 이미 설치됨", 1, 1)
-        return None
-
-    progress("FFmpeg · GitHub Release 정보 확인 중", 0, 1)
+    progress("FFmpeg · 최신 배포 정보 확인 중", 0, 1)
     ffmpeg_archive = resolve_ffmpeg_archive()
-    progress("FFmpeg · GitHub Release 정보 확인 중", 1, 1)
+    progress("FFmpeg · 최신 배포 정보 확인 중", 1, 1)
+    progress("FFmpeg · 설치 검증 중", 0, 1)
+    if validate_ffmpeg(destination, ffmpeg_archive.version):
+        progress("FFmpeg · 설치 검증 중", 1, 1)
+        progress("FFmpeg GPL Essentials 빌드 · 이미 설치됨", 1, 1)
+        return ffmpeg_archive
     archive = root / ffmpeg_archive.relative_path
     download_asset(ffmpeg_archive, archive, progress)
     downloads = archive.parent
@@ -759,9 +763,9 @@ def install_ffmpeg(root: Path, progress: ProgressCallback) -> DownloadAsset | No
             progress,
         )
         progress("FFmpeg · 설치 검증 중", 0, 1)
-        if not validate_ffmpeg(pending):
+        if not validate_ffmpeg(pending, ffmpeg_archive.version):
             shutil.rmtree(pending, ignore_errors=True)
-            raise RuntimeError("지정된 LGPL 공유 FFmpeg 빌드를 확인하지 못했습니다.")
+            raise RuntimeError("지정된 GPL Essentials FFmpeg 빌드를 확인하지 못했습니다.")
         progress("FFmpeg · 설치 검증 중", 1, 1)
 
         previous = root / f"ffmpeg-old-{uuid.uuid4().hex}"
@@ -776,7 +780,7 @@ def install_ffmpeg(root: Path, progress: ProgressCallback) -> DownloadAsset | No
             raise
         shutil.rmtree(previous, ignore_errors=True)
     archive.unlink(missing_ok=True)
-    progress("FFmpeg LGPL 공유 빌드 · 설치 완료", 1, 1)
+    progress("FFmpeg GPL Essentials 빌드 · 설치 완료", 1, 1)
     return ffmpeg_archive
 
 
@@ -926,7 +930,7 @@ def verify_installation(
         current_step += 1
         progress_callback(label, current_step, total_steps)
     if not validate_ffmpeg(root / "ffmpeg"):
-        problems.append("설치 또는 검증 필요: FFmpeg LGPL 공유 빌드")
+        problems.append("설치 또는 검증 필요: FFmpeg GPL Essentials 빌드")
     current_step += 1
     progress_callback(label, current_step, total_steps)
     return problems

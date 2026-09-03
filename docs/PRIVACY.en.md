@@ -11,21 +11,22 @@ The required-components installer sends HTTPS download requests to the following
 | AI Python runtime and AV-CASS runtime code | `github.com`, `objects.githubusercontent.com`, and other download hosts used by GitHub | Download pinned assets from this project's GitHub Release |
 | AV-CASS checkpoint | `drive.usercontent.google.com` | Download the file provided by the AV-CASS project |
 | CAVP checkpoint | `huggingface.co` | Download from the official Diff-Foley model repository |
-| FFmpeg LGPL shared build | `github.com`, `objects.githubusercontent.com`, and other download hosts used by GitHub | Download the BtbN GitHub Release |
+| FFmpeg GPL Essentials build | `www.gyan.dev` | Download Gyan's current official build and its version and checksum metadata |
 
 Download URLs used by the installer:
 
 - AI Python runtime: two split files below `https://github.com/Fabio-Cannavaro/video-music-separator/releases/download/runtime-v0.2.0/`
 - AV-CASS: `https://drive.usercontent.google.com/download?id=1_d-RCP111No-wS-wrmxyK-zH87Sm2xzf&export=download&confirm=t`
 - CAVP: `https://huggingface.co/SimianLuo/Diff-Foley/resolve/b17ddbe76e6d42f4b4135eeb443b1c1644267e3e/diff_foley_ckpt/cavp_epoch66.ckpt?download=true`
-- FFmpeg Release metadata: `https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest`
-- FFmpeg: `https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip`
+- FFmpeg version: `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.ver`
+- FFmpeg checksum: `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256`
+- FFmpeg: `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip`
 
 As part of an ordinary web download, each server operator may receive or log connection data such as the IP address, request time, download URL, HTTP User-Agent, and Range header used to resume a download. Each operator controls its own privacy policy and terms.
 
 The installer first attempts to download the AI Python runtime from the GitHub Release without authentication. A public Release requires neither a GitHub account nor GitHub CLI. If public access is denied, the installer treats the Release as private and uses the GitHub CLI login on this PC. If that login is missing or expired, the installer starts GitHub CLI web authentication and copies the one-time authentication code to the clipboard. The installer does not embed, directly read, or store the GitHub token; authentication and credential storage are handled by GitHub CLI. GitHub may then receive the signed-in account identity and ordinary authentication request data.
 
-The installer pins and verifies the URL, expected size, and SHA-256 of the AI runtime and each model. For FFmpeg, it reads the actual URL, size, and SHA-256 of the selected asset from BtbN's official `latest` Release API, then verifies the LGPL shared-build options. Normal video processing does not require an internet connection after installation.
+The installer pins and verifies the URL, expected size, and SHA-256 of the AI runtime and each model. For FFmpeg, it obtains the current version, size, and SHA-256 from Gyan's official `.ver`, `.sha256`, and final download URL, then verifies the GPL Essentials static-build options. Normal video processing does not require an internet connection after installation.
 
 ## Local files
 

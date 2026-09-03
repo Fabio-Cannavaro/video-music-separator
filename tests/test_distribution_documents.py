@@ -39,6 +39,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("drive.usercontent.google.com", privacy)
         self.assertIn("huggingface.co", privacy)
         self.assertIn("github.com", privacy)
+        self.assertIn("www.gyan.dev", privacy)
         self.assertIn("IP 주소", privacy)
 
     def test_builds_generate_checksums_and_support_optional_code_signing(self) -> None:
@@ -58,6 +59,8 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("git -C $projectDir status --porcelain --untracked-files=no", portable_build)
         self.assertIn('Join-Path $outputDocsDir "SOURCE_COMMIT.txt"', portable_build)
         self.assertIn("audit_python_licenses.py", portable_build)
+        self.assertIn("prepare_ffmpeg_gpl.ps1", portable_build)
+        self.assertNotIn("prepare_ffmpeg_lgpl.ps1", portable_build)
         self.assertIn('Join-Path $outputDir "audiosep"', portable_build)
         self.assertIn('--onefile', executable_build)
         self.assertIn('Join-Path $appDir "sound_separator_app.py"', executable_build)
@@ -129,6 +132,10 @@ class DistributionDocumentTests(unittest.TestCase):
             "CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석",
             readme,
         )
+        self.assertIn("Gyan", readme)
+        self.assertIn("GPL Essentials", readme)
+        self.assertNotIn("BtbN", readme)
+        self.assertNotIn("prepare_ffmpeg_lgpl.ps1", readme)
 
         privacy = (DOCS / "PRIVACY.md").read_text(encoding="utf-8")
         privacy_en = (DOCS / "PRIVACY.en.md").read_text(encoding="utf-8")
