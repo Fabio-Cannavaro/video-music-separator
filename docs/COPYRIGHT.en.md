@@ -1,6 +1,6 @@
 # Video Music Separator Copyright Notice
 
-Copyright © 2026 SONG HO PARK
+Copyright © 2026 @ms-0606 (GitHub: Fabio-Cannavaro)
 
 - YouTube: `@ms-0606`
 - GitHub: `Fabio-Cannavaro`

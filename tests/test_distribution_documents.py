@@ -21,9 +21,16 @@ class DistributionDocumentTests(unittest.TestCase):
         checklist = (DOCS / "DISTRIBUTION_CHECKLIST.md").read_text(encoding="utf-8")
         copyright_notice = (DOCS / "COPYRIGHT.md").read_text(encoding="utf-8")
         self.assertIn("GPL-3.0-only", readme)
-        self.assertIn("Copyright © 2026 SONG HO PARK", readme)
+        self.assertIn(
+            "Copyright © 2026 @ms-0606 (GitHub: Fabio-Cannavaro)", readme
+        )
         self.assertIn("GPL-3.0-only", checklist)
-        self.assertIn("Copyright © 2026 SONG HO PARK", copyright_notice)
+        self.assertIn(
+            "Copyright © 2026 @ms-0606 (GitHub: Fabio-Cannavaro)",
+            copyright_notice,
+        )
+        self.assertNotIn("SONG HO PARK", readme)
+        self.assertNotIn("SONG HO PARK", copyright_notice)
         self.assertIn("GPL-3.0-only", copyright_notice)
 
     def test_privacy_notice_names_network_destinations_and_local_processing(self) -> None:
