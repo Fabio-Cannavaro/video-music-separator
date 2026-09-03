@@ -6,6 +6,8 @@ Video Music Separator의 자체 코드는 루트 `LICENSE`를 따른다. 아래 
 
 이 앱의 음악/비음악 분리에 AV-CASS를 사용한다.
 
+Video Music Separator는 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며, 해당 연구진과 제휴하거나 보증받지 않았다.
+
 - 프로젝트: <https://cass-flowmatching.github.io/>
 - 소스: <https://github.com/pantheon5100/AVCASS>
 - 체크포인트 안내: AV-CASS 공식 저장소의 README
@@ -19,7 +21,7 @@ Video Music Separator의 자체 코드는 루트 `LICENSE`를 따른다. 아래 
 
 AV-CASS 공식 저장소는 코드에 MIT License를 표시하지만, README에서 링크한 사전학습 체크포인트에 별도의 재배포 조건을 명시하지 않았다. 권리자의 명시적 확인 전에는 체크포인트를 공개 저장소에 올리지 않는다.
 
-개인용 온라인 설치에서는 `video-music-separator-setup.exe`가 공식 AV-CASS Google Drive에서 `av_cass_checkpoint.pt`를 사용자 PC로 직접 내려받고, 공개 설치 파일이나 이 저장소에는 체크포인트를 포함하지 않는다.
+온라인 설치에서는 `video-music-separator-setup.exe`가 AV-CASS 프로젝트가 안내한 Google Drive에서 `av_cass_checkpoint.pt`를 사용자 PC로 직접 내려받고, 공개 설치 파일이나 이 저장소에는 체크포인트를 포함하지 않는다.
 
 ## CAVP / Diff-Foley
 

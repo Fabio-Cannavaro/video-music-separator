@@ -1,33 +1,78 @@
-“Commons Clause” License Condition v1.0
-
-The Software is provided to you by the Licensor under the License, as defined below, subject to the following condition.
-
-Without limiting other conditions in the License, the grant of rights under the License will not include, and the License does not grant to you, the right to Sell the Software.
-
-For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you under the License to provide to third parties, for a fee or other consideration (including without limitation fees for hosting or consulting/ support services related to the Software), a product or service whose value derives, entirely or substantially, from the functionality of the Software. Any license notice or attribution required by the License must also include this Commons Clause License Condition notice.
-
-Software: Video Music Separator
-License: MIT License
-Licensor: Fabio-Cannavaro
-
-MIT License
+Video Music Separator No-Resale Share-Alike License 1.0
 
 Copyright (c) 2026 Fabio-Cannavaro
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Permission
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permission is granted, free of charge, to any person obtaining a copy of the
+Video Music Separator software and its accompanying documentation (the
+"Software") to use, copy, study, modify, and distribute the Software, subject
+to all conditions below.
+
+2. Attribution and ownership
+
+Every copy or substantial portion of the Software must retain this license,
+the above copyright notice, and the notices identifying third-party material.
+The original portions of the Software remain copyrighted by their original
+copyright holder. A contributor may claim copyright only in that contributor's
+original modifications and may not claim exclusive ownership of the original
+Software or use a claim of copyright to prevent the permissions granted by
+this license.
+
+3. No resale of substantially unchanged copies
+
+You may not sell, rent, sublicense for a fee, or otherwise charge for a copy of
+the Software that is unmodified or contains only insubstantial changes. This
+condition is intended to prohibit repackaging or lightly modifying the
+Software and reselling it.
+
+This condition does not prohibit charging for substantial original
+development, integration, consulting, support, or a separate work that merely
+interoperates with the Software. It also does not prevent a contributor from
+charging for a substantially modified version, provided that recipients retain
+all rights required by Section 4.
+
+4. Share-alike for distributed modifications
+
+If you distribute a modified version of the Software, in source or executable
+form, you must:
+
+  a. clearly identify the files or portions you changed;
+  b. license the complete modified version, excluding third-party material
+     covered by Section 5, under this same license;
+  c. provide the corresponding source code in the preferred form for making
+     modifications, without an additional charge, from the same download page
+     or with a durable direct link shown there; and
+  d. not impose additional terms or technical measures that restrict a
+     recipient from using, studying, modifying, or redistributing the Software
+     free of charge under this license.
+
+A distributor or contributor may not revoke these permissions for copies
+already received in compliance with this license.
+
+5. Third-party material
+
+This license covers only original Video Music Separator code for which the
+Licensor has authority to grant rights. AV-CASS, CAVP, FFmpeg, Python packages,
+model files, and other third-party material remain governed by their respective
+licenses and terms. Nothing in this license grants additional rights to that
+material.
+
+6. Name and endorsement
+
+This license does not grant permission to state or imply that a modified or
+redistributed version is official, endorsed by, or affiliated with the
+original author, AV-CASS researchers, or any third-party project.
+
+7. No warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
+OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This is a custom source-available license and is not an OSI-approved open-source
+license.

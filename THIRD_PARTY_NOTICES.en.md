@@ -6,6 +6,8 @@ Video Music Separator's own code is governed by the root `LICENSE`. The code, mo
 
 This application uses AV-CASS for music/non-music separation.
 
+Video Music Separator is not an official AV-CASS application and is not affiliated with or endorsed by the AV-CASS researchers or their institutions.
+
 - Project: <https://cass-flowmatching.github.io/>
 - Source: <https://github.com/pantheon5100/AVCASS>
 - Checkpoint information: README in the official AV-CASS repository
@@ -19,7 +21,7 @@ Paper:
 
 The official AV-CASS repository identifies the code as MIT-licensed, but it does not specify separate redistribution terms for the pretrained checkpoint linked from its README. Do not upload the checkpoint to a public repository before receiving explicit confirmation from the rights holder.
 
-For personal online installation, `video-music-separator-setup.exe` downloads `av_cass_checkpoint.pt` directly from the official AV-CASS Google Drive to the user's PC. The checkpoint is not included in this repository or in the public installer binary.
+For online installation, `video-music-separator-setup.exe` downloads `av_cass_checkpoint.pt` directly from the Google Drive location identified by the AV-CASS project. The checkpoint is not included in this repository or in the public installer binary.
 
 ## CAVP / Diff-Foley
 

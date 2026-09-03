@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import argparse
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,6 +39,29 @@ def fake_asset(payload: bytes) -> installer.DownloadAsset:
 
 
 class RuntimeAssetInstallerTests(unittest.TestCase):
+    def test_headless_install_requires_explicit_terms_acceptance(self) -> None:
+        args = argparse.Namespace(
+            install_dir=Path("."),
+            verify_only=False,
+            headless=True,
+            accept_terms=False,
+        )
+        with patch.object(installer, "parse_args", return_value=args):
+            with patch.object(installer, "install_all") as install_all:
+                self.assertEqual(installer.main(), 2)
+        install_all.assert_not_called()
+
+    def test_disclosure_lists_downloads_network_data_and_user_responsibility(self) -> None:
+        disclosure = installer.installation_disclosure_text()
+        self.assertIn("총 약 2.1GB", disclosure)
+        self.assertIn("drive.usercontent.google.com", disclosure)
+        self.assertIn("huggingface.co", disclosure)
+        self.assertIn("github.com/BtbN", disclosure)
+        self.assertIn("IP 주소", disclosure)
+        self.assertIn("업로드하지 않습니다", disclosure)
+        self.assertIn("저작권", disclosure)
+        self.assertIn("공식 앱이 아니며", disclosure)
+
     def test_manifest_pins_official_model_sources_and_hashes(self) -> None:
         avcass, cavp = installer.MODEL_ASSETS
         self.assertIn("drive.usercontent.google.com", avcass.url)

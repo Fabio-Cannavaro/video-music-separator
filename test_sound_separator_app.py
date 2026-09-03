@@ -306,6 +306,12 @@ class MusicPartitionTests(unittest.TestCase):
             (root / "FFMPEG_BUILD.en.md").write_text(
                 "English FFmpeg LGPL shared build", encoding="utf-8"
             )
+            (root / "PRIVACY.md").write_text(
+                "영상과 음원은 로컬 PC에서 처리", encoding="utf-8"
+            )
+            (root / "PRIVACY.en.md").write_text(
+                "Video and audio are processed locally", encoding="utf-8"
+            )
             (root / "LICENSE").write_text("app license", encoding="utf-8")
             (root / "licenses" / "MIT.txt").write_text("MIT", encoding="utf-8")
             (root / "licenses" / "Apache-2.0.txt").write_text(
@@ -324,6 +330,10 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("FFmpeg LGPL shared build", information)
         self.assertIn("LGPL", information)
         self.assertIn("GPL", information)
+        self.assertIn("Video Music Separator: 0.2.0", information)
+        self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
+        self.assertIn("영상과 음원은 로컬 PC에서 처리", information)
+        self.assertIn("Video and audio are processed locally", english_information)
         self.assertIn("User Content Notice", english_information)
         self.assertIn("You are responsible", english_information)
         self.assertIn("Third-Party Notices, Sources & Papers", english_information)

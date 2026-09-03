@@ -1,6 +1,8 @@
 param(
     [string]$PythonPath = "",
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+    [string]$CodeSigningCertificateThumbprint = "",
+    [string]$TimestampServer = "http://timestamp.digicert.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,4 +34,27 @@ if ($LASTEXITCODE -ne 0) {
     throw "필수 구성요소 설치 파일 빌드에 실패했습니다."
 }
 
-Write-Host "설치 파일 생성 완료: $(Join-Path $outputDir 'video-music-separator-setup.exe')"
+$setupPath = Join-Path $outputDir "video-music-separator-setup.exe"
+if ($CodeSigningCertificateThumbprint) {
+    $certificatePath = "Cert:\CurrentUser\My\$CodeSigningCertificateThumbprint"
+    $certificate = Get-Item -LiteralPath $certificatePath -ErrorAction Stop
+    $signature = Set-AuthenticodeSignature `
+        -FilePath $setupPath `
+        -Certificate $certificate `
+        -HashAlgorithm SHA256 `
+        -TimestampServer $TimestampServer
+    if ($signature.Status -ne "Valid") {
+        throw "설치 파일 코드 서명에 실패했습니다: $($signature.StatusMessage)"
+    }
+    Write-Host "설치 파일 코드 서명 완료: $($certificate.Thumbprint)"
+} else {
+    Write-Warning "코드 서명 인증서가 지정되지 않아 설치 파일은 미서명 상태입니다."
+}
+
+$setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$setupHashPath = "$setupPath.sha256"
+"$setupHash  $([System.IO.Path]::GetFileName($setupPath))" |
+    Set-Content -LiteralPath $setupHashPath -Encoding ascii
+
+Write-Host "설치 파일 생성 완료: $setupPath"
+Write-Host "설치 파일 SHA-256: $setupHashPath"

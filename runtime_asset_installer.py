@@ -17,10 +17,29 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from release_info import (
+    APP_VERSION,
+    AVCASS_DOWNLOAD_URL,
+    AVCASS_SHA256,
+    AVCASS_SIZE,
+    AVCASS_SOURCE,
+    AVCASS_VERSION,
+    CAVP_DOWNLOAD_URL,
+    CAVP_SHA256,
+    CAVP_SIZE,
+    CAVP_SOURCE,
+    CAVP_VERSION,
+    FFMPEG_DOWNLOAD_URL,
+    FFMPEG_SHA256,
+    FFMPEG_SIZE,
+    FFMPEG_SOURCE,
+    FFMPEG_VERSION,
+)
+
 
 APP_TITLE = "영상 음악 분리·제거기 필수 구성요소 설치"
 CHUNK_SIZE = 4 * 1024 * 1024
-USER_AGENT = "video-music-separator-runtime-installer/1.0"
+USER_AGENT = f"video-music-separator-runtime-installer/{APP_VERSION}"
 
 
 @dataclass(frozen=True)
@@ -38,45 +57,32 @@ MODEL_ASSETS = (
     DownloadAsset(
         asset_id="avcass",
         label="AV-CASS 분리 모델",
-        url=(
-            "https://drive.usercontent.google.com/download"
-            "?id=1_d-RCP111No-wS-wrmxyK-zH87Sm2xzf&export=download&confirm=t"
-        ),
+        url=AVCASS_DOWNLOAD_URL,
         relative_path="audiosep/avcass/model/av_cass_checkpoint.pt",
-        sha256="66a8a3b9de317d2c508edae6bbd2d727bfd4faa6aec10c7c5ed02f5966e29b64",
-        size=738_312_597,
-        source="https://github.com/pantheon5100/AVCASS",
+        sha256=AVCASS_SHA256,
+        size=AVCASS_SIZE,
+        source=AVCASS_SOURCE,
     ),
     DownloadAsset(
         asset_id="cavp",
         label="CAVP 영상 인식 모델",
-        url=(
-            "https://huggingface.co/SimianLuo/Diff-Foley/resolve/"
-            "b17ddbe76e6d42f4b4135eeb443b1c1644267e3e/"
-            "diff_foley_ckpt/cavp_epoch66.ckpt?download=true"
-        ),
+        url=CAVP_DOWNLOAD_URL,
         relative_path="audiosep/avcass/model/cavp/cavp_epoch66.ckpt",
-        sha256="3472c2217a9481f530a96e32611c9e4611766f10b7f0d185a1ce35be7b7f9c80",
-        size=1_361_483_035,
-        source="https://huggingface.co/SimianLuo/Diff-Foley",
+        sha256=CAVP_SHA256,
+        size=CAVP_SIZE,
+        source=CAVP_SOURCE,
     ),
 )
 
 FFMPEG_ARCHIVE = DownloadAsset(
     asset_id="ffmpeg",
     label="FFmpeg LGPL 공유 빌드",
-    url=(
-        "https://github.com/BtbN/FFmpeg-Builds/releases/download/"
-        "autobuild-2026-08-20-13-45/"
-        "ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip"
-    ),
+    url=FFMPEG_DOWNLOAD_URL,
     relative_path=".downloads/ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip",
-    sha256="d311c8c7b86e06b54588e442652f963bae165bd4d8393e73cc9ebb445b025547",
-    size=70_835_392,
-    source="https://github.com/BtbN/FFmpeg-Builds",
+    sha256=FFMPEG_SHA256,
+    size=FFMPEG_SIZE,
+    source=FFMPEG_SOURCE,
 )
-
-FFMPEG_VERSION = "n8.1.2-44-g7c533d0f86-20260820"
 FFMPEG_REQUIRED_FILES = (
     "ffmpeg.exe",
     "ffprobe.exe",
@@ -90,6 +96,33 @@ FFMPEG_REQUIRED_FILES = (
 )
 
 ProgressCallback = Callable[[str, int, int], None]
+
+
+INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
+
+이 앱은 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며, 해당 연구진과 제휴하거나 보증받지 않았습니다.
+
+설치할 항목 (총 약 2.1GB)
+• AV-CASS 약 704MB — drive.usercontent.google.com
+  {AVCASS_DOWNLOAD_URL}
+• CAVP 약 1.27GB — huggingface.co
+  {CAVP_DOWNLOAD_URL}
+• FFmpeg LGPL 공유 빌드 약 68MB — github.com/BtbN
+  {FFMPEG_DOWNLOAD_URL}
+
+이용조건
+각 모델·프로그램에는 원 권리자의 라이선스와 이용조건이 적용됩니다. AV-CASS 체크포인트에는 별도 재배포 조건이 명시되어 있지 않으므로 이 설치 파일은 모델을 포함하지 않고 공식 제공 주소에서 직접 내려받습니다.
+
+개인정보와 외부 통신
+영상과 음원은 PC에서만 처리되며 설치 프로그램이나 앱이 업로드하지 않습니다. 설치 중 위 세 서버에 HTTPS 다운로드 요청을 보냅니다. 서버 운영자는 IP 주소, 요청 시각, 다운로드 URL, User-Agent와 이어받기용 Range 헤더 같은 일반 접속 정보를 받을 수 있습니다. 파일명, 영상·음원 내용 및 사용 통계는 전송하지 않습니다.
+
+사용자 책임
+처리할 영상·음원의 저작권과 이용 권리를 확인하고 결과물을 사용하는 책임은 사용자에게 있습니다.
+"""
+
+
+def installation_disclosure_text() -> str:
+    return INSTALLATION_DISCLOSURE.strip()
 
 
 def application_directory() -> Path:
@@ -263,8 +296,15 @@ def verify_installation(root: Path) -> list[str]:
 
 def write_install_record(root: Path) -> None:
     record = {
+        "app_version": APP_VERSION,
         "installed_at": datetime.now(timezone.utc).isoformat(),
-        "models": [asdict(asset) for asset in MODEL_ASSETS],
+        "models": [
+            {
+                **asdict(asset),
+                "version": AVCASS_VERSION if asset.asset_id == "avcass" else CAVP_VERSION,
+            }
+            for asset in MODEL_ASSETS
+        ],
         "ffmpeg": asdict(FFMPEG_ARCHIVE),
         "ffmpeg_version": FFMPEG_VERSION,
     }
@@ -295,31 +335,82 @@ class InstallerWindow:
     def __init__(self, root_directory: Path) -> None:
         import tkinter as tk
         from tkinter import messagebox, ttk
+        from tkinter.scrolledtext import ScrolledText
 
         self.tk = tk
+        self.ttk = ttk
         self.messagebox = messagebox
+        self.ScrolledText = ScrolledText
         self.root_directory = root_directory
         self.window = tk.Tk()
         self.window.title(APP_TITLE)
-        self.window.geometry("580x285")
+        self.window.geometry("780x700")
         self.window.resizable(False, False)
         self.status = tk.StringVar(value="설치를 시작할 준비가 됐습니다.")
+        self.accepted = tk.BooleanVar(value=False)
         self.detail = tk.StringVar(
             value="AV-CASS 약 704MB · CAVP 약 1.27GB · FFmpeg 약 68MB"
         )
         frame = ttk.Frame(self.window, padding=22)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text=APP_TITLE, font=("맑은 고딕", 14, "bold")).pack(pady=(0, 14))
-        ttk.Label(
+        ttk.Label(frame, text=APP_TITLE, font=("맑은 고딕", 14, "bold")).pack(pady=(0, 10))
+        disclosure = self.ScrolledText(
             frame,
-            text="공식 배포처에서 파일을 직접 내려받고 SHA-256을 확인합니다.",
-        ).pack()
-        ttk.Label(frame, textvariable=self.detail).pack(pady=(6, 16))
+            height=22,
+            wrap="word",
+            padx=10,
+            pady=10,
+            font=("맑은 고딕", 9),
+        )
+        disclosure.insert("1.0", installation_disclosure_text())
+        disclosure.configure(state="disabled")
+        disclosure.pack(fill="both", expand=True)
+        ttk.Button(
+            frame,
+            text="전체 라이선스·개인정보 문서 보기",
+            command=self.show_documents,
+        ).pack(anchor="e", pady=(7, 0))
+        ttk.Checkbutton(
+            frame,
+            text="위 이용조건, 외부 통신, 사용자 책임 안내를 확인하고 동의합니다.",
+            variable=self.accepted,
+            command=self._update_button_state,
+        ).pack(anchor="w", pady=(10, 8))
         self.progress = ttk.Progressbar(frame, mode="determinate", maximum=100)
         self.progress.pack(fill="x")
-        ttk.Label(frame, textvariable=self.status, wraplength=530).pack(pady=(8, 15))
-        self.button = ttk.Button(frame, text="설치 시작", command=self.start)
+        ttk.Label(frame, textvariable=self.status, wraplength=650).pack(pady=(8, 12))
+        self.button = ttk.Button(frame, text="설치 시작", command=self.start, state="disabled")
         self.button.pack(ipadx=18, ipady=5)
+
+    def show_documents(self) -> None:
+        document_names = (
+            "LICENSE",
+            "MODEL_LICENSES.md",
+            "THIRD_PARTY_NOTICES.md",
+            "PRIVACY.md",
+            "FFMPEG_BUILD.md",
+        )
+        sections: list[str] = []
+        for name in document_names:
+            path = self.root_directory / name
+            if path.is_file():
+                content = path.read_text(encoding="utf-8", errors="replace").strip()
+            else:
+                content = f"문서를 찾을 수 없습니다: {name}"
+            sections.append(f"{name}\n{'=' * len(name)}\n\n{content}")
+
+        window = self.tk.Toplevel(self.window)
+        window.title("라이선스·개인정보 문서")
+        window.geometry("850x680")
+        window.minsize(650, 480)
+        text = self.ScrolledText(window, wrap="word", padx=14, pady=14, font=("맑은 고딕", 9))
+        text.pack(fill="both", expand=True, padx=10, pady=(10, 6))
+        text.insert("1.0", "\n\n\n".join(sections))
+        text.configure(state="disabled")
+        self.ttk.Button(window, text="닫기", command=window.destroy).pack(pady=(0, 10))
+
+    def _update_button_state(self) -> None:
+        self.button.configure(state="normal" if self.accepted.get() else "disabled")
 
     def update_progress(self, label: str, current: int, total: int) -> None:
         percent = 100 if total <= 0 else max(0, min(100, round(current * 100 / total)))
@@ -330,6 +421,9 @@ class InstallerWindow:
         self.progress.configure(value=percent)
 
     def start(self) -> None:
+        if not self.accepted.get():
+            self.messagebox.showwarning(APP_TITLE, "안내를 확인하고 동의한 뒤 설치를 시작해 주세요.")
+            return
         self.button.configure(state="disabled")
         self.progress.configure(value=0)
         self.status.set("필수 구성요소를 확인하는 중…")
@@ -363,6 +457,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--install-dir", type=Path, default=application_directory())
     parser.add_argument("--verify-only", action="store_true")
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument(
+        "--accept-terms",
+        action="store_true",
+        help="비대화형 설치에서 이용조건과 외부 통신 안내를 확인했음을 표시합니다.",
+    )
     return parser.parse_args()
 
 
@@ -374,6 +473,13 @@ def main() -> int:
         print(json.dumps({"ok": not problems, "problems": problems}, ensure_ascii=False))
         return 0 if not problems else 1
     if args.headless:
+        if not args.accept_terms:
+            print(
+                "비대화형 설치에는 --accept-terms가 필요합니다. 먼저 설치 안내와 "
+                "동봉된 라이선스·개인정보 문서를 확인해 주세요.",
+                file=sys.stderr,
+            )
+            return 2
         install_all(root, lambda label, current, total: print(label, flush=True))
         return 0
     InstallerWindow(root).run()

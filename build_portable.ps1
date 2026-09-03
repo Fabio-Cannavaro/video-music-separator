@@ -2,7 +2,9 @@ param(
     [string]$PythonPath = "",
     [string]$OutputDirectory = "",
     [string]$FFmpegDirectory = "",
-    [switch]$BundleRuntimeAssets
+    [switch]$BundleRuntimeAssets,
+    [string]$CodeSigningCertificateThumbprint = "",
+    [string]$TimestampServer = "http://timestamp.digicert.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -101,9 +103,15 @@ if (Test-Path -LiteralPath $legacyExecutable -PathType Leaf) {
 }
 Copy-Item -LiteralPath (Join-Path $builtDir "video-music-separator.exe") -Destination $outputDir -Force
 
-& (Join-Path $projectDir "build_runtime_installer.ps1") `
-    -PythonPath $python `
-    -OutputDirectory (Join-Path $distDir "runtime-installer")
+$installerBuildArguments = @{
+    PythonPath = $python
+    OutputDirectory = (Join-Path $distDir "runtime-installer")
+    TimestampServer = $TimestampServer
+}
+if ($CodeSigningCertificateThumbprint) {
+    $installerBuildArguments.CodeSigningCertificateThumbprint = $CodeSigningCertificateThumbprint
+}
+& (Join-Path $projectDir "build_runtime_installer.ps1") @installerBuildArguments
 if ($LASTEXITCODE -ne 0) {
     throw "필수 구성요소 설치 파일 빌드에 실패했습니다."
 }
@@ -111,6 +119,27 @@ Copy-Item -LiteralPath `
     (Join-Path $distDir "runtime-installer\video-music-separator-setup.exe") `
     -Destination $outputDir `
     -Force
+Copy-Item -LiteralPath `
+    (Join-Path $distDir "runtime-installer\video-music-separator-setup.exe.sha256") `
+    -Destination $outputDir `
+    -Force
+
+$portableExecutable = Join-Path $outputDir "video-music-separator.exe"
+if ($CodeSigningCertificateThumbprint) {
+    $certificatePath = "Cert:\CurrentUser\My\$CodeSigningCertificateThumbprint"
+    $certificate = Get-Item -LiteralPath $certificatePath -ErrorAction Stop
+    $signature = Set-AuthenticodeSignature `
+        -FilePath $portableExecutable `
+        -Certificate $certificate `
+        -HashAlgorithm SHA256 `
+        -TimestampServer $TimestampServer
+    if ($signature.Status -ne "Valid") {
+        throw "앱 실행 파일 코드 서명에 실패했습니다: $($signature.StatusMessage)"
+    }
+    Write-Host "앱 실행 파일 코드 서명 완료: $($certificate.Thumbprint)"
+} else {
+    Write-Warning "코드 서명 인증서가 지정되지 않아 앱 실행 파일은 미서명 상태입니다."
+}
 
 $portableFfmpeg = Join-Path $outputDir "ffmpeg"
 $portableAudioSep = Join-Path $outputDir "audiosep"
@@ -144,10 +173,13 @@ Copy-Item -LiteralPath (Join-Path $projectDir "avcass_worker.py") -Destination $
 Copy-Item -LiteralPath (Join-Path $projectDir "separation_quality.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "MODEL_LICENSES.md") -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "MODEL_LICENSES.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.en.md") -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.md") -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.en.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
 
 $avCassBaseReady =
@@ -201,4 +233,30 @@ if (-not $avCassBaseReady) {
 }
 $usage | Set-Content -LiteralPath (Join-Path $outputDir "사용법.txt") -Encoding UTF8
 
+$setupExecutable = Join-Path $outputDir "video-music-separator-setup.exe"
+$checksumLines = @(
+    "$((Get-FileHash -LiteralPath $portableExecutable -Algorithm SHA256).Hash.ToLowerInvariant())  video-music-separator.exe",
+    "$((Get-FileHash -LiteralPath $setupExecutable -Algorithm SHA256).Hash.ToLowerInvariant())  video-music-separator-setup.exe"
+)
+$checksumLines | Set-Content -LiteralPath (Join-Path $outputDir "SHA256SUMS.txt") -Encoding ascii
+
+$versionLine = Select-String -LiteralPath (Join-Path $projectDir "release_info.py") -Pattern '^APP_VERSION = "([^"]+)"$'
+if (-not $versionLine) {
+    throw "release_info.py에서 앱 버전을 읽지 못했습니다."
+}
+$appVersion = $versionLine.Matches[0].Groups[1].Value
+$releaseDir = Join-Path $distDir "release"
+New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+$archiveSuffix = if ($BundleRuntimeAssets) { "windows-x64-internal-offline" } else { "windows-x64" }
+$archivePath = Join-Path $releaseDir "video-music-separator-$appVersion-$archiveSuffix.zip"
+if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
+    Remove-Item -LiteralPath $archivePath -Force
+}
+Compress-Archive -Path (Join-Path $outputDir "*") -DestinationPath $archivePath -CompressionLevel Optimal
+$archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+"$archiveHash  $([System.IO.Path]::GetFileName($archivePath))" |
+    Set-Content -LiteralPath "$archivePath.sha256" -Encoding ascii
+
 Write-Host "이동용 폴더 생성 완료: $outputDir"
+Write-Host "배포 ZIP 생성 완료: $archivePath"
+Write-Host "배포 ZIP SHA-256: $archivePath.sha256"

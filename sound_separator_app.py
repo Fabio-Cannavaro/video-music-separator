@@ -31,6 +31,7 @@ from audio_core import (
     run_command,
     save_manifest,
 )
+from release_info import APP_VERSION, RUNTIME_COMPONENTS
 
 
 APP_TITLE = "영상 음악 분리·제거기"
@@ -55,6 +56,8 @@ ENGLISH_USER_CONTENT_NOTICE = (
     "and audio you process, and for how you use the results."
 )
 LEGAL_INFORMATION_FILES = (
+    ("개인정보 및 외부 통신 안내", "PRIVACY.md"),
+    ("모델 파일 및 배포 정책", "MODEL_LICENSES.md"),
     ("제3자 고지·출처·논문", "THIRD_PARTY_NOTICES.md"),
     ("FFmpeg LGPL 빌드 정보", "FFMPEG_BUILD.md"),
     ("Video Music Separator 라이선스", "LICENSE"),
@@ -97,6 +100,9 @@ TRANSLATIONS = {
         "user_notice": USER_CONTENT_NOTICE,
         "legal_title": "라이선스·출처·사용자 책임",
         "legal_user_heading": "사용자 콘텐츠 안내",
+        "legal_runtime_heading": "앱·모델 버전 및 체크섬",
+        "legal_privacy": "개인정보 및 외부 통신 안내",
+        "legal_model_policy": "모델 파일 및 배포 정책",
         "legal_third_party": "제3자 고지·출처·논문",
         "legal_ffmpeg": "FFmpeg LGPL 빌드 정보",
         "legal_app_license": "Video Music Separator 라이선스",
@@ -213,6 +219,9 @@ TRANSLATIONS = {
         "user_notice": ENGLISH_USER_CONTENT_NOTICE,
         "legal_title": "Licenses, Sources & User Responsibility",
         "legal_user_heading": "User Content Notice",
+        "legal_runtime_heading": "Application and Runtime Versions & Checksums",
+        "legal_privacy": "Privacy and Network Access Notice",
+        "legal_model_policy": "Model Files and Distribution Policy",
         "legal_third_party": "Third-Party Notices, Sources & Papers",
         "legal_ffmpeg": "FFmpeg LGPL Build Information",
         "legal_app_license": "Video Music Separator License",
@@ -308,6 +317,8 @@ TRANSLATIONS = {
 }
 
 LEGAL_TITLE_KEYS = {
+    "PRIVACY.md": "legal_privacy",
+    "MODEL_LICENSES.md": "legal_model_policy",
     "THIRD_PARTY_NOTICES.md": "legal_third_party",
     "FFMPEG_BUILD.md": "legal_ffmpeg",
     "LICENSE": "legal_app_license",
@@ -318,6 +329,8 @@ LEGAL_TITLE_KEYS = {
 }
 
 ENGLISH_LEGAL_FILES = {
+    "PRIVACY.md": "PRIVACY.en.md",
+    "MODEL_LICENSES.md": "MODEL_LICENSES.en.md",
     "THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.en.md",
     "FFMPEG_BUILD.md": "FFMPEG_BUILD.en.md",
 }
@@ -396,6 +409,34 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
         f"{translate(language, 'legal_user_heading')}\n\n"
         f"{translate(language, 'user_notice')}"
     ]
+    component_lines = [f"Video Music Separator: {APP_VERSION}"]
+    for component in RUNTIME_COMPONENTS:
+        version = component["version"]
+        if language == "ko" and component["name"] == "AV-CASS":
+            version = "공식 영상 기반 체크포인트 (별도 버전 표기 없음)"
+        component_lines.extend(
+            (
+                "",
+                f"{component['name']}: {version}",
+                f"SHA-256: {component['sha256']}",
+                f"Source: {component['source']}",
+            )
+        )
+    record_path = root / "runtime-assets.json"
+    if record_path.is_file():
+        try:
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+            installed_at = record.get("installed_at", "")
+            if installed_at:
+                label = "설치 기록" if language == "ko" else "Installation record"
+                component_lines.extend(("", f"{label}: {installed_at}"))
+        except (OSError, ValueError, TypeError):
+            pass
+    runtime_title = translate(language, "legal_runtime_heading")
+    sections.append(
+        f"{runtime_title}\n{'=' * len(runtime_title)}\n\n"
+        + "\n".join(component_lines)
+    )
     for title, relative_path in LEGAL_INFORMATION_FILES:
         title = translate(language, LEGAL_TITLE_KEYS[relative_path])
         display_path = (

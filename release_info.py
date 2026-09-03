@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+
+APP_VERSION = "0.2.0"
+
+AVCASS_VERSION = "official audio-visual checkpoint (unversioned)"
+AVCASS_SHA256 = "66a8a3b9de317d2c508edae6bbd2d727bfd4faa6aec10c7c5ed02f5966e29b64"
+AVCASS_SIZE = 738_312_597
+AVCASS_SOURCE = "https://github.com/pantheon5100/AVCASS"
+AVCASS_DOWNLOAD_URL = (
+    "https://drive.usercontent.google.com/download"
+    "?id=1_d-RCP111No-wS-wrmxyK-zH87Sm2xzf&export=download&confirm=t"
+)
+
+CAVP_VERSION = "Diff-Foley commit b17ddbe76e6d42f4b4135eeb443b1c1644267e3e"
+CAVP_SHA256 = "3472c2217a9481f530a96e32611c9e4611766f10b7f0d185a1ce35be7b7f9c80"
+CAVP_SIZE = 1_361_483_035
+CAVP_SOURCE = "https://huggingface.co/SimianLuo/Diff-Foley"
+CAVP_DOWNLOAD_URL = (
+    "https://huggingface.co/SimianLuo/Diff-Foley/resolve/"
+    "b17ddbe76e6d42f4b4135eeb443b1c1644267e3e/"
+    "diff_foley_ckpt/cavp_epoch66.ckpt?download=true"
+)
+
+FFMPEG_VERSION = "n8.1.2-44-g7c533d0f86-20260820"
+FFMPEG_SHA256 = "d311c8c7b86e06b54588e442652f963bae165bd4d8393e73cc9ebb445b025547"
+FFMPEG_SIZE = 70_835_392
+FFMPEG_SOURCE = "https://github.com/BtbN/FFmpeg-Builds"
+FFMPEG_DOWNLOAD_URL = (
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/"
+    "autobuild-2026-08-20-13-45/"
+    "ffmpeg-n8.1.2-44-g7c533d0f86-win64-lgpl-shared-8.1.zip"
+)
+
+
+RUNTIME_COMPONENTS = (
+    {
+        "name": "AV-CASS",
+        "version": AVCASS_VERSION,
+        "sha256": AVCASS_SHA256,
+        "size": AVCASS_SIZE,
+        "source": AVCASS_SOURCE,
+        "download_url": AVCASS_DOWNLOAD_URL,
+    },
+    {
+        "name": "CAVP",
+        "version": CAVP_VERSION,
+        "sha256": CAVP_SHA256,
+        "size": CAVP_SIZE,
+        "source": CAVP_SOURCE,
+        "download_url": CAVP_DOWNLOAD_URL,
+    },
+    {
+        "name": "FFmpeg",
+        "version": FFMPEG_VERSION,
+        "sha256": FFMPEG_SHA256,
+        "size": FFMPEG_SIZE,
+        "source": FFMPEG_SOURCE,
+        "download_url": FFMPEG_DOWNLOAD_URL,
+    },
+)
