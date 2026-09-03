@@ -1,4 +1,4 @@
-# Third-party notices, sources, and papers
+# 제3자 고지, 출처 및 논문
 
 Video Music Separator의 자체 코드는 루트 `LICENSE`를 따른다. 아래 외부 구성요소의 코드·모델·실행 파일에는 각 원 저작권자와 원 라이선스가 적용되며, 앱의 라이선스로 바뀌지 않는다.
 

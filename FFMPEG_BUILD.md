@@ -1,4 +1,4 @@
-# FFmpeg LGPL build information
+# FFmpeg LGPL 빌드 정보
 
 이 앱의 Windows 휴대용 배포본은 FFmpeg를 앱 코드에 링크하지 않고 별도 명령줄 프로그램으로 실행한다.
 
