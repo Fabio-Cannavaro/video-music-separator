@@ -63,6 +63,8 @@ LEGAL_INFORMATION_FILES = (
     ("제3자 고지·출처·논문", "THIRD_PARTY_NOTICES.md"),
     ("FFmpeg LGPL 빌드 정보", "FFMPEG_BUILD.md"),
     ("Video Music Separator 저작권 고지", "COPYRIGHT.md"),
+)
+LICENSE_TEXT_FILES = (
     ("Video Music Separator 라이선스", "LICENSE"),
     ("MIT License 전문", "licenses/MIT.txt"),
     ("Apache License 2.0 전문", "licenses/Apache-2.0.txt"),
@@ -104,6 +106,12 @@ TRANSLATIONS = {
         "save_copy": "사본 저장",
         "user_notice": USER_CONTENT_NOTICE,
         "legal_title": "라이선스·출처·사용자 책임",
+        "legal_information_tab": "한국어 안내·출처",
+        "legal_license_tab": "공식 라이선스 원문(영문)",
+        "legal_license_intro": (
+            "아래 내용은 법적 정확성을 위해 번역하지 않은 공식 영문 라이선스 원문입니다. "
+            "한국어 설명은 ‘한국어 안내·출처’ 탭에서 확인할 수 있습니다."
+        ),
         "legal_user_heading": "사용자 콘텐츠 안내",
         "legal_runtime_heading": "앱·모델 버전 및 체크섬",
         "legal_privacy": "개인정보 및 외부 통신 안내",
@@ -111,11 +119,11 @@ TRANSLATIONS = {
         "legal_third_party": "제3자 고지·출처·논문",
         "legal_ffmpeg": "FFmpeg LGPL 빌드 정보",
         "legal_copyright": "Video Music Separator 저작권 고지",
-        "legal_app_license": "Video Music Separator 라이선스",
-        "legal_mit": "MIT License 전문",
-        "legal_apache": "Apache License 2.0 전문",
-        "legal_lgpl": "GNU LGPL v3 전문",
-        "legal_gpl": "GNU GPL v3 전문",
+        "legal_app_license": "Video Music Separator 라이선스 공식 영문 원문",
+        "legal_mit": "MIT License 공식 영문 원문",
+        "legal_apache": "Apache License 2.0 공식 영문 원문",
+        "legal_lgpl": "GNU LGPL v3 공식 영문 원문",
+        "legal_gpl": "GNU GPL v3 공식 영문 원문",
         "file_missing": "파일을 찾을 수 없습니다: {path}",
         "close": "닫기",
         "dialog_video_select": "영상 선택",
@@ -226,6 +234,11 @@ TRANSLATIONS = {
         "save_copy": "Save Copy",
         "user_notice": ENGLISH_USER_CONTENT_NOTICE,
         "legal_title": "Licenses, Sources & User Responsibility",
+        "legal_information_tab": "Information & Sources",
+        "legal_license_tab": "Official License Texts",
+        "legal_license_intro": (
+            "The following texts are the official license terms included with the application."
+        ),
         "legal_user_heading": "User Content Notice",
         "legal_runtime_heading": "Application and Runtime Versions & Checksums",
         "legal_privacy": "Privacy and Network Access Notice",
@@ -443,20 +456,34 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
 
     component_lines = [f"Video Music Separator: {APP_VERSION}"]
     for component in RUNTIME_COMPONENTS:
+        component_name = component["name"]
         version = component["version"]
         sha256 = component["sha256"]
-        if language == "ko" and component["name"] == "AV-CASS":
-            version = "공식 영상 기반 체크포인트 (별도 버전 표기 없음)"
+        if language == "ko":
+            component_name = {
+                "AI Python runtime": "AI Python 실행환경",
+                "AV-CASS": "AV-CASS",
+                "CAVP": "CAVP",
+                "FFmpeg": "FFmpeg",
+            }.get(component_name, component_name)
+            if component["name"] == "AV-CASS":
+                version = "공식 영상 기반 체크포인트 (별도 버전 표기 없음)"
+            elif component["name"] == "CAVP":
+                version = version.replace("Diff-Foley commit", "Diff-Foley 커밋")
+            elif component["name"] == "FFmpeg" and not record:
+                version = "BtbN 최신 FFmpeg 8.1 LGPL 공유 빌드"
+                sha256 = "설치 중 공식 GitHub Release에서 확인"
         if component["name"] == "FFmpeg" and record:
             version = record.get("ffmpeg_version", version)
             ffmpeg_record = record.get("ffmpeg", {})
             sha256 = ffmpeg_record.get("sha256", sha256)
+        source_label = "출처" if language == "ko" else "Source"
         component_lines.extend(
             (
                 "",
-                f"{component['name']}: {version}",
+                f"{component_name}: {version}",
                 f"SHA-256: {sha256}",
-                f"Source: {component['source']}",
+                f"{source_label}: {component['source']}",
             )
         )
     installed_at = record.get("installed_at", "")
@@ -486,6 +513,21 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
             content = path.read_text(encoding="utf-8").strip()
         else:
             content = translate(language, "file_missing", path=display_path)
+        sections.append(f"{title}\n{'=' * len(title)}\n\n{content}")
+    return "\n\n\n".join(sections)
+
+
+def load_license_texts(root: Path, language: str = "ko") -> str:
+    sections = [translate(language, "legal_license_intro")]
+    for _title, relative_path in LICENSE_TEXT_FILES:
+        title = translate(language, LEGAL_TITLE_KEYS[relative_path])
+        path = root / "docs" / relative_path
+        if not path.is_file():
+            path = root / relative_path
+        if path.is_file():
+            content = path.read_text(encoding="utf-8").strip()
+        else:
+            content = translate(language, "file_missing", path=relative_path)
         sections.append(f"{title}\n{'=' * len(title)}\n\n{content}")
     return "\n\n\n".join(sections)
 
@@ -720,7 +762,9 @@ class SoundSeparatorApp(tk.Tk):
         self.status_values: dict[str, object] = {}
         self.status_var = tk.StringVar(value=self._t(self.status_key))
         self.legal_window: tk.Toplevel | None = None
+        self.legal_notebook: ttk.Notebook | None = None
         self.legal_text: ScrolledText | None = None
+        self.legal_license_text: ScrolledText | None = None
         self.legal_close_button: ttk.Button | None = None
         self._build_ui()
 
@@ -1046,14 +1090,29 @@ class SoundSeparatorApp(tk.Tk):
         window.transient(self)
         window.protocol("WM_DELETE_WINDOW", self._close_legal_information)
 
+        self.legal_notebook = ttk.Notebook(window)
+        information_frame = ttk.Frame(self.legal_notebook)
+        license_frame = ttk.Frame(self.legal_notebook)
+        self.legal_notebook.add(information_frame, text=self._t("legal_information_tab"))
+        self.legal_notebook.add(license_frame, text=self._t("legal_license_tab"))
+        self.legal_notebook.pack(fill="both", expand=True, padx=10, pady=(10, 6))
+
         self.legal_text = ScrolledText(
-            window,
+            information_frame,
             wrap="word",
             padx=14,
             pady=14,
             font=("Segoe UI", 10),
         )
-        self.legal_text.pack(fill="both", expand=True, padx=10, pady=(10, 6))
+        self.legal_text.pack(fill="both", expand=True)
+        self.legal_license_text = ScrolledText(
+            license_frame,
+            wrap="word",
+            padx=14,
+            pady=14,
+            font=("Segoe UI", 10),
+        )
+        self.legal_license_text.pack(fill="both", expand=True)
         self.legal_close_button = ttk.Button(
             window, text=self._t("close"), command=self._close_legal_information
         )
@@ -1064,6 +1123,9 @@ class SoundSeparatorApp(tk.Tk):
         if self.legal_window is None or not self.legal_window.winfo_exists():
             return
         self.legal_window.title(self._t("legal_title"))
+        if self.legal_notebook is not None:
+            self.legal_notebook.tab(0, text=self._t("legal_information_tab"))
+            self.legal_notebook.tab(1, text=self._t("legal_license_tab"))
         if self.legal_text is not None:
             self.legal_text.configure(state="normal")
             self.legal_text.delete("1.0", "end")
@@ -1072,6 +1134,14 @@ class SoundSeparatorApp(tk.Tk):
                 load_legal_information(application_root(), self.language_var.get()),
             )
             self.legal_text.configure(state="disabled")
+        if self.legal_license_text is not None:
+            self.legal_license_text.configure(state="normal")
+            self.legal_license_text.delete("1.0", "end")
+            self.legal_license_text.insert(
+                "1.0",
+                load_license_texts(application_root(), self.language_var.get()),
+            )
+            self.legal_license_text.configure(state="disabled")
         if self.legal_close_button is not None:
             self.legal_close_button.configure(text=self._t("close"))
 
@@ -1079,7 +1149,9 @@ class SoundSeparatorApp(tk.Tk):
         if self.legal_window is not None and self.legal_window.winfo_exists():
             self.legal_window.destroy()
         self.legal_window = None
+        self.legal_notebook = None
         self.legal_text = None
+        self.legal_license_text = None
         self.legal_close_button = None
 
     def choose_video(self) -> None:

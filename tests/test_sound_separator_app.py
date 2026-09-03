@@ -32,6 +32,7 @@ from sound_separator_app import (
     clamp_volume,
     cleanup_work_directory,
     load_legal_information,
+    load_license_texts,
     model_result_directory,
     muted_copy_output_path,
     muted_mix_preview_path,
@@ -350,20 +351,34 @@ class MusicPartitionTests(unittest.TestCase):
 
             information = load_legal_information(root)
             english_information = load_legal_information(root, language="en")
+            license_texts = load_license_texts(root)
+            english_license_texts = load_license_texts(root, language="en")
+            (root / "runtime-assets.json").unlink()
+            no_record_information = load_legal_information(root)
 
         self.assertIn("저작권과 이용 권리", information)
         self.assertIn("AV-CASS and CAVP sources", information)
-        self.assertIn("MIT", information)
-        self.assertIn("Apache", information)
         self.assertIn("FFmpeg LGPL shared build", information)
-        self.assertIn("LGPL", information)
-        self.assertIn("GPL", information)
+        self.assertNotIn("app license", information)
+        self.assertIn("공식 영문 라이선스 원문", license_texts)
+        self.assertIn("app license", license_texts)
+        self.assertIn("MIT", license_texts)
+        self.assertIn("Apache", license_texts)
+        self.assertIn("LGPL", license_texts)
+        self.assertIn("GPL", license_texts)
         self.assertIn("Video Music Separator: 0.2.0", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
         self.assertIn("ffmpeg version n8.1.3-test", information)
         self.assertIn("f" * 64, information)
         self.assertIn("2026-09-04T00:00:00+00:00", information)
         self.assertIn("영상과 음원은 로컬 PC에서 처리", information)
+        self.assertIn("AI Python 실행환경", information)
+        self.assertIn("출처:", information)
+        self.assertIn("설치 중 공식 GitHub Release에서 확인", no_record_information)
+        self.assertNotIn(
+            "Resolved from the official GitHub Release during installation",
+            no_record_information,
+        )
         self.assertIn(
             "Copyright © 2026 @ms-0606 (GitHub: Fabio-Cannavaro)", information
         )
@@ -374,6 +389,8 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("Third-Party Notices, Sources & Papers", english_information)
         self.assertIn("English AV-CASS and CAVP sources", english_information)
         self.assertIn("English FFmpeg LGPL shared build", english_information)
+        self.assertIn("official license terms", english_license_texts)
+        self.assertIn("app license", english_license_texts)
 
 
 class WorkDirectoryCleanupTests(unittest.TestCase):
