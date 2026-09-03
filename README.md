@@ -192,7 +192,7 @@ py -m venv --system-site-packages .venv
 
 앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face와 GitHub/BtbN에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
 
-영상 미리보기 왼쪽의 `라이선스·출처` 버튼에서 AV-CASS와 CAVP의 출처·논문, FFmpeg LGPL 빌드 정보와 제3자 고지를 한국어로 확인할 수 있다. GPL·LGPL·MIT·Apache의 변경되지 않은 공식 영문 원문은 별도의 `공식 라이선스 원문(영문)` 탭에 표시한다.
+영상 미리보기 왼쪽의 `라이선스·출처` 버튼을 누르면 한 화면에서 AV-CASS와 CAVP의 출처·논문, FFmpeg LGPL 빌드 정보와 제3자 고지를 한국어로 확인할 수 있다. 그 아래에는 GPL·LGPL·MIT·Apache의 변경되지 않은 공식 영문 원문이 이어진다.
 
 ### 라이선스
 
@@ -398,7 +398,7 @@ The application processes user-selected files locally on the PC. Users must obta
 
 The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, and GitHub/BtbN during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
 
-The `Licenses & Sources` button to the left of the video preview separates explanatory information from the unmodified official license texts. Korean mode shows Korean notices and sources in the first tab, while GPL, LGPL, MIT, and Apache texts remain available in a separate official-license tab.
+The `Licenses & Sources` button to the left of the video preview opens one scrollable page. In Korean mode, Korean notices and sources appear first, followed by the unmodified official GPL, LGPL, MIT, and Apache license texts.
 
 ### License
 

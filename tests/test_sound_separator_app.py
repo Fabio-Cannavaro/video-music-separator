@@ -32,6 +32,7 @@ from sound_separator_app import (
     clamp_volume,
     cleanup_work_directory,
     load_legal_information,
+    load_legal_display,
     load_license_texts,
     model_result_directory,
     muted_copy_output_path,
@@ -353,6 +354,7 @@ class MusicPartitionTests(unittest.TestCase):
             english_information = load_legal_information(root, language="en")
             license_texts = load_license_texts(root)
             english_license_texts = load_license_texts(root, language="en")
+            combined_display = load_legal_display(root)
             (root / "runtime-assets.json").unlink()
             no_record_information = load_legal_information(root)
 
@@ -360,7 +362,10 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("AV-CASS and CAVP sources", information)
         self.assertIn("FFmpeg LGPL shared build", information)
         self.assertNotIn("app license", information)
-        self.assertIn("공식 영문 라이선스 원문", license_texts)
+        self.assertIn("공식 라이선스 원문(영문)", license_texts)
+        self.assertIn("저작권과 이용 권리", combined_display)
+        self.assertIn("공식 라이선스 원문(영문)", combined_display)
+        self.assertIn("app license", combined_display)
         self.assertIn("app license", license_texts)
         self.assertIn("MIT", license_texts)
         self.assertIn("Apache", license_texts)
