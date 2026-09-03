@@ -63,6 +63,16 @@ class DistributionDocumentTests(unittest.TestCase):
         for name in ("app", "tests", "scripts", "docs", "licenses"):
             self.assertTrue((ROOT / name).is_dir(), name)
 
+    def test_readme_documents_supported_environment_and_first_install(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Windows 64비트", readme)
+        self.assertIn("NVIDIA GPU", readme)
+        self.assertIn("약 5.9GB", readme)
+        self.assertIn("약 15GB", readme)
+        self.assertIn("video-music-separator-setup.exe", readme)
+        self.assertIn("미서명 빌드", readme)
+        self.assertIn("https://www.youtube.com/@ms-0606", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

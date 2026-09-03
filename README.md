@@ -4,6 +4,34 @@
 
 원본 영상은 바꾸지 않는다. 음악만 뮤트하면 원본 옆에 `<원본이름>_음악제거.mp4`를 만들며, 같은 이름의 사본은 덮어쓴다.
 
+- 현재 앱 버전: `0.2.0`
+- 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
+
+## 지원 환경
+
+| 항목 | 요구사항 |
+| --- | --- |
+| 운영체제 | Windows 64비트. 현재 빌드와 동작 확인 환경은 Windows 11이다. |
+| GPU | CUDA를 사용할 수 있는 NVIDIA GPU가 필요하다. CPU 전용 실행은 지원하지 않는다. 최소 VRAM은 아직 검증된 지원 기준을 정하지 않았다. |
+| 저장 공간 | 첫 설치 때 약 5.9GB를 내려받으며, 압축 해제와 설치 중에는 약 15GB의 여유 공간을 권장한다. |
+| 인터넷 | 첫 설치, 재설치 또는 런타임 업데이트 때 필요하다. 설치가 끝난 뒤 일반적인 영상 분리·저장에는 필요하지 않다. |
+| Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 LGPL FFmpeg를 내려받는다. |
+| 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. 두 EXE는 같은 폴더에 둔다. |
+
+## 처음 설치하는 방법
+
+1. 배포자가 제공한 기본 앱 ZIP을 새 폴더에 **전부 압축 해제**한다.
+2. 같은 폴더에 `video-music-separator.exe`와 `video-music-separator-setup.exe`가 있는지 확인한다.
+3. 함께 제공된 SHA-256 값과 내려받은 파일의 체크섬이 같은지 확인한다. 값이 다르면 실행하지 않는다.
+4. `video-music-separator-setup.exe`를 실행한다.
+5. 설치 화면에서 약 5.9GB의 다운로드 용량, 다운로드 출처, 모델 이용조건, 개인정보 안내와 사용자 책임을 읽고 동의한 뒤 `설치 시작`을 누른다.
+6. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다. 중간에 끊겼다면 설치 파일을 다시 실행하면 `.part` 파일에서 이어받는다.
+7. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
+
+현재 실행 파일은 유료 코드 서명 인증서를 적용하지 않은 **미서명 빌드**일 수 있다. Windows SmartScreen에 `알 수 없는 게시자` 경고가 나오면 저장소·배포 주소와 SHA-256을 먼저 확인하고, 두 정보가 맞을 때에만 `추가 정보`에서 실행한다. 체크섬이 다르거나 출처가 불명확한 파일은 실행하지 않는다.
+
+> **현재 배포 상태:** 이 저장소는 비공개 배포 준비 단계다. 공개 Release 전에는 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사를 완료해야 한다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+
 ## 처리 구조
 
 1. FFmpeg가 영상 오디오를 44.1kHz 스테레오 WAV로 추출한다.
@@ -40,9 +68,9 @@
 
 루트의 `video-music-separator.exe`와 `video-music-separator-setup.exe`는 `scripts/build_executables.ps1`로 만드는 로컬 실행 파일이며 Git에는 포함하지 않는다. GitHub 표시와 라이선스 확인을 위해 `README.md`, `LICENSE`, `requirements.txt`는 루트에 유지한다.
 
-## 이동용 폴더
+## 설치 후 폴더 구성과 이동
 
-최종 사용자는 작은 기본 앱 ZIP을 받은 뒤 그 안의 `video-music-separator-setup.exe`를 한 번 실행한다. 설치 파일은 AI Python 실행환경, AV-CASS, CAVP와 LGPL FFmpeg를 각 지정 배포처에서 내려받아 SHA-256을 확인한 뒤 앱 폴더에 배치한다.
+설치 파일은 AI Python 실행환경, AV-CASS, CAVP와 LGPL FFmpeg를 각 지정 배포처에서 내려받아 SHA-256을 확인한 뒤 앱 폴더에 배치한다.
 
 설치 화면에는 약 5.9GB의 다운로드 용량, 약 15GB의 설치 중 권장 여유 공간, 다운로드 출처, 적용되는 이용조건, 외부 통신 정보와 사용자 책임이 표시된다. 사용자가 이를 확인하고 동의해야 설치를 시작할 수 있다. Video Music Separator는 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며 제휴하거나 보증받지 않았다.
 
@@ -60,19 +88,24 @@
 
 공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
 
-## 필수 구성요소 자동 설치
+## 설치 프로그램이 하는 일
 
-1. `video-music-separator-setup.exe`를 `video-music-separator.exe`와 같은 폴더에서 실행한다.
-2. `설치 시작`을 누른다.
-3. 설치 파일이 다음 항목을 지정 배포처에서 내려받는다.
+1. 다음 항목을 지정 배포처에서 내려받는다.
    - AI Python 실행환경: 이 프로젝트의 GitHub Release에 고정된 두 분할 파일
    - AV-CASS `av_cass_checkpoint.pt`: AV-CASS 공식 Google Drive
    - CAVP `cavp_epoch66.ckpt`: Diff-Foley 공식 Hugging Face의 고정 커밋
    - FFmpeg: BtbN의 고정 LGPL 공유 빌드
-4. 각 파일의 크기와 SHA-256, FFmpeg의 버전·빌드 옵션을 확인한다.
-5. 중단된 다운로드는 `.part` 파일에서 이어받으며 검증이 끝난 파일만 실제 설치 위치로 교체한다.
+2. 각 파일의 크기와 SHA-256, FFmpeg의 버전·빌드 옵션을 확인한다.
+3. 중단된 다운로드는 `.part` 파일에서 이어받으며 검증이 끝난 파일만 실제 설치 위치로 교체한다.
 
 설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. 공식 주소가 변경되거나 파일 내용이 바뀌어 체크섬이 맞지 않으면 설치를 중단한다. 설치 결과와 출처는 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
+
+### 설치 문제 해결
+
+- 설치 파일을 ZIP 안에서 직접 실행했거나 `Program Files`처럼 쓰기가 제한된 위치에 두었다면, 폴더 전체를 문서 폴더 같은 사용자 쓰기 가능 위치로 옮긴 뒤 다시 실행한다.
+- 다운로드가 중단되면 같은 설치 파일을 다시 실행한다. 검증된 파일은 재사용하고 완료되지 않은 `.part` 다운로드는 이어받는다.
+- 체크섬 불일치는 파일을 임의로 사용하지 않기 위한 정상적인 중단이다. 검증을 우회하지 말고 배포 안내의 주소·버전이 최신인지 확인한다.
+- `NVIDIA GPU가 필요합니다` 오류가 나오면 지원되는 NVIDIA GPU와 정상 설치된 드라이버가 필요하다. 현재 CPU 전용 대체 실행은 제공하지 않는다.
 
 ## 사용 방법
 
