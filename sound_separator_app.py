@@ -400,19 +400,14 @@ class SoundSeparatorApp(tk.Tk):
         self.volume_label = ttk.Label(actions, width=4, text=str(DEFAULT_VOLUME))
         self.volume_label.pack(side="left")
 
-        preview_area = ttk.Frame(root)
-        preview_area.grid(row=0, column=0, sticky="ew", pady=(0, 8))
-        preview_area.columnconfigure(0, weight=1)
-        preview_area.columnconfigure(2, weight=1)
-
         ttk.Button(
-            preview_area,
+            root,
             text="라이선스·출처",
             command=self.show_legal_information,
-        ).grid(row=0, column=0, sticky="nw", padx=(0, 12), pady=(8, 0))
+        ).grid(row=0, column=0, sticky="nw", padx=(2, 0), pady=(8, 0))
 
-        preview_frame = ttk.LabelFrame(preview_area, text="영상 미리보기", padding=8)
-        preview_frame.grid(row=0, column=1)
+        preview_frame = ttk.LabelFrame(root, text="영상 미리보기", padding=8)
+        preview_frame.grid(row=0, column=0, pady=(0, 8))
         preview_surface = tk.Frame(
             preview_frame,
             width=PREVIEW_WIDTH,
