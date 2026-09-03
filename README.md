@@ -97,10 +97,10 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 1. `영상 열기`로 클립을 선택한다.
 2. `영상에서 음악 분리`를 누른다.
-3. 각 행의 `듣기`를 누르면 앱 맨 위의 작은 화면에서 영상과 해당 트랙이 함께 재생된다. 같은 버튼을 다시 누르면 정지한다. 미리보기 아래 슬라이더를 움직이면 원하는 재생 위치로 바로 이동한다.
+3. 각 행의 `듣기`를 누르면 앱 맨 위의 작은 화면에서 영상과 해당 트랙이 함께 재생된다. 같은 버튼을 다시 누르면 정지한다. 미리보기 아래 슬라이더를 움직이면 원하는 재생 위치로 바로 이동한다. 미리보기 영상은 처음 한 번 420×236·24fps의 가벼운 프록시로 준비하고 이후 재사용한다.
 4. `음악 (BGM)` 행의 `뮤트`를 누른다.
-5. `전체 영상 재생`으로 음악이 빠진 영상과 목소리·효과음을 확인한다. 영상 프레임은 소리 재생 시계를 기준으로 맞춰 장시간 재생해도 싱크가 누적해서 벌어지지 않게 한다.
-6. 창 아래의 `사본 저장`을 누르면 `<원본이름>_음악제거.mp4`를 만든다.
+5. `전체 영상 재생`으로 음악이 빠진 영상과 목소리·효과음을 확인한다. 소리를 기준 시계로 삼고, 영상 디코딩은 화면 처리와 분리하며 늦은 영상 프레임은 건너뛰어 소리 싱크와 UI 반응성을 우선한다.
+6. 창 아래의 `사본 저장`을 누르면 `<원본이름>_음악제거.mp4`를 만든다. 재생용 프록시는 저장본에 쓰지 않으며, 저장본의 영상 스트림은 원본 그대로 복사한다.
 
 영상 미리보기 오른쪽의 `한국어 / English`를 선택하면 창 제목, 버튼, 상태 안내, 결과 표, 경고창과 앱 정보·라이선스·출처 창의 안내 표기가 즉시 해당 언어로 바뀐다.
 
@@ -303,10 +303,10 @@ To move the application itself, move the entire installed folder rather than eit
 
 1. Select a clip with `Open Video`.
 2. Select `Separate Music from Video`.
-3. Select `Listen` on either row to play the video with that separated track in the preview at the top of the application. Select the same button again to stop. Move the slider below the preview to seek directly to the desired position.
+3. Select `Listen` on either row to play the video with that separated track in the preview at the top of the application. Select the same button again to stop. Move the slider below the preview to seek directly to the desired position. On first use, the app prepares a lightweight 420×236, 24 fps preview proxy and reuses it afterward.
 4. Select `Mute` on the `Music (BGM)` row.
-5. Use `Play Full Video` to review the video with the music removed and the voice and effects preserved. Video frames follow the audio playback clock so sync does not drift during long playback.
-6. Select `Save Copy` at the bottom of the window to create `<source name>_music-removed.mp4`.
+5. Use `Play Full Video` to review the video with the music removed and the voice and effects preserved. Audio is the master clock; video decoding runs separately from UI work, and late video frames are skipped to prioritize audio sync and responsiveness.
+6. Select `Save Copy` at the bottom of the window to create `<source name>_music-removed.mp4`. Preview proxies are never used for the saved copy; its encoded video stream is copied unchanged from the source.
 
 Selecting `한국어 / English` to the right of the video preview immediately changes the window title, buttons, status messages, result table, warnings, and license/source window to the selected language.
 

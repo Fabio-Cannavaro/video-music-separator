@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -24,10 +25,13 @@ from audio_core import (
     VIDEO_EXTENSIONS,
     SoundEvent,
     application_root,
+    create_muted_preview_video,
+    create_preview_proxy,
     create_preview_video,
     export_video,
     extract_audio,
     probe_duration,
+    preview_proxy_is_current,
     require_program,
     run_command,
     save_manifest,
@@ -154,6 +158,7 @@ TRANSLATIONS = {
         "status_audiosep_compare_running": "AudioSep 모델을 한 번 불러 3가지 음악 유형을 비교하는 중입니다…",
         "status_playing_original": "원본 전체 믹스를 영상과 함께 재생합니다.",
         "status_playing_muted": "{count}개 소리를 뮤트한 전체 믹스를 재생합니다.",
+        "status_prepare_original_preview": "소리 중심의 가벼운 영상 미리보기를 준비하는 중입니다…",
         "status_prepare_muted_preview": "선택한 소리만 뮤트한 전체 영상 미리보기를 준비하는 중입니다…",
         "status_save_cleanup_failed": "저장 완료 · 작업 폴더 정리 실패: {path}",
         "status_save_complete": "저장 완료 · 작업 폴더 삭제 완료: {path}",
@@ -275,6 +280,7 @@ TRANSLATIONS = {
         "status_audiosep_compare_running": "Loading AudioSep once to compare three music types…",
         "status_playing_original": "Playing the original full mix with video.",
         "status_playing_muted": "Playing the full mix with {count} sound(s) muted.",
+        "status_prepare_original_preview": "Preparing a lightweight, audio-first video preview…",
         "status_prepare_muted_preview": "Preparing a full-video preview with the selected sounds muted…",
         "status_save_cleanup_failed": "Saved · Could not clean the work folder: {path}",
         "status_save_complete": "Saved · Deleted the work folder: {path}",
@@ -395,6 +401,107 @@ def next_preview_delay_ms(started_at: float, now: float, fps: float) -> int:
     next_frame = int(elapsed * fps) + 1
     deadline = started_at + next_frame / fps
     return max(1, round((deadline - now) * 1000.0))
+
+
+def replace_latest(item_queue: queue.Queue, item: object) -> None:
+    """Keep only the newest decoder request or decoded frame."""
+    while True:
+        try:
+            item_queue.get_nowait()
+        except queue.Empty:
+            break
+    item_queue.put_nowait(item)
+
+
+class PreviewFrameDecoder:
+    """Decode video away from Tk's UI thread and retain only the newest frame."""
+
+    def __init__(self, source: Path, offset: float, fps: float) -> None:
+        self.source = source
+        self.position = max(0.0, offset)
+        self.fps = normalized_preview_fps(fps)
+        self._requests: queue.Queue[tuple[float, bool] | None] = queue.Queue(
+            maxsize=1
+        )
+        self._frames: queue.Queue[tuple[float, object]] = queue.Queue(maxsize=1)
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def request(self, target: float, *, force_seek: bool = False) -> None:
+        if not self._stop.is_set():
+            replace_latest(self._requests, (max(0.0, target), force_seek))
+
+    def pop_latest(self) -> tuple[float, object] | None:
+        newest = None
+        while True:
+            try:
+                newest = self._frames.get_nowait()
+            except queue.Empty:
+                return newest
+
+    def close(self) -> None:
+        self._stop.set()
+        try:
+            replace_latest(self._requests, None)
+        except queue.Full:
+            pass
+        self._thread.join(timeout=0.25)
+
+    def _run(self) -> None:
+        capture = cv2.VideoCapture(str(self.source))
+        try:
+            if not capture.isOpened():
+                return
+            capture.set(cv2.CAP_PROP_POS_MSEC, self.position * 1000.0)
+            frame_tolerance = 0.5 / self.fps
+            while not self._stop.is_set():
+                try:
+                    request = self._requests.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+                if request is None:
+                    return
+                target, force_seek = request
+                while True:
+                    try:
+                        newer = self._requests.get_nowait()
+                    except queue.Empty:
+                        break
+                    if newer is None:
+                        return
+                    target, newer_force = newer
+                    force_seek = force_seek or newer_force
+
+                if (
+                    force_seek
+                    or target + frame_tolerance < self.position
+                    or target - self.position > 0.35
+                ):
+                    capture.set(cv2.CAP_PROP_POS_MSEC, target * 1000.0)
+                    self.position = target
+
+                newest_frame = None
+                for _ in range(max(1, round(self.fps * 2))):
+                    if not force_seek and self.position + frame_tolerance >= target:
+                        break
+                    ok, frame = capture.read()
+                    if not ok:
+                        break
+                    newest_frame = frame
+                    reported = capture.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+                    self.position = (
+                        reported
+                        if reported > 0.0
+                        else self.position + 1.0 / self.fps
+                    )
+                    force_seek = False
+                    if self.position + frame_tolerance >= target:
+                        break
+                if newest_frame is not None:
+                    replace_latest(self._frames, (self.position, newest_frame))
+        finally:
+            capture.release()
 
 
 def terminate_preview_process(
@@ -670,6 +777,10 @@ def muted_mix_preview_path(work_dir: Path) -> Path:
     return work_dir / "previews" / "muted_mix_preview.mkv"
 
 
+def original_preview_path(work_dir: Path) -> Path:
+    return work_dir / "previews" / "original_preview.mkv"
+
+
 def audiosep_result_key(query_id: str) -> str:
     if query_id not in AUDIOSEP_QUERIES:
         raise ValueError(f"지원하지 않는 AudioSep 질의입니다: {query_id}")
@@ -767,7 +878,7 @@ class SoundSeparatorApp(tk.Tk):
         self.playback_generation = 0
         self.player_poll_after_id: str | None = None
         self.volume_restart_after_id: str | None = None
-        self.video_capture: cv2.VideoCapture | None = None
+        self.video_decoder: PreviewFrameDecoder | None = None
         self.video_position = 0.0
         self.preview_fps = float(PREVIEW_FPS)
         self.video_poll_after_id: str | None = None
@@ -1629,16 +1740,20 @@ class SoundSeparatorApp(tk.Tk):
         duration = probe_duration(source)
         offset = min(max(0.0, offset), duration)
         capture = cv2.VideoCapture(str(source))
-        if not capture.isOpened():
+        try:
+            if not capture.isOpened():
+                raise RuntimeError(self._t("preview_open_failed", path=source))
+            capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
+            self.preview_fps = normalized_preview_fps(capture.get(cv2.CAP_PROP_FPS))
+            ok, first_frame = capture.read()
+            if ok:
+                self._display_video_frame(first_frame)
+        finally:
             capture.release()
-            raise RuntimeError(self._t("preview_open_failed", path=source))
-        capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
-        self.video_capture = capture
+        self.video_decoder = PreviewFrameDecoder(source, offset, self.preview_fps)
         self.video_position = offset
-        self.preview_fps = normalized_preview_fps(capture.get(cv2.CAP_PROP_FPS))
         self.player_duration = duration
         self._configure_preview_seek(duration, offset)
-        self._read_video_frame(offset, force_seek=True)
         self.player = subprocess.Popen(
             build_ffplay_command(source, self.volume_var.get(), offset),
             stdout=subprocess.DEVNULL,
@@ -1690,33 +1805,6 @@ class SoundSeparatorApp(tk.Tk):
         self.preview_photo = ImageTk.PhotoImage(canvas)
         self.preview_label.configure(image=self.preview_photo, text="")
 
-    def _read_video_frame(self, target: float, force_seek: bool = False) -> None:
-        capture = self.video_capture
-        if capture is None:
-            return
-        preview_fps = normalized_preview_fps(
-            getattr(self, "preview_fps", float(PREVIEW_FPS))
-        )
-        frame_tolerance = 0.5 / preview_fps
-        if not force_seek and self.video_position + frame_tolerance >= target:
-            return
-        if force_seek or target - self.video_position > 0.5:
-            capture.set(cv2.CAP_PROP_POS_MSEC, target * 1000.0)
-        newest = None
-        for _ in range(max(1, round(preview_fps))):
-            ok, frame = capture.read()
-            if not ok:
-                break
-            newest = frame
-            self.video_position = max(
-                target if force_seek else 0.0,
-                capture.get(cv2.CAP_PROP_POS_MSEC) / 1000.0,
-            )
-            if self.video_position + frame_tolerance >= target:
-                break
-        if newest is not None:
-            self._display_video_frame(newest)
-
     def _poll_video_frame(self, generation: int | None = None) -> None:
         self.video_poll_after_id = None
         if generation is not None and generation != self.playback_generation:
@@ -1730,7 +1818,13 @@ class SoundSeparatorApp(tk.Tk):
             self.player_duration,
         )
         if not self.seek_dragging:
-            self._read_video_frame(position)
+            decoder = self.video_decoder
+            if decoder is not None:
+                decoder.request(position)
+                decoded = decoder.pop_latest()
+                if decoded is not None:
+                    self.video_position, frame = decoded
+                    self._display_video_frame(frame)
             self._set_preview_position(position)
         self.video_poll_after_id = self.after(
             next_preview_delay_ms(
@@ -1772,8 +1866,21 @@ class SoundSeparatorApp(tk.Tk):
             return
         muted = [event for event in self.events if event.muted]
         if not muted:
-            self._start_audio_preview(self.video_path, "original")
-            self._set_status("status_playing_original")
+            if not self.work_dir:
+                return
+            target = original_preview_path(self.work_dir)
+            if preview_proxy_is_current(self.video_path, target):
+                self._start_audio_preview(target, "original")
+                self._set_status("status_playing_original")
+                return
+            video_path = self.video_path
+
+            def operation() -> None:
+                create_preview_proxy(video_path, target)
+                self.after(0, lambda: self._start_audio_preview(target, "original"))
+                self.after(0, lambda: self._set_status("status_playing_original"))
+
+            self._run_background("status_prepare_original_preview", operation)
             return
         if not self.result_dir:
             return
@@ -1789,7 +1896,7 @@ class SoundSeparatorApp(tk.Tk):
         result_key = self._active_result_key()
 
         def operation() -> None:
-            export_video(video_path, target, events)
+            create_muted_preview_video(video_path, target, events)
             self.model_preview_dirty[result_key] = False
             self.after(0, lambda: self._start_audio_preview(target, "original"))
             self.after(
@@ -1842,9 +1949,10 @@ class SoundSeparatorApp(tk.Tk):
             except tk.TclError:
                 pass
             self.volume_restart_after_id = None
-        if self.video_capture is not None:
-            self.video_capture.release()
-        self.video_capture = None
+        previous_decoder = self.video_decoder
+        self.video_decoder = None
+        if previous_decoder is not None:
+            previous_decoder.close()
         previous_player = self.player
         self.player = None
         terminate_preview_process(previous_player)

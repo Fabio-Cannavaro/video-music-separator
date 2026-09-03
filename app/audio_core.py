@@ -12,6 +12,10 @@ from typing import Iterable, Sequence
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 MUSIC_PARTITION_IDS = {"music", "non-music"}
+PREVIEW_VIDEO_FILTER = (
+    "scale=420:236:force_original_aspect_ratio=decrease,"
+    "pad=420:236:(ow-iw)/2:(oh-ih)/2:black,fps=24"
+)
 
 
 def application_root() -> Path:
@@ -111,31 +115,74 @@ def probe_duration(media_path: Path) -> float:
     return float(completed.stdout.strip())
 
 
-def create_preview_video(video_path: Path, audio_path: Path, output_path: Path) -> None:
-    """Create a lightweight preview using the clip picture and a chosen audio track."""
+def _preview_video_args() -> list[str]:
+    return [
+        "-vf",
+        PREVIEW_VIDEO_FILTER,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "27",
+        "-pix_fmt",
+        "yuv420p",
+    ]
+
+
+def create_preview_proxy(video_path: Path, output_path: Path) -> None:
+    """Create a small A/V proxy used only by the in-app player."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    run_command(
-        [
-            require_program("ffmpeg"),
-            "-y",
-            "-i",
-            str(video_path),
-            "-i",
-            str(audio_path),
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "192k",
-            "-shortest",
-            str(output_path),
-        ]
+    command = [
+        require_program("ffmpeg"),
+        "-y",
+        "-i",
+        str(video_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0",
+    ]
+    command.extend(_preview_video_args())
+    command.extend(
+        ["-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
     )
+    run_command(command)
+
+
+def preview_proxy_is_current(video_path: Path, output_path: Path) -> bool:
+    """Return whether a non-empty proxy is at least as new as its source video."""
+    try:
+        source_stat = video_path.stat()
+        output_stat = output_path.stat()
+    except OSError:
+        return False
+    return (
+        output_stat.st_size > 0
+        and output_stat.st_mtime_ns >= source_stat.st_mtime_ns
+    )
+
+
+def create_preview_video(video_path: Path, audio_path: Path, output_path: Path) -> None:
+    """Create a small video proxy paired with a chosen audio track."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        require_program("ffmpeg"),
+        "-y",
+        "-i",
+        str(video_path),
+        "-i",
+        str(audio_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+    ]
+    command.extend(_preview_video_args())
+    command.extend(
+        ["-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
+    )
+    run_command(command)
 
 
 def extract_event_clip(
@@ -295,7 +342,13 @@ def build_partition_filter(events: Sequence[SoundEvent]) -> tuple[str, str]:
     )
 
 
-def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEvent]) -> None:
+def _build_mixed_video_command(
+    video_path: Path,
+    output_path: Path,
+    events: Sequence[SoundEvent],
+    *,
+    preview: bool,
+) -> list[str]:
     muted = [event for event in events if event.muted]
     partition = is_music_partition(events)
     required = list(events) if partition else muted
@@ -312,22 +365,32 @@ def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEven
     else:
         filter_graph, output_label = build_mute_filter(events)
     command.extend(
-        [
-            "-filter_complex",
-            filter_graph,
-            "-map",
-            "0:v:0",
-            "-map",
-            output_label,
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "320k",
-        ]
+        ["-filter_complex", filter_graph, "-map", "0:v:0", "-map", output_label]
     )
-    if output_path.suffix.lower() in {".mp4", ".m4v", ".mov"}:
+    if preview:
+        command.extend(_preview_video_args())
+    else:
+        command.extend(["-c:v", "copy"])
+    command.extend(["-c:a", "aac", "-b:a", "192k" if preview else "320k"])
+    if not preview and output_path.suffix.lower() in {".mp4", ".m4v", ".mov"}:
         command.extend(["-movflags", "+faststart"])
     command.extend(["-shortest", str(output_path)])
+    return command
+
+
+def create_muted_preview_video(
+    video_path: Path, output_path: Path, events: Sequence[SoundEvent]
+) -> None:
+    """Create a lightweight preview with the selected separated sounds muted."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    run_command(
+        _build_mixed_video_command(video_path, output_path, events, preview=True)
+    )
+
+
+def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEvent]) -> None:
+    """Save a final copy while preserving the original encoded video stream."""
+    command = _build_mixed_video_command(
+        video_path, output_path, events, preview=False
+    )
     run_command(command)

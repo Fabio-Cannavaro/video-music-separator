@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import queue
 import subprocess
 import sys
 import tempfile
@@ -51,9 +52,11 @@ from sound_separator_app import (
     next_preview_delay_ms,
     normalized_preview_fps,
     open_creator_youtube_channel,
+    original_preview_path,
     format_playback_time,
     playback_position,
     preview_path_for_event,
+    replace_latest,
     run_worker_command,
     terminate_preview_process,
     worker_progress_message,
@@ -176,32 +179,46 @@ class PlaybackCommandTests(unittest.TestCase):
         self.assertEqual(next_preview_delay_ms(100.0, 100.0, 24.0), 42)
         self.assertEqual(next_preview_delay_ms(100.0, 100.050, 24.0), 33)
 
-    def test_video_does_not_advance_ahead_of_playback_clock(self) -> None:
-        class Capture:
+    def test_late_decoded_frames_are_replaced_by_the_newest_frame(self) -> None:
+        frames = queue.Queue(maxsize=1)
+        replace_latest(frames, (1.0, "old"))
+        replace_latest(frames, (2.0, "new"))
+        self.assertEqual(frames.get_nowait(), (2.0, "new"))
+
+    @patch("sound_separator_app.time.monotonic", return_value=100.1)
+    def test_video_poll_uses_background_decoder_latest_frame(self, _monotonic) -> None:
+        displayed: list[object] = []
+
+        class Decoder:
             def __init__(self) -> None:
-                self.read_count = 0
+                self.targets: list[float] = []
 
-            def read(self):
-                self.read_count += 1
-                return True, object()
+            def request(self, target: float) -> None:
+                self.targets.append(target)
 
-            def get(self, _property):
-                return self.read_count * 1000 / 30
+            def pop_latest(self):
+                return 0.1, "newest-frame"
 
-            def set(self, _property, _value):
-                return True
-
-        capture = Capture()
+        decoder = Decoder()
         app = SimpleNamespace(
-            video_capture=capture,
+            playback_generation=3,
+            video_poll_after_id="callback",
+            _player_is_running=lambda: True,
+            player_offset=0.0,
+            player_started_at=100.0,
+            player_duration=10.0,
+            seek_dragging=False,
+            video_decoder=decoder,
             video_position=0.0,
-            _display_video_frame=lambda _frame: None,
+            _display_video_frame=displayed.append,
+            _set_preview_position=lambda _position: None,
+            after=lambda _delay, _callback: "next-callback",
+            preview_fps=24.0,
         )
-
-        SoundSeparatorApp._read_video_frame(app, 0.01)
-        self.assertEqual(capture.read_count, 0)
-        SoundSeparatorApp._read_video_frame(app, 0.04)
-        self.assertEqual(capture.read_count, 1)
+        SoundSeparatorApp._poll_video_frame(app, generation=3)
+        self.assertAlmostEqual(decoder.targets[0], 0.1)
+        self.assertEqual(displayed, ["newest-frame"])
+        self.assertEqual(app.video_poll_after_id, "next-callback")
 
 
 class MusicPartitionTests(unittest.TestCase):
@@ -357,6 +374,10 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertEqual(
             muted_mix_preview_path(Path("work")),
             Path("work") / "previews" / "muted_mix_preview.mkv",
+        )
+        self.assertEqual(
+            original_preview_path(Path("work")),
+            Path("work") / "previews" / "original_preview.mkv",
         )
         events[0].muted = True
         self.assertEqual(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -16,10 +17,13 @@ from audio_core import (
     SoundEvent,
     build_mute_filter,
     build_partition_filter,
+    create_muted_preview_video,
+    create_preview_proxy,
     create_preview_video,
     extract_audio,
     load_manifest,
     merge_window_detections,
+    preview_proxy_is_current,
     save_manifest,
     export_video,
     run_command,
@@ -48,6 +52,53 @@ class RunCommandTests(unittest.TestCase):
         self.assertIn("44100", command)
         self.assertIn("pcm_s16le", command)
         self.assertNotIn("pcm_s24le", command)
+
+    @patch("audio_core.run_command")
+    @patch("audio_core.require_program", return_value="ffmpeg.exe")
+    def test_preview_proxy_is_small_fixed_rate_h264(
+        self, _mocked_require, mocked_command
+    ) -> None:
+        create_preview_proxy(Path("source.mp4"), Path("preview.mkv"))
+        command = mocked_command.call_args.args[0]
+        video_filter = command[command.index("-vf") + 1]
+        self.assertIn(
+            "scale=420:236:force_original_aspect_ratio=decrease", video_filter
+        )
+        self.assertIn("fps=24", video_filter)
+        self.assertEqual(command[command.index("-c:v") + 1], "libx264")
+
+    @patch("audio_core.run_command")
+    @patch("audio_core.require_program", return_value="ffmpeg.exe")
+    def test_final_export_copies_video_but_muted_preview_transcodes_it(
+        self, _mocked_require, mocked_command
+    ) -> None:
+        event = SoundEvent(
+            "music", "Music", 0.0, 1.0, 1.0, muted=True, extracted_path="music.wav"
+        )
+        export_video(Path("source.mp4"), Path("saved.mp4"), [event])
+        final_command = mocked_command.call_args.args[0]
+        self.assertEqual(final_command[final_command.index("-c:v") + 1], "copy")
+
+        create_muted_preview_video(
+            Path("source.mp4"), Path("preview.mkv"), [event]
+        )
+        preview_command = mocked_command.call_args.args[0]
+        self.assertEqual(
+            preview_command[preview_command.index("-c:v") + 1], "libx264"
+        )
+
+    def test_preview_cache_requires_nonempty_proxy_newer_than_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.mp4"
+            proxy = root / "preview.mkv"
+            source.write_bytes(b"source")
+            proxy.write_bytes(b"proxy")
+            os.utime(source, ns=(2_000_000_000, 2_000_000_000))
+            os.utime(proxy, ns=(3_000_000_000, 3_000_000_000))
+            self.assertTrue(preview_proxy_is_current(source, proxy))
+            os.utime(source, ns=(4_000_000_000, 4_000_000_000))
+            self.assertFalse(preview_proxy_is_current(source, proxy))
 
 
 class MergeDetectionTests(unittest.TestCase):
@@ -172,10 +223,14 @@ class FfmpegIntegrationTests(unittest.TestCase):
             preview = root / "preview.mkv"
             create_preview_video(source, stem, preview)
             preview_probe = subprocess.run([
-                "ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
+                "ffprobe", "-v", "error",
+                "-show_entries", "stream=codec_type,width,height,avg_frame_rate",
                 "-of", "csv=p=0", str(preview),
             ], check=True, capture_output=True, text=True)
             self.assertIn("video", preview_probe.stdout)
+            self.assertIn("420", preview_probe.stdout)
+            self.assertIn("236", preview_probe.stdout)
+            self.assertIn("24/1", preview_probe.stdout)
             self.assertIn("audio", preview_probe.stdout)
             event = SoundEvent(
                 "sound-0001", "Tone", 0.5, 1.5, 1.0,
@@ -190,6 +245,12 @@ class FfmpegIntegrationTests(unittest.TestCase):
             ], check=True, capture_output=True, text=True)
             self.assertIn("video", probe.stdout)
             self.assertIn("audio", probe.stdout)
+            codec_probe = subprocess.run([
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=codec_name", "-of", "csv=p=0",
+                str(output),
+            ], check=True, capture_output=True, text=True)
+            self.assertEqual(codec_probe.stdout.strip(), "mpeg4")
 
 
 if __name__ == "__main__":
