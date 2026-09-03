@@ -7,7 +7,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectDir = Split-Path -Parent $scriptDir
+$appDir = Join-Path $projectDir "app"
 $python = if ($PythonPath) { $PythonPath } else { Join-Path $projectDir ".venv\Scripts\python.exe" }
 $outputDir = if ($OutputDirectory) {
     [System.IO.Path]::GetFullPath($OutputDirectory)
@@ -15,10 +17,13 @@ $outputDir = if ($OutputDirectory) {
     Join-Path $projectDir "dist\runtime-installer"
 }
 $workDir = Join-Path $projectDir "build\runtime-installer"
+$specDir = Join-Path $projectDir "build\spec"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "빌드용 Python을 찾을 수 없습니다: $python"
 }
+
+New-Item -ItemType Directory -Path $outputDir, $workDir, $specDir -Force | Out-Null
 
 & $python -m PyInstaller `
     --noconfirm `
@@ -28,8 +33,9 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     --name "video-music-separator-setup" `
     --distpath $outputDir `
     --workpath $workDir `
-    --specpath $projectDir `
-    (Join-Path $projectDir "runtime_asset_installer.py")
+    --specpath $specDir `
+    --paths $appDir `
+    (Join-Path $appDir "runtime_asset_installer.py")
 if ($LASTEXITCODE -ne 0) {
     throw "필수 구성요소 설치 파일 빌드에 실패했습니다."
 }

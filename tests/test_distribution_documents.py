@@ -4,7 +4,9 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT / "docs"
+SCRIPTS = ROOT / "scripts"
 
 
 class DistributionDocumentTests(unittest.TestCase):
@@ -18,7 +20,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("not impose additional terms", license_text)
 
     def test_privacy_notice_names_network_destinations_and_local_processing(self) -> None:
-        privacy = (ROOT / "PRIVACY.md").read_text(encoding="utf-8")
+        privacy = (DOCS / "PRIVACY.md").read_text(encoding="utf-8")
         self.assertIn("로컬 PC", privacy)
         self.assertIn("drive.usercontent.google.com", privacy)
         self.assertIn("huggingface.co", privacy)
@@ -26,8 +28,9 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("IP 주소", privacy)
 
     def test_builds_generate_checksums_and_support_optional_code_signing(self) -> None:
-        installer_build = (ROOT / "build_runtime_installer.ps1").read_text(encoding="utf-8")
-        portable_build = (ROOT / "build_portable.ps1").read_text(encoding="utf-8")
+        installer_build = (SCRIPTS / "build_runtime_installer.ps1").read_text(encoding="utf-8")
+        portable_build = (SCRIPTS / "build_portable.ps1").read_text(encoding="utf-8")
+        executable_build = (SCRIPTS / "build_executables.ps1").read_text(encoding="utf-8")
         self.assertIn("CodeSigningCertificateThumbprint", installer_build)
         self.assertIn("Set-AuthenticodeSignature", installer_build)
         self.assertIn(".sha256", installer_build)
@@ -37,13 +40,15 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("SIGNING_STATUS.txt", portable_build)
         self.assertIn("audit_python_licenses.py", portable_build)
         self.assertIn('Join-Path $outputDir "audiosep"', portable_build)
+        self.assertIn('--onefile', executable_build)
+        self.assertIn('Join-Path $appDir "sound_separator_app.py"', executable_build)
 
-        runtime_build = (ROOT / "build_ai_runtime_archive.ps1").read_text(encoding="utf-8")
+        runtime_build = (SCRIPTS / "build_ai_runtime_archive.ps1").read_text(encoding="utf-8")
         self.assertIn("PartSizeMiB = 1900", runtime_build)
         self.assertIn("runtime-parts.json", runtime_build)
 
     def test_public_build_excludes_legacy_workers(self) -> None:
-        portable_build = (ROOT / "build_portable.ps1").read_text(encoding="utf-8")
+        portable_build = (SCRIPTS / "build_portable.ps1").read_text(encoding="utf-8")
         self.assertNotIn(
             'Copy-Item -LiteralPath (Join-Path $projectDir "audiosep_worker.py")',
             portable_build,
@@ -52,6 +57,11 @@ class DistributionDocumentTests(unittest.TestCase):
             'Copy-Item -LiteralPath (Join-Path $projectDir "bandit_worker.py")',
             portable_build,
         )
+
+    def test_repository_uses_organized_top_level_directories(self) -> None:
+        self.assertEqual(list(ROOT.glob("*.py")), [])
+        for name in ("app", "tests", "scripts", "docs", "licenses"):
+            self.assertTrue((ROOT / name).is_dir(), name)
 
 
 if __name__ == "__main__":

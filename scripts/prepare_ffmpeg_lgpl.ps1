@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectDir = Split-Path -Parent $scriptDir
 $destinationDir = if ($DestinationDirectory) {
     [System.IO.Path]::GetFullPath($DestinationDirectory)
 } else {

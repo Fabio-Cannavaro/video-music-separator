@@ -14,7 +14,7 @@
 - FFmpeg 대응 소스 커밋: <https://github.com/FFmpeg/FFmpeg/commit/7c533d0f86>
 - 빌드 시스템 대응 커밋: <https://github.com/BtbN/FFmpeg-Builds/tree/48576f197ad1c2afb2e0b8efe204919a1afbff54>
 
-온라인 설치 시 `video-music-separator-setup.exe`가 위 고정 파일을 공식 GitHub Release에서 직접 내려받고 SHA-256을 확인한다. 압축을 푼 뒤 `--enable-shared`가 있고 `--enable-gpl`, `--enable-nonfree`가 없는지 다시 검사한 파일만 앱의 `ffmpeg/` 폴더에 설치한다. 개발·오프라인 빌드에서는 `prepare_ffmpeg_lgpl.ps1`와 `build_portable.ps1 -BundleRuntimeAssets`가 같은 검증을 수행한다.
+온라인 설치 시 `video-music-separator-setup.exe`가 위 고정 파일을 공식 GitHub Release에서 직접 내려받고 SHA-256을 확인한다. 압축을 푼 뒤 `--enable-shared`가 있고 `--enable-gpl`, `--enable-nonfree`가 없는지 다시 검사한 파일만 앱의 `ffmpeg/` 폴더에 설치한다. 개발·오프라인 빌드에서는 `scripts/prepare_ffmpeg_lgpl.ps1`와 `scripts/build_portable.ps1 -BundleRuntimeAssets`가 같은 검증을 수행한다.
 
 ## FFmpeg configure line
 

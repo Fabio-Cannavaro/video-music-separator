@@ -9,6 +9,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "app"))
+
 from audiosep_worker import load_jobs
 from avcass_worker import INFERENCE_HOP, INFERENCE_LENGTH, inference_starts
 

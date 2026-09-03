@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 if not exist ".venv\Scripts\python.exe" (
     echo 전용 Python 환경이 없습니다.
@@ -9,5 +9,5 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
-".venv\Scripts\python.exe" "sound_separator_app.py"
+".venv\Scripts\python.exe" "app\sound_separator_app.py"
 if errorlevel 1 pause

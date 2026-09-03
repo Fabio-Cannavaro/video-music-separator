@@ -27,7 +27,18 @@
 - FFmpeg 실행 파일
 - 개인 영상·오디오, 분리 결과, 임시 작업 폴더와 로그
 
-모델과 외부 도구의 이용·재배포 조건은 [MODEL_LICENSES.md](MODEL_LICENSES.md)와 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 먼저 확인해야 한다.
+모델과 외부 도구의 이용·재배포 조건은 [MODEL_LICENSES.md](docs/MODEL_LICENSES.md)와 [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)를 먼저 확인해야 한다.
+
+## 폴더 구조
+
+- `app/`: 앱, 분리 워커와 런타임 설치 코드
+- `tests/`: 단위·통합 테스트
+- `scripts/`: 개발 실행, 빌드, 배포 및 라이선스 검사 도구
+- `docs/`: 개인정보, 모델, FFmpeg 및 제3자 고지 문서
+- `licenses/`: 앱에 포함하는 라이선스 전문
+- `build/`, `dist/`: Git에서 제외되는 빌드 중간물과 배포 결과
+
+루트의 `video-music-separator.exe`와 `video-music-separator-setup.exe`는 `scripts/build_executables.ps1`로 만드는 로컬 실행 파일이며 Git에는 포함하지 않는다. GitHub 표시와 라이선스 확인을 위해 `README.md`, `LICENSE`, `requirements.txt`는 루트에 유지한다.
 
 ## 이동용 폴더
 
@@ -47,7 +58,7 @@
 
 `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다. 앱의 분리 모델은 AV-CASS이며 NVIDIA GPU가 필요하다. 기본 앱 ZIP에는 AI Python 환경·AV-CASS 코드·모델·FFmpeg가 들어 있지 않으며, 처음 설치할 때 약 5.9GB를 내려받는다. 설치 완료 후 일반 사용에는 인터넷 연결이나 별도 Python 설치가 필요하지 않다.
 
-공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `licenses/python/`에서 확인할 수 있다.
+공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
 
 ## 필수 구성요소 자동 설치
 
@@ -61,7 +72,7 @@
 4. 각 파일의 크기와 SHA-256, FFmpeg의 버전·빌드 옵션을 확인한다.
 5. 중단된 다운로드는 `.part` 파일에서 이어받으며 검증이 끝난 파일만 실제 설치 위치로 교체한다.
 
-설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. 공식 주소가 변경되거나 파일 내용이 바뀌어 체크섬이 맞지 않으면 설치를 중단한다. 설치 결과와 출처는 앱 폴더의 `runtime-assets.json`에 기록한다.
+설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. 공식 주소가 변경되거나 파일 내용이 바뀌어 체크섬이 맞지 않으면 설치를 중단한다. 설치 결과와 출처는 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
 
 ## 사용 방법
 
@@ -86,7 +97,7 @@ GUI 자체는 가벼운 Python 환경으로 실행하고, AI 추론은 휴대용
 cd video-music-separator
 py -m venv --system-site-packages .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe sound_separator_app.py
+.\.venv\Scripts\python.exe app\sound_separator_app.py
 ```
 
 `py`가 설치된 Python을 찾지 못하면 설치된 Python 실행 파일의 전체 경로로 첫 명령을 실행한다. AI 추론 기능을 사용하려면 별도로 준비한 휴대용 런타임과 모델 파일이 필요하다.
@@ -94,20 +105,21 @@ py -m venv --system-site-packages .venv
 ## 빌드와 테스트
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest -v
-.\prepare_ffmpeg_lgpl.ps1
-.\build_runtime_installer.ps1
-.\build_portable.ps1
+.\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
+.\scripts\prepare_ffmpeg_lgpl.ps1
+.\scripts\build_executables.ps1
+.\scripts\build_runtime_installer.ps1
+.\scripts\build_portable.ps1
 ```
 
-`build_runtime_installer.ps1`는 사용자가 실행할 단일 `video-music-separator-setup.exe`와 대응하는 `.sha256` 파일을 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 내부용 오프라인 묶음이 필요하면 `build_portable.ps1 -BundleRuntimeAssets`를 사용한다. 인증서 지문을 `-CodeSigningCertificateThumbprint`로 제공한 경우에만 Authenticode 서명을 적용하며, 인증서가 없으면 미서명 상태로 빌드한다.
+`build_executables.ps1`는 루트에 단일 파일형 앱 EXE와 설치 EXE를 만든다. `build_runtime_installer.ps1`는 설치 EXE와 대응하는 `.sha256` 파일만 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 내부용 오프라인 묶음이 필요하면 `build_portable.ps1 -BundleRuntimeAssets`를 사용한다. 인증서 지문을 `-CodeSigningCertificateThumbprint`로 제공한 경우에만 Authenticode 서명을 적용하며, 인증서가 없으면 미서명 상태로 빌드한다.
 
-`prepare_ffmpeg_lgpl.ps1`는 개발·오프라인 빌드용으로 고정된 BtbN FFmpeg 8.1 LGPL 공유 빌드를 내려받고 SHA-256을 검증한다. 정확한 버전, 소스 커밋과 빌드 설정은 [FFMPEG_BUILD.md](FFMPEG_BUILD.md)에 기록한다.
+`prepare_ffmpeg_lgpl.ps1`는 개발·오프라인 빌드용으로 고정된 BtbN FFmpeg 8.1 LGPL 공유 빌드를 내려받고 SHA-256을 검증한다. 정확한 버전, 소스 커밋과 빌드 설정은 [FFMPEG_BUILD.md](docs/FFMPEG_BUILD.md)에 기록한다.
 
 휴대용 실동작 검사는 다음처럼 실행한다.
 
 ```powershell
-..\video-music-separator-portable\video-music-separator.exe --portable-smoke-test `
+.\dist\package\video-music-separator.exe --portable-smoke-test `
   ..\sample.mp4 `
   ..\test-output\portable_avcass_smoke.json
 ```
@@ -123,7 +135,7 @@ py -m venv --system-site-packages .venv
 
 이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 완벽한 대사·효과음 보존이나 음악 제거를 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
 
-앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face와 GitHub/BtbN에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](PRIVACY.md)에 기록한다.
+앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face와 GitHub/BtbN에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
 
 영상 미리보기 왼쪽의 `라이선스·출처` 버튼에서 AV-CASS와 CAVP의 출처·논문, FFmpeg LGPL 빌드 정보, 제3자 고지와 포함된 라이선스 전문을 확인할 수 있다.
 
@@ -135,4 +147,4 @@ py -m venv --system-site-packages .venv
 
 외부 프로젝트의 코드, 모델 가중치, FFmpeg에는 각각의 원 라이선스가 적용되며 이 저장소의 라이선스로 바뀌지 않는다. 실행 파일을 공개 배포하기 전에는 포함한 각 파일의 라이선스와 소스 제공 의무를 다시 확인해야 한다.
 
-공개 Release를 만들기 전에는 [DISTRIBUTION_CHECKLIST.md](DISTRIBUTION_CHECKLIST.md)를 순서대로 확인한다.
+공개 Release를 만들기 전에는 [DISTRIBUTION_CHECKLIST.md](docs/DISTRIBUTION_CHECKLIST.md)를 순서대로 확인한다.

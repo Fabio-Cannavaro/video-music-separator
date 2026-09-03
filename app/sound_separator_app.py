@@ -390,6 +390,13 @@ def worker_progress_key(
     return None
 
 
+def worker_script_path(name: str) -> Path:
+    """Locate a worker in the organized source or packaged application folder."""
+    if getattr(sys, "frozen", False):
+        return application_root() / "app" / name
+    return Path(__file__).resolve().parent / name
+
+
 def worker_progress_message(
     model_id: str, line: str, language: str = "ko"
 ) -> str | None:
@@ -422,7 +429,9 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
                 f"Source: {component['source']}",
             )
         )
-    record_path = root / "runtime-assets.json"
+    record_path = root / "docs" / "runtime-assets.json"
+    if not record_path.is_file():
+        record_path = root / "runtime-assets.json"
     if record_path.is_file():
         try:
             record = json.loads(record_path.read_text(encoding="utf-8"))
@@ -444,7 +453,11 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
             if language == "en"
             else relative_path
         )
-        path = root / display_path
+        path = root / "docs" / display_path
+        if not path.is_file() and display_path != relative_path:
+            path = root / "docs" / relative_path
+        if not path.is_file():
+            path = root / display_path
         if not path.is_file() and display_path != relative_path:
             path = root / relative_path
         if path.is_file():
@@ -1365,7 +1378,7 @@ class SoundSeparatorApp(tk.Tk):
             )
             command = [
                 str(python_path),
-                str(application_root() / "audiosep_worker.py"),
+                str(worker_script_path("audiosep_worker.py")),
                 "--repo",
                 str(repo),
                 "--model",
@@ -1843,7 +1856,7 @@ class SoundSeparatorApp(tk.Tk):
             ) = runtime_paths
             command = [
                 str(python_path),
-                str(application_root() / "avcass_worker.py"),
+                str(worker_script_path("avcass_worker.py")),
                 "--repo",
                 str(repo),
                 "--deps",
@@ -1869,7 +1882,7 @@ class SoundSeparatorApp(tk.Tk):
             python_path, repo, hparams, checkpoint = runtime_paths
             command = [
                 str(python_path),
-                str(application_root() / "bandit_worker.py"),
+                str(worker_script_path("bandit_worker.py")),
                 "--repo",
                 str(repo),
                 "--hparams",
@@ -1887,7 +1900,7 @@ class SoundSeparatorApp(tk.Tk):
             python_path, repo, checkpoint, runtime_root = runtime_paths
             command = [
                 str(python_path),
-                str(application_root() / "audiosep_worker.py"),
+                str(worker_script_path("audiosep_worker.py")),
                 "--repo",
                 str(repo),
                 "--model",
@@ -2068,7 +2081,7 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
             run_command(
                 [
                     str(python_path),
-                    str(application_root() / "avcass_worker.py"),
+                    str(worker_script_path("avcass_worker.py")),
                     "--repo",
                     str(repo),
                     "--deps",

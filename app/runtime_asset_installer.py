@@ -150,7 +150,7 @@ def installation_disclosure_text() -> str:
 def application_directory() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parents[1]
 
 
 def sha256_file(path: Path) -> str:
@@ -442,7 +442,9 @@ def write_install_record(root: Path) -> None:
         "ffmpeg": asdict(FFMPEG_ARCHIVE),
         "ffmpeg_version": FFMPEG_VERSION,
     }
-    (root / "runtime-assets.json").write_text(
+    documents = root / "docs"
+    documents.mkdir(parents=True, exist_ok=True)
+    (documents / "runtime-assets.json").write_text(
         json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
@@ -525,7 +527,9 @@ class InstallerWindow:
         )
         sections: list[str] = []
         for name in document_names:
-            path = self.root_directory / name
+            path = self.root_directory / "docs" / name
+            if not path.is_file():
+                path = self.root_directory / name
             if path.is_file():
                 content = path.read_text(encoding="utf-8", errors="replace").strip()
             else:

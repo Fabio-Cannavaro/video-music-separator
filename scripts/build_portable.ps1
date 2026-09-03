@@ -10,12 +10,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoDir = Split-Path -Parent $projectDir
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectDir = Split-Path -Parent $scriptDir
+$appDir = Join-Path $projectDir "app"
+$docsDir = Join-Path $projectDir "docs"
 $outputDir = if ($OutputDirectory) {
     [System.IO.Path]::GetFullPath($OutputDirectory)
 } else {
-    Join-Path $repoDir "video-music-separator-portable"
+    Join-Path $projectDir "dist\package"
 }
 $buildDir = Join-Path $projectDir "build"
 $distDir = Join-Path $projectDir "dist"
@@ -34,7 +36,7 @@ if (-not $AIRuntimeDirectory) {
     throw "라이선스 목록 생성을 위한 정리된 AI 런타임 원본을 -AIRuntimeDirectory로 지정해 주세요."
 }
 if ($BundleRuntimeAssets -and -not $FFmpegDirectory -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
-    & (Join-Path $projectDir "prepare_ffmpeg_lgpl.ps1") -DestinationDirectory $ffmpegRoot
+    & (Join-Path $scriptDir "prepare_ffmpeg_lgpl.ps1") -DestinationDirectory $ffmpegRoot
     if ($LASTEXITCODE -ne 0) {
         throw "LGPL FFmpeg 준비에 실패했습니다."
     }
@@ -74,76 +76,25 @@ if ($BundleRuntimeAssets) {
     }
 }
 
-& $python -m PyInstaller `
-    --noconfirm `
-    --clean `
-    --windowed `
-    --onedir `
-    --name "video-music-separator" `
-    --distpath $distDir `
-    --workpath $buildDir `
-    --specpath $projectDir `
-    (Join-Path $projectDir "sound_separator_app.py")
-if ($LASTEXITCODE -ne 0) {
-    throw "PyInstaller 빌드에 실패했습니다."
-}
-
-$builtDir = Join-Path $distDir "video-music-separator"
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-$builtInternal = Join-Path $builtDir "_internal"
-$portableInternal = Join-Path $outputDir "_internal"
-if (Test-Path -LiteralPath $portableInternal -PathType Container) {
-    $resolvedOutput = (Resolve-Path -LiteralPath $outputDir).Path
-    $resolvedInternal = (Resolve-Path -LiteralPath $portableInternal).Path
-    if (-not $resolvedInternal.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "교체 대상이 이동용 폴더 밖에 있습니다: $resolvedInternal"
-    }
-    Remove-Item -LiteralPath $resolvedInternal -Recurse -Force
-}
-Move-Item -LiteralPath $builtInternal -Destination $portableInternal
 $legacyExecutable = Join-Path $outputDir "video-sound-separator.exe"
 if (Test-Path -LiteralPath $legacyExecutable -PathType Leaf) {
     Remove-Item -LiteralPath $legacyExecutable -Force
 }
-Copy-Item -LiteralPath (Join-Path $builtDir "video-music-separator.exe") -Destination $outputDir -Force
-
-$installerBuildArguments = @{
+$executableBuildArguments = @{
     PythonPath = $python
-    OutputDirectory = (Join-Path $distDir "runtime-installer")
+    OutputDirectory = $outputDir
     TimestampServer = $TimestampServer
 }
 if ($CodeSigningCertificateThumbprint) {
-    $installerBuildArguments.CodeSigningCertificateThumbprint = $CodeSigningCertificateThumbprint
+    $executableBuildArguments.CodeSigningCertificateThumbprint = $CodeSigningCertificateThumbprint
 }
-& (Join-Path $projectDir "build_runtime_installer.ps1") @installerBuildArguments
+& (Join-Path $scriptDir "build_executables.ps1") @executableBuildArguments
 if ($LASTEXITCODE -ne 0) {
-    throw "필수 구성요소 설치 파일 빌드에 실패했습니다."
+    throw "실행 파일 빌드에 실패했습니다."
 }
-Copy-Item -LiteralPath `
-    (Join-Path $distDir "runtime-installer\video-music-separator-setup.exe") `
-    -Destination $outputDir `
-    -Force
-Copy-Item -LiteralPath `
-    (Join-Path $distDir "runtime-installer\video-music-separator-setup.exe.sha256") `
-    -Destination $outputDir `
-    -Force
 
 $portableExecutable = Join-Path $outputDir "video-music-separator.exe"
-if ($CodeSigningCertificateThumbprint) {
-    $certificatePath = "Cert:\CurrentUser\My\$CodeSigningCertificateThumbprint"
-    $certificate = Get-Item -LiteralPath $certificatePath -ErrorAction Stop
-    $signature = Set-AuthenticodeSignature `
-        -FilePath $portableExecutable `
-        -Certificate $certificate `
-        -HashAlgorithm SHA256 `
-        -TimestampServer $TimestampServer
-    if ($signature.Status -ne "Valid") {
-        throw "앱 실행 파일 코드 서명에 실패했습니다: $($signature.StatusMessage)"
-    }
-    Write-Host "앱 실행 파일 코드 서명 완료: $($certificate.Thumbprint)"
-} else {
-    Write-Warning "코드 서명 인증서가 지정되지 않아 앱 실행 파일은 미서명 상태입니다."
-}
 
 $portableFfmpeg = Join-Path $outputDir "ffmpeg"
 $portableAudioSep = Join-Path $outputDir "audiosep"
@@ -209,30 +160,26 @@ if ($BundleRuntimeAssets) {
         }
     }
 }
-Copy-Item -LiteralPath (Join-Path $projectDir "avcass_worker.py") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "separation_quality.py") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "MODEL_LICENSES.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "MODEL_LICENSES.en.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.en.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.en.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "PRIVACY.en.md") -Destination $outputDir -Force
-Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
+$outputAppDir = Join-Path $outputDir "app"
+$outputDocsDir = Join-Path $outputDir "docs"
+New-Item -ItemType Directory -Path $outputAppDir, $outputDocsDir -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $appDir "avcass_worker.py") -Destination $outputAppDir -Force
+Copy-Item -LiteralPath (Join-Path $appDir "separation_quality.py") -Destination $outputAppDir -Force
+Copy-Item -Path (Join-Path $docsDir "*") -Destination $outputDocsDir -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDocsDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDocsDir -Recurse -Force
 
-$pythonLicenseDir = Join-Path $outputDir "licenses\python"
+$pythonLicenseDir = Join-Path $outputDocsDir "licenses\python"
 $auditSitePackages = if ($BundleRuntimeAssets) {
     Join-Path $portableAudioSep "env\Lib\site-packages"
 } else {
     $sourceSitePackages
 }
-& $python (Join-Path $projectDir "audit_python_licenses.py") `
+& $python (Join-Path $scriptDir "audit_python_licenses.py") `
     --site-packages $auditSitePackages `
-    --output (Join-Path $outputDir "PYTHON_PACKAGES_NOTICES.md") `
+    --output (Join-Path $outputDocsDir "PYTHON_PACKAGES_NOTICES.md") `
     --license-output $pythonLicenseDir `
-    --json-output (Join-Path $outputDir "PYTHON_PACKAGES_INVENTORY.json")
+    --json-output (Join-Path $outputDocsDir "PYTHON_PACKAGES_INVENTORY.json")
 if ($LASTEXITCODE -ne 0) {
     throw "Python 패키지 라이선스 목록 생성에 실패했습니다."
 }
@@ -250,7 +197,7 @@ if ($CodeSigningCertificateThumbprint) {
     $signingStatus += "UNSIGNED BUILD"
     $signingStatus += "이 앱과 설치 파일에는 Authenticode 코드 서명이 적용되지 않았습니다. Windows에서 게시자 경고가 표시될 수 있습니다."
 }
-$signingStatus | Set-Content -LiteralPath (Join-Path $outputDir "SIGNING_STATUS.txt") -Encoding UTF8
+$signingStatus | Set-Content -LiteralPath (Join-Path $outputDocsDir "SIGNING_STATUS.txt") -Encoding UTF8
 
 $avCassBaseReady =
     (Test-Path -LiteralPath (Join-Path $portableAudioSep "env\python.exe") -PathType Leaf) -and
@@ -301,22 +248,22 @@ if (-not $avCassBaseReady) {
 } elseif (-not $avCassAssetsReady -or -not (Test-Path -LiteralPath (Join-Path $portableFfmpeg "ffmpeg.exe") -PathType Leaf)) {
     $usage += "`r`n처음 사용하기 전에 video-music-separator-setup.exe를 실행해 주세요.`r`n"
 }
-$usage | Set-Content -LiteralPath (Join-Path $outputDir "사용법.txt") -Encoding UTF8
+$usage | Set-Content -LiteralPath (Join-Path $outputDocsDir "사용법.txt") -Encoding UTF8
 
 $setupExecutable = Join-Path $outputDir "video-music-separator-setup.exe"
 $checksumLines = @(
     "$((Get-FileHash -LiteralPath $portableExecutable -Algorithm SHA256).Hash.ToLowerInvariant())  video-music-separator.exe",
     "$((Get-FileHash -LiteralPath $setupExecutable -Algorithm SHA256).Hash.ToLowerInvariant())  video-music-separator-setup.exe"
 )
-$checksumLines | Set-Content -LiteralPath (Join-Path $outputDir "SHA256SUMS.txt") -Encoding ascii
+$checksumLines | Set-Content -LiteralPath (Join-Path $outputDocsDir "SHA256SUMS.txt") -Encoding ascii
 
 $forbiddenPublicPaths = @(
     (Join-Path $outputDir "audiosep"),
     (Join-Path $outputDir "ffmpeg"),
     (Join-Path $portableAudioSep "audiosep"),
     (Join-Path $portableAudioSep "bandit"),
-    (Join-Path $outputDir "audiosep_worker.py"),
-    (Join-Path $outputDir "bandit_worker.py"),
+    (Join-Path $outputAppDir "audiosep_worker.py"),
+    (Join-Path $outputAppDir "bandit_worker.py"),
     (Join-Path $portableAudioSep "avcass\model\av_cass_checkpoint.pt"),
     (Join-Path $portableAudioSep "avcass\model\cavp\cavp_epoch66.ckpt"),
     (Join-Path $portableAudioSep "env\Lib\site-packages\pedalboard"),
@@ -334,7 +281,7 @@ if (-not $BundleRuntimeAssets) {
     }
 }
 
-$versionLine = Select-String -LiteralPath (Join-Path $projectDir "release_info.py") -Pattern '^APP_VERSION = "([^"]+)"$'
+$versionLine = Select-String -LiteralPath (Join-Path $appDir "release_info.py") -Pattern '^APP_VERSION = "([^"]+)"$'
 if (-not $versionLine) {
     throw "release_info.py에서 앱 버전을 읽지 못했습니다."
 }

@@ -11,6 +11,9 @@ build/
 dist/
 *.spec
 video-music-separator-portable/
+/video-music-separator.exe
+/video-music-separator-setup.exe
+runtime-assets.json
 
 # Bundled runtimes, upstream repositories, and model weights
 audiosep/
