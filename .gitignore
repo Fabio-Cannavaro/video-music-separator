@@ -13,6 +13,7 @@ dist/
 video-music-separator-portable/
 /video-music-separator.exe
 /video-music-separator-setup.exe
+/exe-backups/
 runtime-assets.json
 
 # Bundled runtimes, upstream repositories, and model weights
