@@ -39,7 +39,6 @@ APP_TITLE = "영상 음악 분리·제거기"
 PREVIEW_WIDTH = 420
 PREVIEW_HEIGHT = 236
 PREVIEW_FPS = 30
-PREVIEW_UPDATE_MS = 15
 DEFAULT_VOLUME = 100
 DEFAULT_MODEL_ID = "avcass"
 CREATOR_YOUTUBE_URL = "https://www.youtube.com/@ms-0606"
@@ -382,6 +381,20 @@ def playback_position(
     return min(max(0.0, duration), max(0.0, offset + now - started_at))
 
 
+def normalized_preview_fps(value: float) -> float:
+    if 1.0 <= value <= 120.0:
+        return value
+    return float(PREVIEW_FPS)
+
+
+def next_preview_delay_ms(started_at: float, now: float, fps: float) -> int:
+    fps = normalized_preview_fps(fps)
+    elapsed = max(0.0, now - started_at)
+    next_frame = int(elapsed * fps) + 1
+    deadline = started_at + next_frame / fps
+    return max(1, round((deadline - now) * 1000.0))
+
+
 def worker_progress_key(
     model_id: str, line: str
 ) -> tuple[str, dict[str, object]] | None:
@@ -566,8 +579,9 @@ def build_ffplay_command(media_path: Path, volume: float, offset: float = 0.0) -
         require_program("ffplay"),
         "-nodisp",
         "-autoexit",
-        "-sync",
-        "ext",
+        "-vn",
+        "-sn",
+        "-dn",
         "-volume",
         str(clamp_volume(volume)),
     ]
@@ -734,6 +748,7 @@ class SoundSeparatorApp(tk.Tk):
         self.volume_restart_after_id: str | None = None
         self.video_capture: cv2.VideoCapture | None = None
         self.video_position = 0.0
+        self.preview_fps = float(PREVIEW_FPS)
         self.video_poll_after_id: str | None = None
         self.preview_photo: ImageTk.PhotoImage | None = None
         self.preview_seek_var = tk.DoubleVar(value=0.0)
@@ -1599,6 +1614,7 @@ class SoundSeparatorApp(tk.Tk):
         capture.set(cv2.CAP_PROP_POS_MSEC, offset * 1000.0)
         self.video_capture = capture
         self.video_position = offset
+        self.preview_fps = normalized_preview_fps(capture.get(cv2.CAP_PROP_FPS))
         self.player_duration = duration
         self._configure_preview_seek(duration, offset)
         self._read_video_frame(offset, force_seek=True)
@@ -1615,7 +1631,12 @@ class SoundSeparatorApp(tk.Tk):
         self.player_started_at = time.monotonic()
         self.refresh_rows()
         self.player_poll_after_id = self.after(250, self._poll_player)
-        self.video_poll_after_id = self.after(PREVIEW_UPDATE_MS, self._poll_video_frame)
+        self.video_poll_after_id = self.after(
+            next_preview_delay_ms(
+                self.player_started_at, time.monotonic(), self.preview_fps
+            ),
+            self._poll_video_frame,
+        )
 
     def _configure_preview_seek(self, duration: float, position: float) -> None:
         self.preview_seek_scale.configure(to=max(duration, 0.001))
@@ -1636,7 +1657,7 @@ class SoundSeparatorApp(tk.Tk):
     def _display_video_frame(self, frame) -> None:
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(rgb)
-        image.thumbnail((PREVIEW_WIDTH, PREVIEW_HEIGHT), Image.Resampling.LANCZOS)
+        image.thumbnail((PREVIEW_WIDTH, PREVIEW_HEIGHT), Image.Resampling.BILINEAR)
         canvas = Image.new("RGB", (PREVIEW_WIDTH, PREVIEW_HEIGHT), "black")
         canvas.paste(
             image,
@@ -1649,13 +1670,16 @@ class SoundSeparatorApp(tk.Tk):
         capture = self.video_capture
         if capture is None:
             return
-        frame_tolerance = 0.5 / PREVIEW_FPS
+        preview_fps = normalized_preview_fps(
+            getattr(self, "preview_fps", float(PREVIEW_FPS))
+        )
+        frame_tolerance = 0.5 / preview_fps
         if not force_seek and self.video_position + frame_tolerance >= target:
             return
         if force_seek or target - self.video_position > 0.5:
             capture.set(cv2.CAP_PROP_POS_MSEC, target * 1000.0)
         newest = None
-        for _ in range(PREVIEW_FPS):
+        for _ in range(max(1, round(preview_fps))):
             ok, frame = capture.read()
             if not ok:
                 break
@@ -1682,7 +1706,12 @@ class SoundSeparatorApp(tk.Tk):
         if not self.seek_dragging:
             self._read_video_frame(position)
             self._set_preview_position(position)
-        self.video_poll_after_id = self.after(PREVIEW_UPDATE_MS, self._poll_video_frame)
+        self.video_poll_after_id = self.after(
+            next_preview_delay_ms(
+                self.player_started_at, time.monotonic(), self.preview_fps
+            ),
+            self._poll_video_frame,
+        )
 
     def _begin_preview_seek(self, _event=None) -> None:
         if self._player_is_running():
@@ -1793,6 +1822,7 @@ class SoundSeparatorApp(tk.Tk):
         self.player_offset = 0.0
         self.player_duration = 0.0
         self.video_position = 0.0
+        self.preview_fps = float(PREVIEW_FPS)
         self.seek_dragging = False
         if hasattr(self, "preview_seek_scale"):
             self.preview_seek_scale.state(["disabled"])

@@ -37,6 +37,8 @@ from sound_separator_app import (
     model_result_directory,
     muted_copy_output_path,
     muted_mix_preview_path,
+    next_preview_delay_ms,
+    normalized_preview_fps,
     open_creator_youtube_channel,
     format_playback_time,
     playback_position,
@@ -68,7 +70,10 @@ class PlaybackCommandTests(unittest.TestCase):
         command = build_ffplay_command(Path("stem.wav"), 63, 4.25)
         self.assertEqual(command[0], "ffplay.exe")
         self.assertIn("-nodisp", command)
-        self.assertEqual(command[command.index("-sync") + 1], "ext")
+        self.assertIn("-vn", command)
+        self.assertIn("-sn", command)
+        self.assertIn("-dn", command)
+        self.assertNotIn("-sync", command)
         self.assertEqual(command[command.index("-volume") + 1], "63")
         self.assertIn("-ss", command)
         self.assertIn("4.250", command)
@@ -81,6 +86,12 @@ class PlaybackCommandTests(unittest.TestCase):
     def test_playback_position_uses_one_clock_and_clamps_to_duration(self) -> None:
         self.assertAlmostEqual(playback_position(12.5, 100.0, 103.25, 30.0), 15.75)
         self.assertEqual(playback_position(12.5, 100.0, 200.0, 30.0), 30.0)
+
+    def test_preview_timing_uses_source_fps_and_fixed_deadlines(self) -> None:
+        self.assertEqual(normalized_preview_fps(24.0), 24.0)
+        self.assertEqual(normalized_preview_fps(0.0), 30.0)
+        self.assertEqual(next_preview_delay_ms(100.0, 100.0, 24.0), 42)
+        self.assertEqual(next_preview_delay_ms(100.0, 100.050, 24.0), 33)
 
     def test_video_does_not_advance_ahead_of_playback_clock(self) -> None:
         class Capture:
