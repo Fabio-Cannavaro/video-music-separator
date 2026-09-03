@@ -47,10 +47,12 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 이 앱은 FFmpeg 명령줄 프로그램을 외부 프로세스로 실행한다.
 
 - 프로젝트 및 법적 안내: <https://ffmpeg.org/legal.html>
-- 현재 휴대용 배포본에 사용한 FFmpeg 빌드: GNU GPL version 3
-- 라이선스 전문: `licenses/GPL-3.0.txt`
+- 현재 휴대용 배포본: BtbN `n8.1.2-44-g7c533d0f86-20260820` Windows x64 LGPL shared build
+- 적용 라이선스: GNU Lesser General Public License version 3
+- 바이너리와 정확한 출처·체크섬·빌드 설정: `FFMPEG_BUILD.md`
+- 라이선스 전문: `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt`
 
-FFmpeg는 빌드 옵션에 따라 LGPL 또는 GPL이 적용된다. 공개 배포 전에는 포함한 바이너리의 정확한 빌드 설정과 일치하는 소스, 빌드 방법, 저작권 고지와 라이선스 전문을 함께 제공해야 한다.
+이 빌드는 공유 라이브러리를 사용하며 `--enable-gpl`과 `--enable-nonfree`를 사용하지 않는다. 공개 배포 전에는 포함한 바이너리의 정확한 빌드 설정과 일치하는 FFmpeg 및 빌드 의존성 소스, 빌드 방법, 저작권 고지와 라이선스 전문을 같은 Release에 함께 제공해야 한다.
 
 ## Python packages
 

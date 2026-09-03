@@ -1,6 +1,7 @@
 param(
     [string]$PythonPath = "",
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+    [string]$FFmpegDirectory = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,13 +16,53 @@ $outputDir = if ($OutputDirectory) {
 $buildDir = Join-Path $projectDir "build"
 $distDir = Join-Path $projectDir "dist"
 $python = if ($PythonPath) { $PythonPath } else { Join-Path $projectDir ".venv\Scripts\python.exe" }
-$ffmpegDir = "C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin"
+$ffmpegRoot = if ($FFmpegDirectory) {
+    [System.IO.Path]::GetFullPath($FFmpegDirectory)
+} else {
+    Join-Path $projectDir "third_party\ffmpeg-lgpl"
+}
+$ffmpegDir = Join-Path $ffmpegRoot "bin"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "빌드용 Python을 찾을 수 없습니다: $python"
 }
+if (-not $FFmpegDirectory -and -not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
+    & (Join-Path $projectDir "prepare_ffmpeg_lgpl.ps1") -DestinationDirectory $ffmpegRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "LGPL FFmpeg 준비에 실패했습니다."
+    }
+}
 if (-not (Test-Path -LiteralPath $ffmpegDir -PathType Container)) {
     throw "FFmpeg 폴더를 찾을 수 없습니다: $ffmpegDir"
+}
+
+$requiredFfmpegFiles = @(
+    "ffmpeg.exe",
+    "ffprobe.exe",
+    "ffplay.exe",
+    "avcodec-62.dll",
+    "avformat-62.dll",
+    "avfilter-11.dll",
+    "avutil-60.dll",
+    "swresample-6.dll",
+    "swscale-9.dll"
+)
+foreach ($name in $requiredFfmpegFiles) {
+    if (-not (Test-Path -LiteralPath (Join-Path $ffmpegDir $name) -PathType Leaf)) {
+        throw "LGPL 공유 FFmpeg 구성 파일을 찾을 수 없습니다: $name"
+    }
+}
+
+$ffmpegVersionText = (& (Join-Path $ffmpegDir "ffmpeg.exe") -version 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0) {
+    throw "FFmpeg 버전을 확인하지 못했습니다."
+}
+if (
+    -not $ffmpegVersionText.Contains("--enable-shared") -or
+    $ffmpegVersionText.Contains("--enable-gpl") -or
+    $ffmpegVersionText.Contains("--enable-nonfree")
+) {
+    throw "배포에는 GPL/nonfree 옵션이 없는 LGPL 공유 FFmpeg만 사용할 수 있습니다."
 }
 
 & $python -m PyInstaller `
@@ -59,12 +100,18 @@ Copy-Item -LiteralPath (Join-Path $builtDir "video-music-separator.exe") -Destin
 
 $portableFfmpeg = Join-Path $outputDir "ffmpeg"
 $portableAudioSep = Join-Path $outputDir "audiosep"
+if (Test-Path -LiteralPath $portableFfmpeg -PathType Container) {
+    $resolvedOutput = [System.IO.Path]::GetFullPath($outputDir).TrimEnd('\') + '\'
+    $resolvedFfmpeg = [System.IO.Path]::GetFullPath($portableFfmpeg)
+    if (-not $resolvedFfmpeg.StartsWith($resolvedOutput, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "FFmpeg 교체 대상이 이동용 폴더 밖에 있습니다: $resolvedFfmpeg"
+    }
+    Remove-Item -LiteralPath $portableFfmpeg -Recurse -Force
+}
 New-Item -ItemType Directory -Path $portableFfmpeg -Force | Out-Null
 New-Item -ItemType Directory -Path $portableAudioSep -Force | Out-Null
 
-Copy-Item -LiteralPath (Join-Path $ffmpegDir "ffmpeg.exe") -Destination $portableFfmpeg -Force
-Copy-Item -LiteralPath (Join-Path $ffmpegDir "ffprobe.exe") -Destination $portableFfmpeg -Force
-Copy-Item -LiteralPath (Join-Path $ffmpegDir "ffplay.exe") -Destination $portableFfmpeg -Force
+Copy-Item -Path (Join-Path $ffmpegDir "*") -Destination $portableFfmpeg -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "bandit_worker.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "audiosep_worker.py") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "avcass_worker.py") -Destination $outputDir -Force
@@ -72,6 +119,7 @@ Copy-Item -LiteralPath (Join-Path $projectDir "separation_quality.py") -Destinat
 Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "MODEL_LICENSES.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "THIRD_PARTY_NOTICES.md") -Destination $outputDir -Force
+Copy-Item -LiteralPath (Join-Path $projectDir "FFMPEG_BUILD.md") -Destination $outputDir -Force
 Copy-Item -LiteralPath (Join-Path $projectDir "licenses") -Destination $outputDir -Recurse -Force
 
 $avCassReady =
@@ -112,7 +160,7 @@ AV-CASS는 영상 장면까지 분석하며 NVIDIA GPU가 필요합니다.
 인터넷 연결이나 별도 Python 설치는 필요하지 않습니다.
 
 처리할 영상·음원의 저작권과 이용 권리를 확인하고, 결과물을 사용하는 책임은 사용자에게 있습니다.
-앱의 '라이선스·출처'에서 제3자 고지, 출처, 논문과 라이선스 전문을 확인할 수 있습니다.
+영상 미리보기 왼쪽의 '라이선스·출처'에서 제3자 고지, 출처, 논문과 라이선스 전문을 확인할 수 있습니다.
 "@
 if (-not $avCassReady) {
     $usage += "`r`nAV-CASS 실행 파일이나 모델을 찾을 수 없습니다.`r`n"

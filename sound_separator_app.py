@@ -52,9 +52,11 @@ USER_CONTENT_NOTICE = (
 )
 LEGAL_INFORMATION_FILES = (
     ("제3자 고지·출처·논문", "THIRD_PARTY_NOTICES.md"),
+    ("FFmpeg LGPL 빌드 정보", "FFMPEG_BUILD.md"),
     ("Video Music Separator 라이선스", "LICENSE"),
     ("MIT License 전문", "licenses/MIT.txt"),
     ("Apache License 2.0 전문", "licenses/Apache-2.0.txt"),
+    ("GNU LGPL v3 전문", "licenses/LGPL-3.0.txt"),
     ("GNU GPL v3 전문", "licenses/GPL-3.0.txt"),
 )
 AUDIOSEP_QUERIES = {
@@ -377,11 +379,6 @@ class SoundSeparatorApp(tk.Tk):
             "<<ComboboxSelected>>", self.select_audiosep_query
         )
         self._update_audiosep_query_control()
-        ttk.Button(
-            source,
-            text="라이선스·출처",
-            command=self.show_legal_information,
-        ).grid(row=1, column=2, padx=(8, 0), pady=(7, 0))
         ttk.Label(source, textvariable=self.model_status_var, foreground="#555555").grid(
             row=2, column=0, columnspan=4, sticky="w", pady=(7, 0)
         )
@@ -403,8 +400,19 @@ class SoundSeparatorApp(tk.Tk):
         self.volume_label = ttk.Label(actions, width=4, text=str(DEFAULT_VOLUME))
         self.volume_label.pack(side="left")
 
-        preview_frame = ttk.LabelFrame(root, text="영상 미리보기", padding=8)
-        preview_frame.grid(row=0, column=0, pady=(0, 8))
+        preview_area = ttk.Frame(root)
+        preview_area.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        preview_area.columnconfigure(0, weight=1)
+        preview_area.columnconfigure(2, weight=1)
+
+        ttk.Button(
+            preview_area,
+            text="라이선스·출처",
+            command=self.show_legal_information,
+        ).grid(row=0, column=0, sticky="nw", padx=(0, 12), pady=(8, 0))
+
+        preview_frame = ttk.LabelFrame(preview_area, text="영상 미리보기", padding=8)
+        preview_frame.grid(row=0, column=1)
         preview_surface = tk.Frame(
             preview_frame,
             width=PREVIEW_WIDTH,

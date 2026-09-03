@@ -285,11 +285,15 @@ class MusicPartitionTests(unittest.TestCase):
             (root / "THIRD_PARTY_NOTICES.md").write_text(
                 "AV-CASS and CAVP sources", encoding="utf-8"
             )
+            (root / "FFMPEG_BUILD.md").write_text(
+                "FFmpeg LGPL shared build", encoding="utf-8"
+            )
             (root / "LICENSE").write_text("app license", encoding="utf-8")
             (root / "licenses" / "MIT.txt").write_text("MIT", encoding="utf-8")
             (root / "licenses" / "Apache-2.0.txt").write_text(
                 "Apache", encoding="utf-8"
             )
+            (root / "licenses" / "LGPL-3.0.txt").write_text("LGPL", encoding="utf-8")
             (root / "licenses" / "GPL-3.0.txt").write_text("GPL", encoding="utf-8")
 
             information = load_legal_information(root)
@@ -298,6 +302,8 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("AV-CASS and CAVP sources", information)
         self.assertIn("MIT", information)
         self.assertIn("Apache", information)
+        self.assertIn("FFmpeg LGPL shared build", information)
+        self.assertIn("LGPL", information)
         self.assertIn("GPL", information)
 
 

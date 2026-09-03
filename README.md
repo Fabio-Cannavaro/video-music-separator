@@ -36,7 +36,7 @@
 같은 PC 안에서는 이 큰 폴더를 영상 폴더마다 복사할 필요가 없다. 현재 위치에서 EXE를 실행하고 `영상 열기`로 다른 폴더의 영상을 선택하면 작업 폴더와 결과 사본은 원본 영상 옆에 생긴다. 자주 쓸 때는 EXE의 바로가기만 바탕화면 등에 두면 된다. 폴더 전체 이동은 다른 PC로 옮길 때만 필요하다.
 
 - 실행 파일: `video-music-separator.exe`
-- FFmpeg: `ffmpeg/`
+- LGPL 공유 FFmpeg 실행 파일과 DLL: `ffmpeg/`
 - AI Python 환경: `audiosep/env/`
 - AV-CASS 코드와 구성요소: `audiosep/avcass/repo/`, `audiosep/avcass/deps/`
 - AV-CASS 모델: `audiosep/avcass/model/av_cass_checkpoint.pt`, `audiosep/avcass/model/cavp/cavp_epoch66.ckpt`
@@ -77,8 +77,11 @@ py -m venv --system-site-packages .venv
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest -v
+.\prepare_ffmpeg_lgpl.ps1
 .\build_portable.ps1
 ```
+
+`prepare_ffmpeg_lgpl.ps1`는 고정된 BtbN FFmpeg 8.1 LGPL 공유 빌드를 내려받고 SHA-256을 검증한다. `build_portable.ps1`는 GPL/nonfree 옵션이 없는지 검사하고 FFmpeg 실행 파일과 필요한 DLL을 함께 복사한다. 정확한 버전, 소스 커밋과 빌드 설정은 [FFMPEG_BUILD.md](FFMPEG_BUILD.md)에 기록한다.
 
 휴대용 실동작 검사는 다음처럼 실행한다.
 
@@ -99,7 +102,7 @@ py -m venv --system-site-packages .venv
 
 이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 완벽한 대사·효과음 보존이나 음악 제거를 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
 
-앱의 `라이선스·출처` 버튼에서 AV-CASS와 CAVP의 출처·논문, 제3자 고지, 포함된 라이선스 전문을 확인할 수 있다.
+영상 미리보기 왼쪽의 `라이선스·출처` 버튼에서 AV-CASS와 CAVP의 출처·논문, FFmpeg LGPL 빌드 정보, 제3자 고지와 포함된 라이선스 전문을 확인할 수 있다.
 
 ## 라이선스
 

@@ -157,7 +157,7 @@ class FfmpegIntegrationTests(unittest.TestCase):
                 "ffmpeg", "-y",
                 "-f", "lavfi", "-i", "color=c=black:s=160x90:d=2",
                 "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+                "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-c:a", "aac",
                 "-shortest", str(source),
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run([

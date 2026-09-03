@@ -15,6 +15,7 @@ video-music-separator-portable/
 # Bundled runtimes, upstream repositories, and model weights
 audiosep/
 ffmpeg/
+third_party/
 models/
 *.pt
 *.pth
