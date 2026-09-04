@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$PythonPath = "",
     [string]$OutputDirectory = "",
     [string]$FFmpegDirectory = "",
