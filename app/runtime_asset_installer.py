@@ -24,10 +24,8 @@ from release_info import (
     BASE_RUNTIME_ARCHIVE,
     BASE_RUNTIME_ARCHIVE_SHA256,
     BASE_RUNTIME_ARCHIVE_SIZE,
-    BASE_RUNTIME_GITHUB_REPOSITORY,
     BASE_RUNTIME_PARTS,
     BASE_RUNTIME_RELEASE_BASE_URL,
-    BASE_RUNTIME_RELEASE_TAG,
     BASE_RUNTIME_SOURCE,
     BASE_RUNTIME_VERSION,
     AVCASS_DOWNLOAD_URL,
@@ -144,7 +142,7 @@ INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
 개인정보와 외부 통신
 영상과 음원은 PC에서만 처리되며 설치 프로그램이나 앱이 업로드하지 않습니다. 설치 중 위 서버에 HTTPS 다운로드 요청을 보냅니다. 서버 운영자는 IP 주소, 요청 시각, 다운로드 URL, User-Agent와 이어받기용 Range 헤더 같은 일반 접속 정보를 받을 수 있습니다. 파일명, 영상·음원 내용 및 사용 통계는 전송하지 않습니다.
 
-AI Python 실행환경은 먼저 인증 없이 GitHub Release에서 받습니다. Release가 공개되어 있으면 GitHub 계정이나 GitHub CLI가 필요하지 않습니다. 공개 접근이 거부되면 비공개 상태로 보고 이 PC의 GitHub CLI(gh) 로그인을 사용하며, 로그인이 없거나 만료되었으면 설치 중 GitHub의 웹 인증을 시작합니다. 설치 파일은 GitHub 토큰을 포함하거나 직접 읽고 저장하지 않으며, 인증 정보 저장은 GitHub CLI가 처리합니다.
+AI Python 실행환경은 공개 GitHub Release에서 인증 없이 받습니다. GitHub 계정이나 GitHub CLI는 필요하지 않으며 설치 프로그램이 GitHub 로그인을 시작하거나 인증 정보를 읽고 저장하지 않습니다.
 
 사용자 책임
 처리할 영상·음원의 저작권과 이용 권리를 확인하고 결과물을 사용하는 책임은 사용자에게 있습니다.
@@ -171,7 +169,7 @@ Each model and program is governed by the original rights holder's license and t
 Privacy and network access
 Video and audio are processed only on this PC and are not uploaded by the installer or application. During installation, HTTPS download requests are sent to the servers listed above. Their operators may receive ordinary connection information such as the IP address, request time, download URL, User-Agent, and Range header used to resume a download. File names, media contents, and usage analytics are not transmitted.
 
-The AI Python runtime is first requested from the GitHub Release without authentication. A public Release requires neither a GitHub account nor GitHub CLI. If public access is denied, the installer treats the Release as private and uses the GitHub CLI login on this PC. If the login is missing or expired, GitHub web authentication starts during installation. The installer does not embed, directly read, or store the GitHub token; credential storage is handled by GitHub CLI.
+The AI Python runtime is downloaded from the public GitHub Release without authentication. No GitHub account or GitHub CLI is required, and the installer does not start GitHub login or read or store GitHub credentials.
 
 User responsibility
 The user is responsible for confirming the copyright and usage rights of the video and audio being processed and for the use of generated results.
@@ -212,10 +210,6 @@ INSTALLER_UI = {
 
 PROGRESS_TRANSLATIONS = (
     ("필수 구성요소 설치 완료", "Required components installed"),
-    ("GitHub 로그인 필요 · 웹 인증을 여는 중", "GitHub login required · Opening web authentication"),
-    ("GitHub 로그인 완료", "GitHub login complete"),
-    ("비공개 Release 인증 확인 중", "Checking private Release authentication"),
-    ("GitHub 인증 다운로드 중", "Downloading with GitHub authentication"),
     ("최신 배포 정보 확인 중", "Checking latest release information"),
     ("분할 파일을 결합하는 중", "Combining split files"),
     ("결합 파일 무결성 확인 중", "Verifying combined-file integrity"),
@@ -235,10 +229,8 @@ PROGRESS_TRANSLATIONS = (
 
 
 ERROR_TRANSLATIONS = (
-    ("GitHub CLI(gh)를 찾을 수 없습니다.", "GitHub CLI (gh) was not found."),
-    ("로그인해 주세요.", "Sign in and try again."),
-    ("GitHub 로그인을 완료하지 못했습니다.", "GitHub login was not completed."),
-    ("비공개 AI 실행환경을 내려받지 못했습니다.", "The private AI runtime could not be downloaded."),
+    ("공개 AI 실행환경 파일에 접근할 수 없습니다.", "The public AI runtime file could not be accessed."),
+    ("배포 주소와 Release의 공개 상태를 확인해 주세요.", "Check the distribution URL and the public status of the Release."),
     ("Gyan 공식 최신 FFmpeg GPL Essentials 정보를 확인하지 못했습니다.", "The latest official Gyan FFmpeg GPL Essentials information could not be read."),
     ("Gyan FFmpeg 배포 정보가 올바르지 않습니다.", "The Gyan FFmpeg release information is invalid."),
     ("다운로드한 FFmpeg 압축 파일의 구조가 예상과 다릅니다.", "The downloaded FFmpeg archive has an unexpected structure."),
@@ -389,193 +381,6 @@ def download_asset(
     os.replace(partial, destination)
 
 
-def _github_cli() -> str:
-    executable = shutil.which("gh")
-    if executable is None:
-        raise RuntimeError(
-            "GitHub CLI(gh)를 찾을 수 없습니다.\n\n"
-            "https://cli.github.com/ 에서 GitHub CLI를 설치한 뒤 다음 명령으로 "
-            "로그인해 주세요.\n"
-            "gh auth login --hostname github.com"
-        )
-    return executable
-
-
-def _github_login_is_valid(executable: str) -> bool:
-    result = subprocess.run(
-        [executable, "auth", "status", "--hostname", "github.com"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def _require_github_login(executable: str, progress: ProgressCallback) -> None:
-    if _github_login_is_valid(executable):
-        return
-
-    progress("GitHub 로그인 필요 · 웹 인증을 여는 중", 0, 1)
-    creation_flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
-    result = subprocess.run(
-        [
-            executable,
-            "auth",
-            "login",
-            "--hostname",
-            "github.com",
-            "--git-protocol",
-            "https",
-            "--web",
-            "--clipboard",
-        ],
-        check=False,
-        creationflags=creation_flags,
-    )
-    if result.returncode != 0 or not _github_login_is_valid(executable):
-        raise RuntimeError(
-            "GitHub 로그인을 완료하지 못했습니다. 설치 중 열린 창과 웹브라우저에서 "
-            "이 비공개 저장소에 접근할 수 있는 계정으로 인증한 뒤 다시 시도해 주세요."
-        )
-    progress("GitHub 로그인 완료", 1, 1)
-
-
-def _github_release_asset_id(executable: str, asset_name: str) -> int:
-    result = subprocess.run(
-        [
-            executable,
-            "api",
-            f"repos/{BASE_RUNTIME_GITHUB_REPOSITORY}/releases/tags/"
-            f"{BASE_RUNTIME_RELEASE_TAG}",
-        ],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
-        raise RuntimeError(
-            "비공개 AI 실행환경의 GitHub Release 정보를 확인하지 못했습니다."
-            + (f"\n\nGitHub CLI 응답:\n{detail}" if detail else "")
-        )
-    try:
-        release = json.loads(result.stdout)
-        matching = [
-            item for item in release.get("assets", []) if item.get("name") == asset_name
-        ]
-        asset_id = int(matching[0]["id"])
-    except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
-        raise RuntimeError(
-            f"비공개 AI 실행환경 Release에서 파일을 찾지 못했습니다: {asset_name}"
-        ) from error
-    return asset_id
-
-
-def _stream_github_release_asset(
-    executable: str,
-    github_asset_id: int,
-    asset: DownloadAsset,
-    partial: Path,
-    progress: ProgressCallback,
-) -> None:
-    process = subprocess.Popen(
-        [
-            executable,
-            "api",
-            "--method",
-            "GET",
-            "--header",
-            "Accept: application/octet-stream",
-            f"repos/{BASE_RUNTIME_GITHUB_REPOSITORY}/releases/assets/{github_asset_id}",
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
-    if process.stdout is None or process.stderr is None:
-        process.kill()
-        raise RuntimeError("GitHub CLI 다운로드 스트림을 열지 못했습니다.")
-
-    downloaded = 0
-    try:
-        with partial.open("wb") as output:
-            while True:
-                chunk = process.stdout.read(CHUNK_SIZE)
-                if not chunk:
-                    break
-                output.write(chunk)
-                downloaded += len(chunk)
-                progress(
-                    f"{asset.label} · GitHub 인증 다운로드 중",
-                    downloaded,
-                    asset.size,
-                )
-        error_output = process.stderr.read().decode("utf-8", errors="replace").strip()
-        return_code = process.wait()
-    except BaseException:
-        process.kill()
-        process.wait()
-        progress(f"{asset.label} · 다운로드 중단", downloaded, asset.size)
-        raise
-
-    if return_code != 0:
-        partial.unlink(missing_ok=True)
-        raise RuntimeError(
-            "비공개 AI 실행환경을 내려받지 못했습니다. 로그인한 GitHub 계정이 "
-            f"{BASE_RUNTIME_GITHUB_REPOSITORY} 저장소를 볼 수 있는지 확인해 주세요."
-            + (f"\n\nGitHub CLI 응답:\n{error_output}" if error_output else "")
-        )
-
-
-def download_private_runtime_asset(
-    asset: DownloadAsset,
-    destination: Path,
-    progress: ProgressCallback,
-) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if asset_is_valid(destination, asset, progress):
-        progress(f"{asset.label} · 이미 설치됨", asset.size, asset.size)
-        return
-
-    executable = _github_cli()
-    _require_github_login(executable, progress)
-    asset_name = Path(asset.relative_path).name
-    progress(f"{asset.label} · GitHub Release 정보 확인 중", 0, 1)
-    github_asset_id = _github_release_asset_id(executable, asset_name)
-    progress(f"{asset.label} · GitHub Release 정보 확인 중", 1, 1)
-    partial = destination.with_name(destination.name + ".part")
-    partial.unlink(missing_ok=True)
-    _stream_github_release_asset(
-        executable,
-        github_asset_id,
-        asset,
-        partial,
-        progress,
-    )
-    if partial.stat().st_size != asset.size:
-        raise RuntimeError(
-            f"{asset.label} 파일 크기가 올바르지 않습니다: "
-            f"{partial.stat().st_size:,} / {asset.size:,} 바이트"
-        )
-    actual_hash = sha256_file(
-        partial,
-        progress,
-        f"{asset.label} · 무결성 확인 중",
-    )
-    if actual_hash.lower() != asset.sha256.lower():
-        partial.unlink(missing_ok=True)
-        raise RuntimeError(
-            f"{asset.label} SHA-256이 일치하지 않습니다.\n"
-            f"예상: {asset.sha256}\n실제: {actual_hash}"
-        )
-    os.replace(partial, destination)
-
-
 def download_base_runtime_asset(
     asset: DownloadAsset,
     destination: Path,
@@ -583,12 +388,13 @@ def download_base_runtime_asset(
 ) -> None:
     try:
         download_asset(asset, destination, progress)
-        return
     except urllib.error.HTTPError as error:
-        if error.code not in (401, 403, 404):
-            raise
-    progress(f"{asset.label} · 비공개 Release 인증 확인 중", 0, asset.size)
-    download_private_runtime_asset(asset, destination, progress)
+        if error.code in (401, 403, 404):
+            raise RuntimeError(
+                "공개 AI 실행환경 파일에 접근할 수 없습니다. "
+                "배포 주소와 Release의 공개 상태를 확인해 주세요."
+            ) from error
+        raise
 
 
 def resolve_ffmpeg_archive() -> DownloadAsset:

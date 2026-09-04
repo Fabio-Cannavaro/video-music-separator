@@ -24,7 +24,7 @@ Video Music Separator는 사용자가 선택한 영상과 음원을 로컬 PC에
 
 서버 운영자는 일반적인 웹 다운로드 과정에서 IP 주소, 요청 시각, 다운로드 URL, HTTP User-Agent, 이어받기용 Range 헤더와 같은 접속 정보를 수신하거나 기록할 수 있다. 각 서버의 개인정보 처리방침과 이용조건은 해당 운영자가 정한다.
 
-AI Python 실행환경은 먼저 인증 없이 GitHub Release에서 내려받는다. Release가 공개되어 있으면 GitHub 계정이나 GitHub CLI가 필요하지 않다. 공개 접근이 거부되면 비공개 Release로 보고 이 PC의 GitHub CLI 로그인 상태를 사용한다. 로그인이 없거나 만료되었으면 설치 프로그램이 GitHub CLI의 웹 인증을 시작하며 일회용 인증 코드를 클립보드에 복사한다. 설치 프로그램은 GitHub 토큰을 포함하거나 직접 읽고 저장하지 않고, 인증과 자격 증명 저장은 GitHub CLI가 처리한다. 이때 GitHub에는 로그인한 계정 정보와 일반적인 인증 요청 정보가 전달될 수 있다.
+AI Python 실행환경은 공개 GitHub Release에서 인증 없이 내려받는다. GitHub 계정이나 GitHub CLI는 필요하지 않다. 설치 프로그램은 GitHub 로그인을 시작하거나 GitHub 인증 정보를 읽고 저장하지 않으며, 클립보드에 인증 코드를 복사하지 않는다.
 
 설치 파일은 AI 실행환경·모델의 URL, 예상 파일 크기와 SHA-256을 고정해 확인한다. FFmpeg는 Gyan 공식 `.ver`·`.sha256`과 최종 다운로드 URL에서 현재 버전·크기·SHA-256을 확인하고 GPL Essentials 정적 빌드 옵션도 검증한다. 설치 완료 후 일반적인 영상 처리에는 인터넷 연결이 필요하지 않다.
 

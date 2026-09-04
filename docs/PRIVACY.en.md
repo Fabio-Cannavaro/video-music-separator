@@ -24,7 +24,7 @@ Download URLs used by the installer:
 
 As part of an ordinary web download, each server operator may receive or log connection data such as the IP address, request time, download URL, HTTP User-Agent, and Range header used to resume a download. Each operator controls its own privacy policy and terms.
 
-The installer first attempts to download the AI Python runtime from the GitHub Release without authentication. A public Release requires neither a GitHub account nor GitHub CLI. If public access is denied, the installer treats the Release as private and uses the GitHub CLI login on this PC. If that login is missing or expired, the installer starts GitHub CLI web authentication and copies the one-time authentication code to the clipboard. The installer does not embed, directly read, or store the GitHub token; authentication and credential storage are handled by GitHub CLI. GitHub may then receive the signed-in account identity and ordinary authentication request data.
+The installer downloads the AI Python runtime from the public GitHub Release without authentication. No GitHub account or GitHub CLI is required. The installer does not start GitHub login, read or store GitHub credentials, or copy an authentication code to the clipboard.
 
 The installer pins and verifies the URL, expected size, and SHA-256 of the AI runtime and each model. For FFmpeg, it obtains the current version, size, and SHA-256 from Gyan's official `.ver`, `.sha256`, and final download URL, then verifies the GPL Essentials static-build options. Normal video processing does not require an internet connection after installation.
 

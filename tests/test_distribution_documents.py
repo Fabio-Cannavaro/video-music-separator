@@ -35,12 +35,17 @@ class DistributionDocumentTests(unittest.TestCase):
 
     def test_privacy_notice_names_network_destinations_and_local_processing(self) -> None:
         privacy = (DOCS / "PRIVACY.md").read_text(encoding="utf-8")
+        privacy_en = (DOCS / "PRIVACY.en.md").read_text(encoding="utf-8")
         self.assertIn("로컬 PC", privacy)
         self.assertIn("drive.usercontent.google.com", privacy)
         self.assertIn("huggingface.co", privacy)
         self.assertIn("github.com", privacy)
         self.assertIn("www.gyan.dev", privacy)
         self.assertIn("IP 주소", privacy)
+        self.assertNotIn("일회용 인증 코드", privacy)
+        self.assertNotIn("one-time authentication code", privacy_en)
+        self.assertNotIn("GitHub CLI가 처리", privacy)
+        self.assertNotIn("handled by GitHub CLI", privacy_en)
 
     def test_builds_generate_checksums_and_support_optional_code_signing(self) -> None:
         installer_build = (SCRIPTS / "build_runtime_installer.ps1").read_text(encoding="utf-8")

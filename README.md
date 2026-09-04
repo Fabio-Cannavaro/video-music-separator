@@ -21,7 +21,7 @@
 | GPU | CUDA를 사용할 수 있는 NVIDIA GPU가 필요하다. CPU 전용 실행은 지원하지 않는다. 최소 VRAM은 아직 검증된 지원 기준을 정하지 않았다. |
 | 저장 공간 | 첫 설치 때 약 5.9GB를 내려받으며, 압축 해제와 설치 중에는 약 15GB의 여유 공간을 권장한다. |
 | 인터넷 | 첫 설치, 재설치 또는 런타임 업데이트 때 필요하다. 설치가 끝난 뒤 일반적인 영상 분리·저장에는 필요하지 않다. |
-| GitHub 인증 | 공개 Release에서는 필요 없다. Release가 비공개이면 GitHub CLI가 필요하고, 설치 프로그램이 필요한 경우 GitHub 웹 인증을 시작한다. |
+| GitHub 계정·CLI | 필요하지 않다. 설치 프로그램은 공개 Release 자산을 인증 없이 내려받는다. |
 | Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 Gyan 공식 최신 FFmpeg GPL Essentials 정적 빌드를 내려받는다. |
 | 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. |
 
@@ -45,9 +45,8 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 3. 무결성을 직접 확인하려면 선택 파일인 `.sha256`도 받아 ZIP의 체크섬과 비교한다. 이 확인은 설치 필수 단계가 아니며, 확인한 값이 다르면 실행하지 않는다.
 4. **`video-music-separator-setup.exe`를 먼저 실행한다.**
 5. 설치 화면 오른쪽 위에서 `한국어 / English`를 선택할 수 있다. 약 5.9GB의 다운로드 용량, 다운로드 출처, 모델 이용조건, 개인정보 안내와 사용자 책임을 읽고 동의한 뒤 `설치 시작`을 누른다.
-6. AI 실행환경 Release가 비공개이고 로그인이 없거나 만료되었다면 설치 프로그램이 여는 GitHub CLI 창과 웹브라우저에서 이 저장소에 접근할 수 있는 계정으로 인증한다. 일회용 코드는 클립보드에 자동 복사된다. 공개 Release에서는 이 단계가 생략된다.
-7. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다.
-8. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
+6. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다.
+7. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
 
 현재 실행 파일은 유료 코드 서명 인증서를 적용하지 않은 **미서명 빌드**일 수 있다. Windows SmartScreen에 `알 수 없는 게시자` 경고가 나오면 저장소·배포 주소와 SHA-256을 먼저 확인하고, 두 정보가 맞을 때에만 `추가 정보`에서 실행한다. 체크섬이 다르거나 출처가 불명확한 파일은 실행하지 않는다.
 
@@ -56,16 +55,16 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 #### 4. 설치 프로그램이 내려받는 항목
 
 1. 다음 항목을 지정 배포처에서 내려받는다.
-   - AI Python 실행환경: 이 프로젝트의 Release에 고정된 두 분할 파일. 공개 Release는 인증 없이 받고, 공개 접근이 거부된 비공개 Release만 로컬 GitHub CLI 인증을 사용한다.
+   - AI Python 실행환경: 이 프로젝트의 공개 Release에 고정된 두 분할 파일. GitHub 인증 없이 내려받는다.
    - AV-CASS `av_cass_checkpoint.pt`: AV-CASS 공식 Google Drive
    - CAVP `cavp_epoch66.ckpt`: Diff-Foley 공식 Hugging Face의 고정 커밋
    - FFmpeg: Gyan 공식 최신 FFmpeg release essentials GPLv3 정적 빌드
 2. AI 실행환경과 모델은 고정된 크기·SHA-256을 확인한다. FFmpeg는 Gyan 공식 `.ver`·`.sha256`과 최종 다운로드 URL에서 현재 버전·크기·SHA-256을 확인하고, 빌드 옵션도 검증한다.
-3. 공개 배포처의 중단된 다운로드는 `.part` 파일에서 이어받는다. 비공개 GitHub Release 다운로드는 다시 시작하며, 모든 파일은 검증이 끝난 뒤에만 실제 설치 위치로 교체한다.
+3. 중단된 다운로드는 `.part` 파일에서 이어받으며, 모든 파일은 검증이 끝난 뒤에만 실제 설치 위치로 교체한다.
 
 설치 화면에는 다운로드 출처, 적용되는 이용조건, 외부 통신 정보와 사용자 책임이 표시된다. 사용자가 이를 확인하고 동의해야 설치를 시작할 수 있다. Video Music Separator는 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며 제휴하거나 보증받지 않았다.
 
-설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 Gyan의 공식 버전·체크섬·최종 다운로드 URL 및 GPL Essentials 빌드 조건과 다르면 설치를 중단한다. 다운로드, GitHub 인증, 분할 파일 결합, 무결성 확인, 압축 해제, 파일 배치, 최종 검증은 단계별 퍼센트로 표시한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
+설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 Gyan의 공식 버전·체크섬·최종 다운로드 URL 및 GPL Essentials 빌드 조건과 다르면 설치를 중단한다. 다운로드, 분할 파일 결합, 무결성 확인, 압축 해제, 파일 배치, 최종 검증은 단계별 퍼센트로 표시한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
 
 앱은 검증된 체크포인트를 읽을 때도 PyTorch의 제한된 `weights_only` 모드를 사용하며, 각 공식 체크포인트에 필요한 최소 메타데이터 형식만 허용한다. 따라서 일반 Python 객체를 제한 없이 역직렬화하지 않는다.
 
@@ -73,7 +72,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 #### 5. 설치 문제 해결
 
-- 공개 Release에서는 GitHub CLI가 필요 없다. 비공개 상태에서 `GitHub CLI를 찾을 수 없습니다` 오류가 나오면 GitHub CLI를 설치한 뒤 설치 프로그램을 다시 실행한다. 로그인이 없거나 만료된 경우에는 설치 프로그램이 웹 인증을 자동으로 시작하며, `Fabio-Cannavaro/video-music-separator`를 볼 수 있는 계정이어야 한다.
+- AI 실행환경 파일에 접근할 수 없다는 오류가 나오면 저장소와 `runtime-v0.2.0` Release가 공개 상태인지, 배포 주소와 파일명이 바뀌지 않았는지 확인한다. 설치 프로그램은 비공개 Release와 GitHub 로그인을 지원하지 않는다.
 - 설치 파일을 ZIP 안에서 직접 실행했거나 `Program Files`처럼 쓰기가 제한된 위치에 두었다면, 폴더 전체를 문서 폴더 같은 사용자 쓰기 가능 위치로 옮긴 뒤 다시 실행한다.
 - 다운로드가 중단되면 같은 설치 파일을 다시 실행한다. 검증된 파일은 재사용하고 완료되지 않은 `.part` 다운로드는 이어받는다.
 - 체크섬 불일치는 파일을 임의로 사용하지 않기 위한 정상적인 중단이다. 검증을 우회하지 말고 배포 안내의 주소·버전이 최신인지 확인한다.
@@ -242,7 +241,7 @@ For the first installation, keep the following two executables in the same folde
 | GPU | An NVIDIA GPU with CUDA support is required. CPU-only execution is not supported. A verified minimum VRAM requirement has not yet been established. |
 | Disk space | The first installation downloads approximately 5.9 GB. Approximately 15 GB of free space is recommended while downloading, extracting, and installing. |
 | Internet | Required for the first installation, reinstallation, or runtime updates. Normal separation and saving do not require an internet connection after installation. |
-| GitHub authentication | Not required for a public Release. If the Release is private, GitHub CLI is required and the installer starts GitHub web authentication when necessary. |
+| GitHub account and CLI | Not required. The installer downloads public Release assets without authentication. |
 | Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and the current official Gyan FFmpeg GPL Essentials static build. |
 | Installation location | Do not run the application from inside the ZIP. Extract the entire ZIP into a normal user-writable folder such as Documents. |
 
@@ -266,9 +265,8 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 3. To verify integrity yourself, optionally download the `.sha256` file and compare it with the ZIP checksum. This is not required for installation; if the values differ, do not run the file.
 4. **Run `video-music-separator-setup.exe` first.**
 5. Select `한국어 / English` in the upper-right corner of the installer. Review the approximately 5.9 GB download size, download sources, model terms, privacy notice, and user responsibilities; then accept the notice and select `Start Installation`.
-6. If the AI runtime Release is private and the GitHub login is missing or expired, authenticate with an account that can access this repository in the GitHub CLI window and browser opened by the installer. The one-time code is copied to the clipboard automatically. This step is skipped for a public Release.
-7. Wait for all downloads and SHA-256 verification to finish.
-8. After the completion message appears, run `video-music-separator.exe`.
+6. Wait for all downloads and SHA-256 verification to finish.
+7. After the completion message appears, run `video-music-separator.exe`.
 
 The executables may be **unsigned builds** without a paid code-signing certificate. If Windows SmartScreen displays an `Unknown publisher` warning, first verify the repository, distribution URL, and SHA-256 value. Use `More info` to continue only when those details match. Do not run a file with a mismatched checksum or unclear origin.
 
@@ -277,16 +275,16 @@ The executables may be **unsigned builds** without a paid code-signing certifica
 #### 4. Components Downloaded by the Installer
 
 1. The installer downloads the following items from their specified distributors.
-   - AI Python runtime: two pinned split files from this project's Release. A public Release is downloaded without authentication; only a private Release that rejects public access uses local GitHub CLI authentication.
+   - AI Python runtime: two pinned split files from this project's public Release, downloaded without GitHub authentication.
    - AV-CASS `av_cass_checkpoint.pt`: the official AV-CASS Google Drive location
    - CAVP `cavp_epoch66.ckpt`: the pinned commit in the official Diff-Foley Hugging Face repository
    - FFmpeg: Gyan's current official FFmpeg release essentials GPLv3 static build
 2. It verifies the pinned sizes and SHA-256 values of the AI runtime and models. For FFmpeg, it resolves the current version, size, and SHA-256 from Gyan's official `.ver`, `.sha256`, and final download URL, then verifies the build options.
-3. Interrupted downloads from public distributors resume from their `.part` files. Private GitHub Release downloads restart. Files replace their installation targets only after verification succeeds.
+3. Interrupted downloads resume from their `.part` files. Files replace their installation targets only after verification succeeds.
 
 The installer displays the download sources, applicable terms, network-access information, and user responsibilities. Installation begins only after the user reviews and accepts them. Video Music Separator is not an official application of, affiliated with, or endorsed by the AV-CASS researchers or their institutions.
 
-The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if the AI runtime or models no longer match their pinned checksums, or if FFmpeg does not match Gyan's official version, checksum, final download URL, and GPL Essentials build requirements. Downloads, GitHub authentication, split-file combining, integrity checks, extraction, file placement, and final verification display a percentage for each stage. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
+The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if the AI runtime or models no longer match their pinned checksums, or if FFmpeg does not match Gyan's official version, checksum, final download URL, and GPL Essentials build requirements. Downloads, split-file combining, integrity checks, extraction, file placement, and final verification display a percentage for each stage. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
 
 Even after checksum verification, the application reads checkpoints through PyTorch's restricted `weights_only` mode and allowlists only the minimal metadata types required by each official checkpoint. It does not deserialize arbitrary Python objects without restriction.
 
@@ -294,7 +292,7 @@ The public application ZIP and separate AI runtime assets exclude the former Aud
 
 #### 5. Installation Troubleshooting
 
-- GitHub CLI is not required for a public Release. If a private Release reports `GitHub CLI was not found`, install GitHub CLI and rerun the installer. If the login is missing or expired, the installer starts web authentication automatically. The account must be able to access `Fabio-Cannavaro/video-music-separator`.
+- If the installer reports that an AI runtime file cannot be accessed, confirm that the repository and the `runtime-v0.2.0` Release are public and that the distribution URL and asset names have not changed. Private Releases and GitHub login are not supported.
 - If the installer was run from inside the ZIP or from a write-restricted location such as `Program Files`, move the entire folder to a user-writable location such as Documents and try again.
 - If a download is interrupted, rerun the same installer. Verified files are reused, and incomplete `.part` downloads resume where supported.
 - A checksum mismatch is an intentional safety stop. Do not bypass verification; confirm that the distribution URL and pinned version are current.
