@@ -206,14 +206,28 @@ function Get-ReleaseTreeFiles {
     )
 
     $resolvedRoot = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).Path
-    $rootPrefix = $resolvedRoot.TrimEnd("\") + "\"
     $files = [System.Collections.Generic.List[string]]::new()
-    foreach ($item in Get-ChildItem -LiteralPath $resolvedRoot -Recurse -Force) {
-        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-            throw "배포 스테이징에는 링크 또는 재분석 지점을 둘 수 없습니다: $($item.FullName)"
-        }
-        if (-not $item.PSIsContainer) {
-            $files.Add($item.FullName.Substring($rootPrefix.Length).Replace("\", "/"))
+    $pending = [System.Collections.Generic.Stack[object]]::new()
+    $pending.Push([PSCustomObject]@{ Path = $resolvedRoot; RelativePath = "" })
+    while ($pending.Count -gt 0) {
+        $current = $pending.Pop()
+        foreach ($item in Get-ChildItem -LiteralPath $current.Path -Force) {
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "배포 스테이징에는 링크 또는 재분석 지점을 둘 수 없습니다: $($item.FullName)"
+            }
+            $relativePath = if ($current.RelativePath) {
+                "$($current.RelativePath)/$($item.Name)"
+            } else {
+                $item.Name
+            }
+            if ($item.PSIsContainer) {
+                $pending.Push([PSCustomObject]@{
+                    Path = $item.FullName
+                    RelativePath = $relativePath
+                })
+            } else {
+                $files.Add($relativePath)
+            }
         }
     }
     return $files.ToArray()
