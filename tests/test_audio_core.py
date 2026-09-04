@@ -75,14 +75,28 @@ class RunCommandTests(unittest.TestCase):
         event = SoundEvent(
             "music", "Music", 0.0, 1.0, 1.0, muted=True, extracted_path="music.wav"
         )
-        export_video(Path("source.mp4"), Path("saved.mp4"), [event])
-        final_command = mocked_command.call_args.args[0]
-        self.assertEqual(final_command[final_command.index("-c:v") + 1], "copy")
+        with tempfile.TemporaryDirectory() as temporary:
+            saved = Path(temporary) / "saved.mp4"
 
+            def create_output(command) -> None:
+                Path(command[-1]).write_bytes(b"saved")
+
+            mocked_command.side_effect = create_output
+            export_video(Path("source.mp4"), saved, [event])
+            final_command = mocked_command.call_args.args[0]
+            self.assertIn("-y", final_command)
+            self.assertEqual(
+                final_command[final_command.index("-c:v") + 1], "copy"
+            )
+            self.assertEqual(saved.read_bytes(), b"saved")
+            self.assertEqual(list(saved.parent.glob(".*.tmp.mp4")), [])
+
+        mocked_command.side_effect = None
         create_muted_preview_video(
             Path("source.mp4"), Path("preview.mkv"), [event]
         )
         preview_command = mocked_command.call_args.args[0]
+        self.assertIn("-y", preview_command)
         self.assertEqual(
             preview_command[preview_command.index("-c:v") + 1], "libx264"
         )
@@ -239,6 +253,10 @@ class FfmpegIntegrationTests(unittest.TestCase):
             )
             export_video(source, output, [event])
             self.assertTrue(output.exists())
+            original_bytes = output.read_bytes()
+            with self.assertRaises(FileExistsError):
+                export_video(source, output, [event])
+            self.assertEqual(output.read_bytes(), original_bytes)
             probe = subprocess.run([
                 "ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
                 "-of", "csv=p=0", str(output),

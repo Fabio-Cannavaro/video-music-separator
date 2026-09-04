@@ -34,6 +34,7 @@ from sound_separator_app import (
     TRANSLATIONS,
     VISIBLE_MODEL_IDS,
     SoundSeparatorApp,
+    available_output_path,
     assess_partition_metrics,
     avcass_runtime_paths,
     audiosep_result_key,
@@ -391,6 +392,17 @@ class MusicPartitionTests(unittest.TestCase):
             Path("folder") / "clip_음악만.mp4",
         )
 
+    def test_preserves_existing_saved_copies_with_numbered_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            preferred = root / "clip_음악제거.mp4"
+            preferred.write_bytes(b"first")
+            (root / "clip_음악제거_2.mp4").write_bytes(b"second")
+            self.assertEqual(
+                available_output_path(preferred),
+                root / "clip_음악제거_3.mp4",
+            )
+
     def test_keeps_each_model_result_in_a_separate_cache(self) -> None:
         work_dir = Path("folder") / "clip_sound_work"
         self.assertEqual(
@@ -558,7 +570,7 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("Apache", license_texts)
         self.assertIn("LGPL", license_texts)
         self.assertIn("GPL", license_texts)
-        self.assertIn("Video Music Separator: 0.2.0", information)
+        self.assertIn("Video Music Separator: 0.2.1", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
         self.assertIn("ffmpeg version 9.0.1-test", information)
         self.assertIn("f" * 64, information)

@@ -840,6 +840,20 @@ def muted_copy_output_path(video_path: Path, events: list[SoundEvent]) -> Path:
     return video_path.with_name(f"{video_path.stem}_{suffix}.mp4")
 
 
+def available_output_path(preferred_path: Path) -> Path:
+    """Return a non-existing path without replacing an earlier saved copy."""
+    if not preferred_path.exists():
+        return preferred_path
+    serial = 2
+    while True:
+        candidate = preferred_path.with_name(
+            f"{preferred_path.stem}_{serial}{preferred_path.suffix}"
+        )
+        if not candidate.exists():
+            return candidate
+        serial += 1
+
+
 def cleanup_work_directory(video_path: Path, work_dir: Path) -> bool:
     expected = video_path.parent / f"{video_path.stem}_sound_work"
     if work_dir.resolve() != expected.resolve():
@@ -2230,7 +2244,7 @@ class SoundSeparatorApp(tk.Tk):
         video_path = self.video_path
         work_dir = self.work_dir
         events = list(self.events)
-        target = muted_copy_output_path(video_path, events)
+        target = available_output_path(muted_copy_output_path(video_path, events))
         self.stop_preview()
 
         def operation() -> None:

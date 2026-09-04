@@ -5,6 +5,7 @@ import math
 import shutil
 import subprocess
 import sys
+import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -390,7 +391,16 @@ def create_muted_preview_video(
 
 def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEvent]) -> None:
     """Save a final copy while preserving the original encoded video stream."""
-    command = _build_mixed_video_command(
-        video_path, output_path, events, preview=False
+    if output_path.exists():
+        raise FileExistsError(f"기존 사본을 덮어쓸 수 없습니다: {output_path}")
+    temporary_output = output_path.with_name(
+        f".{output_path.stem}.{uuid.uuid4().hex}.tmp{output_path.suffix}"
     )
-    run_command(command)
+    try:
+        command = _build_mixed_video_command(
+            video_path, temporary_output, events, preview=False
+        )
+        run_command(command)
+        temporary_output.rename(output_path)
+    finally:
+        temporary_output.unlink(missing_ok=True)

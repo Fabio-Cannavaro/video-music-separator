@@ -116,11 +116,11 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("#### 2. Download the Windows Installer", lines)
         self.assertIn("#### 6. Using and Moving the Installed Folder", lines)
         self.assertIn(
-            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.0-r6",
+            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.1",
             readme,
         )
         self.assertIn("Source code (zip)", readme)
-        self.assertIn("video-music-separator-0.2.0-windows-x64.zip.sha256", readme)
+        self.assertIn("video-music-separator-0.2.1-windows-x64.zip.sha256", readme)
         self.assertIn("설치 ZIP 하나만 내려받으면 된다", readme)
         self.assertIn("only the installer ZIP is required", readme)
         self.assertIn("선택 사항(무결성 확인용)", readme)
@@ -136,6 +136,10 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("GPL Essentials", readme)
         self.assertNotIn("BtbN", readme)
         self.assertNotIn("prepare_ffmpeg_lgpl.ps1", readme)
+
+        portable_build = (SCRIPTS / "build_portable.ps1").read_text(encoding="utf-8")
+        self.assertIn("'앱 정보·라이선스'", portable_build)
+        self.assertNotIn("'라이선스·출처'", portable_build)
 
         privacy = (DOCS / "PRIVACY.md").read_text(encoding="utf-8")
         privacy_en = (DOCS / "PRIVACY.en.md").read_text(encoding="utf-8")
