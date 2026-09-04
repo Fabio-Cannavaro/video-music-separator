@@ -50,7 +50,7 @@
 
 - 검증된 관련 파일만 `main`에 커밋하고 `origin/main`으로 푸시한다.
 - 소유권 경고가 발생하면 전역 설정을 바꾸지 않고 해당 명령에만
-  `git -c safe.directory=C:/Users/SongHo/Documents/ChatGPT/video-music-separator`
+  `git -c safe.directory="<현재 저장소의 절대 경로>"`
   옵션을 사용한다.
 - 푸시 후 로컬과 원격의 ahead/behind가 `0/0`인지 확인한다.
 - 최종 보고에는 테스트 수, 실제 EXE 검증 결과, 적용된 기본값, 커밋 해시,
