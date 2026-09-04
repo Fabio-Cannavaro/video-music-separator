@@ -179,28 +179,17 @@ function Copy-AllowlistedTree {
         }
     }
 
-    $sourcePrefix = $source.TrimEnd("\") + "\"
-    $destinationPrefix = $destination.TrimEnd("\") + "\"
     $copied = [System.Collections.Generic.List[string]]::new()
     foreach ($relativePath in $entries) {
         $platformPath = $relativePath.Replace("/", "\")
         $sourcePath = [System.IO.Path]::GetFullPath((Join-Path $source $platformPath))
-        if (-not $sourcePath.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "허용 파일이 원본 루트 밖을 가리킵니다: $relativePath"
-        }
         if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
             throw "허용 목록 파일을 찾을 수 없습니다: $relativePath"
         }
         Assert-NoReparsePoint -Root $source -RelativePath $relativePath
         $resolvedSource = (Resolve-Path -LiteralPath $sourcePath -ErrorAction Stop).Path
-        if (-not $resolvedSource.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "허용 파일이 링크를 통해 원본 루트 밖을 가리킵니다: $relativePath"
-        }
 
         $destinationPath = [System.IO.Path]::GetFullPath((Join-Path $destination $platformPath))
-        if (-not $destinationPath.StartsWith($destinationPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "허용 파일의 복사 대상이 스테이징 루트 밖입니다: $relativePath"
-        }
         $destinationParent = Split-Path -Parent $destinationPath
         New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
         Copy-Item -LiteralPath $resolvedSource -Destination $destinationPath -Force
@@ -354,10 +343,9 @@ function New-ReleaseZipFromDirectory {
     )
 
     $source = (Resolve-Path -LiteralPath $SourceRoot -ErrorAction Stop).Path
-    $sourcePrefix = $source.TrimEnd("\") + "\"
     $archiveFile = [System.IO.Path]::GetFullPath($ArchivePath)
     if (
-        $archiveFile.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+        (Test-ReleasePathWithin -Path $archiveFile -Root $source) -or
         (Test-Path -LiteralPath $archiveFile)
     ) {
         throw "새 배포 ZIP은 스테이징 밖의 존재하지 않는 파일 경로에 만들어야 합니다: $archiveFile"
@@ -382,10 +370,7 @@ function New-ReleaseZipFromDirectory {
             $sourcePath = [System.IO.Path]::GetFullPath(
                 (Join-Path $source $normalized.Replace("/", "\"))
             )
-            if (
-                -not $sourcePath.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
-                -not (Test-Path -LiteralPath $sourcePath -PathType Leaf)
-            ) {
+            if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
                 throw "배포 ZIP 원본 파일을 찾을 수 없습니다: $normalized"
             }
             $entry = $archive.CreateEntry(
