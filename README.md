@@ -6,7 +6,7 @@
 
 영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
 
-- 현재 앱 버전: `0.2.1`
+- 현재 앱 버전: `0.2.2`
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### 설치 안내
@@ -27,12 +27,12 @@
 
 #### 2. Windows 설치 파일 다운로드
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.1)
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.2)
 
 위 릴리스의 `Assets`에서 설치 ZIP 하나만 내려받으면 된다.
 
-- 필수 설치 ZIP: `video-music-separator-0.2.1-windows-x64.zip`
-- 선택 사항(무결성 확인용): `video-music-separator-0.2.1-windows-x64.zip.sha256`
+- 필수 설치 ZIP: `video-music-separator-0.2.2-windows-x64.zip`
+- 선택 사항(무결성 확인용): `video-music-separator-0.2.2-windows-x64.zip.sha256`
 
 GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
 
@@ -214,7 +214,7 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
 
-- Current application version: `0.2.1`
+- Current application version: `0.2.2`
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### Installation Guide
@@ -235,12 +235,12 @@ For the first installation, keep the following two executables in the same folde
 
 #### 2. Download the Windows Installer
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.1)
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.2)
 
 Under `Assets` in the Release above, only the installer ZIP is required.
 
-- Required installer ZIP: `video-music-separator-0.2.1-windows-x64.zip`
-- Optional integrity check: `video-music-separator-0.2.1-windows-x64.zip.sha256`
+- Required installer ZIP: `video-music-separator-0.2.2-windows-x64.zip`
+- Optional integrity check: `video-music-separator-0.2.2-windows-x64.zip.sha256`
 
 The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
 
