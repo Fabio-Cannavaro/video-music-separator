@@ -407,7 +407,7 @@ def load_manifest(path: Path) -> tuple[Path, list[SoundEvent]]:
 def build_mute_filter(events: Sequence[SoundEvent]) -> tuple[str, str]:
     muted = [event for event in events if event.muted and event.extracted_path]
     if not muted:
-        return "[0:a]anull[aout]", "[aout]"
+        return "[0:a]apad[aout]", "[aout]"
 
     parts: list[str] = []
     mix_inputs = ["[0:a]"]
@@ -426,7 +426,8 @@ def build_mute_filter(events: Sequence[SoundEvent]) -> tuple[str, str]:
     weights = " ".join("1" for _ in mix_inputs)
     parts.append(
         f"{''.join(mix_inputs)}amix=inputs={len(mix_inputs)}:"
-        f"weights='{weights}':normalize=0:duration=first,alimiter=limit=0.98[aout]"
+        f"weights='{weights}':normalize=0:duration=first,"
+        "alimiter=limit=0.98,apad[aout]"
     )
     return ";".join(parts), "[aout]"
 
@@ -443,13 +444,16 @@ def build_partition_filter(events: Sequence[SoundEvent]) -> tuple[str, str]:
         if not event.muted
     ]
     if not kept_inputs:
-        return "[0:a]volume=0[aout]", "[aout]"
+        return "[0:a]volume=0,apad[aout]", "[aout]"
     if len(kept_inputs) == 1:
-        return f"{kept_inputs[0]}aresample=48000,alimiter=limit=0.98[aout]", "[aout]"
+        return (
+            f"{kept_inputs[0]}aresample=48000,alimiter=limit=0.98,apad[aout]",
+            "[aout]",
+        )
     joined = "".join(kept_inputs)
     return (
         f"{joined}amix=inputs={len(kept_inputs)}:normalize=0:duration=longest,"
-        "aresample=48000,alimiter=limit=0.98[aout]",
+        "aresample=48000,alimiter=limit=0.98,apad[aout]",
         "[aout]",
     )
 

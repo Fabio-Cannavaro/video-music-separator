@@ -199,7 +199,7 @@ class ManifestTests(unittest.TestCase):
 class MuteFilterTests(unittest.TestCase):
     def test_no_muted_stems_keeps_original_audio(self) -> None:
         graph, label = build_mute_filter([])
-        self.assertEqual(graph, "[0:a]anull[aout]")
+        self.assertEqual(graph, "[0:a]apad[aout]")
         self.assertEqual(label, "[aout]")
 
     def test_muted_stem_is_inverted_and_delayed(self) -> None:
@@ -218,6 +218,7 @@ class MuteFilterTests(unittest.TestCase):
         self.assertIn("volume=-1", graph)
         self.assertIn("adelay=750|750", graph)
         self.assertIn("amix=inputs=2", graph)
+        self.assertIn("apad[aout]", graph)
 
     def test_music_partition_uses_kept_stem_directly(self) -> None:
         events = [
@@ -229,6 +230,7 @@ class MuteFilterTests(unittest.TestCase):
         self.assertEqual(label, "[aout]")
         self.assertIn("[2:a]aresample=48000", graph)
         self.assertNotIn("[1:a]", graph)
+        self.assertIn("apad[aout]", graph)
 
     def test_muting_both_partition_stems_creates_silence(self) -> None:
         events = [
@@ -236,7 +238,7 @@ class MuteFilterTests(unittest.TestCase):
             SoundEvent("non-music", "음악 아님", 0.0, 5.0, 1.0, muted=True, extracted_path="non-music.wav"),
         ]
         graph, _ = build_partition_filter(events)
-        self.assertEqual(graph, "[0:a]volume=0[aout]")
+        self.assertEqual(graph, "[0:a]volume=0,apad[aout]")
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg 필요")
@@ -261,9 +263,9 @@ class FfmpegIntegrationTests(unittest.TestCase):
             subprocess.run([
                 "ffmpeg", "-y",
                 "-f", "lavfi", "-i", "color=c=black:s=160x90:d=2",
-                "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=1.5",
                 "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-c:a", "aac",
-                "-shortest", str(source),
+                str(source),
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run([
                 "ffmpeg", "-y", "-ss", "0.25", "-t", "1.5", "-i", str(source),
@@ -304,6 +306,17 @@ class FfmpegIntegrationTests(unittest.TestCase):
                 str(output),
             ], check=True, capture_output=True, text=True)
             self.assertEqual(codec_probe.stdout.strip(), "mpeg4")
+            source_frames = subprocess.run([
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=nb_frames", "-of", "csv=p=0",
+                str(source),
+            ], check=True, capture_output=True, text=True)
+            output_frames = subprocess.run([
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=nb_frames", "-of", "csv=p=0",
+                str(output),
+            ], check=True, capture_output=True, text=True)
+            self.assertEqual(output_frames.stdout.strip(), source_frames.stdout.strip())
 
 
 if __name__ == "__main__":
