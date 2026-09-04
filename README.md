@@ -123,6 +123,41 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 처리 시간은 영상 길이와 GPU 상태에 따라 달라진다.
 
+### 이 앱의 음악·비음악 분리 방식
+
+이 앱은 AV-CASS의 공식 audio-visual 체크포인트와 CAVP 체크포인트를 사용해 다음
+순서로 음악과 비음악을 만든다. 핵심은 CAVP 전체 장면 입력,
+`speech`·`sfx`·`music` 3개 생성 결과의 음악 마스크화, 원본 44.1kHz 스테레오 보존,
+1초 cosine-squared OLA 결합이다.
+
+1. 원본 오디오는 최종 출력용 44.1kHz 스테레오로 보관한다. AI 분석용으로는 좌우
+   채널을 모노로 합치고 16kHz로 변환한다.
+2. 영상은 초당 4프레임으로 추출하고 각 프레임을 224×224 중앙 크롭으로 만든다.
+   현재 앱은 이 전체 장면 프레임을 CAVP scene encoder에 전달하며 얼굴 검출이나
+   별도의 facial encoder는 사용하지 않는다.
+3. AV-CASS의 조건부 flow-matching 모델은 약 8.18초 단위로 혼합음과 장면 특징을
+   분석해 `speech`, `sfx`, `music` 추정치 세 개를 동시에 생성한다. 각 청크는 기본
+   250단계로 추론하고, 청크 사이를 1초 겹친 뒤 cosine-squared OLA로 부드럽게 합친다.
+4. `speech + sfx`를 비음악 추정치로 합치고, 음악과 비음악 추정치의 에너지 비율에서
+   부드러운 시간-주파수 음악 마스크를 만든다. AI가 생성한 파형을 최종 출력으로 직접
+   사용하지 않고, 이 마스크를 보관해 둔 원본 44.1kHz 스테레오에 동일하게 적용한다.
+5. 마스크가 선택한 원본 성분을 음악으로 만들고, 비음악은 `원본 - 음악`으로 만든다.
+   따라서 두 트랙의 합은 원본과 정확히 같으며 원본 채널 수·스테레오 공간감·위상·길이를
+   유지한다.
+6. 16kHz 모델이 직접 판단할 수 있는 대역은 8kHz까지다. 기본 고역 확장값 0%에서는
+   8kHz를 넘는 원본 성분을 비음악에 보존한다.
+
+이 방식은 독립된 대사·효과음·음악 3트랙 추출보다 음악 제거와 원본 충실도를 우선한다.
+대사와 효과음 사이의 오분류는 둘 다 비음악에 남지만, 음악으로 오분류된 소리는 제거될
+수 있다. 8kHz 초과 대역을 보존하면 원본의 선명함을 유지할 수 있지만 심벌처럼 높은
+음악 성분이 비음악에 일부 남을 수 있다. 결과는 AI 추정이므로 저장 전에 음악과 비음악을
+각각 듣고 음악 뮤트 전체 재생도 확인해야 한다.
+
+기반 연구와 모델은 [AV-CASS 프로젝트 페이지](https://cass-flowmatching.github.io/),
+[논문](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf)과
+[공개 소스 코드](https://github.com/pantheon5100/AVCASS)에서 확인할 수 있다. 이
+프로젝트는 AV-CASS 연구진의 공식 앱이 아니며 연구진의 제휴나 보증을 받지 않았다.
+
 ### 저장소에 포함되지 않는 파일
 
 이 저장소에는 앱 소스, 테스트, 빌드·배포 스크립트, 문서와 라이선스 전문이 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
@@ -345,6 +380,45 @@ Inputs are restricted to supported media formats on fixed local disks. UNC paths
 9. Full playback with both tracks enabled uses the original audio.
 
 Processing time depends on video duration and GPU performance.
+
+### How This Application Separates Music and Non-Music
+
+This application uses the official audio-visual AV-CASS checkpoint and CAVP checkpoint to create
+music and non-music through the following pipeline. Its key characteristics are CAVP full-scene
+conditioning, conversion of three generated speech, sfx, and music estimates into a music mask,
+preservation of the original 44.1 kHz stereo signal, and one-second cosine-squared overlap-add.
+
+1. The source audio is retained as 44.1 kHz stereo for final output. For AI analysis, the left and
+   right channels are mixed to mono and resampled to 16 kHz.
+2. The video is sampled at 4 fps and each frame is center-cropped to 224×224. The application
+   currently sends these full-scene frames to the CAVP scene encoder. It does not perform face
+   detection or run a separate facial encoder.
+3. In approximately 8.18-second chunks, the AV-CASS conditional flow-matching model analyzes the
+   mixture and scene features and generates `speech`, `sfx`, and `music` estimates simultaneously.
+   Each chunk uses 250 inference steps by default. Adjacent chunks overlap by one second and are
+   combined with cosine-squared overlap-add.
+4. The application combines `speech + sfx` as the non-music estimate and derives a smooth
+   time-frequency music mask from the energy ratio between the music and non-music estimates.
+   Rather than using the AI-generated waveforms directly as final output, it applies this mask
+   consistently to the retained 44.1 kHz stereo source.
+5. Source components selected by the mask form the music track, and non-music is constructed as
+   `source - music`. The two tracks therefore sum exactly to the source while preserving channel
+   count, stereo image, phase, and duration.
+6. A 16 kHz model can directly evaluate frequencies only up to 8 kHz. With the default 0% high-band
+   extension, source content above 8 kHz is preserved in non-music.
+
+This design prioritizes music removal and fidelity to the source over extraction of three clean,
+independent speech, effects, and music tracks. Confusion between speech and effects remains in
+non-music, while a sound misclassified as music may be removed. Preserving content above 8 kHz
+retains source clarity but can also leave some high-frequency music such as cymbals in non-music.
+Because the result is an AI estimate, users should listen to both tracks and review full playback
+with music muted before saving.
+
+See the [AV-CASS project page](https://cass-flowmatching.github.io/),
+[paper](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), and
+[public source code](https://github.com/pantheon5100/AVCASS) for the underlying research and model.
+This project is not an official AV-CASS application and is not affiliated with or endorsed by the
+AV-CASS researchers.
 
 ### Files Not Included in the Repository
 
