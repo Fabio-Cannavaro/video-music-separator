@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from scripts.check_repository_safety import (
+    MAX_TEXT_SCAN_BYTES,
     MAX_TRACKED_FILE_BYTES,
     check_paths,
 )
@@ -75,6 +76,51 @@ class RepositorySafetyTests(unittest.TestCase):
 
         self.assertTrue(any("GitHub token" in item for item in findings))
         self.assertTrue(any("Hugging Face token" in item for item in findings))
+
+    def test_rejects_local_agent_notes_and_secret_filenames(self):
+        paths = [
+            "AGENTS.local.md",
+            ".env.local",
+            "config/client_secret_desktop.json",
+            "certificates/signing.pfx",
+        ]
+        for path in paths:
+            self.write_file(path)
+
+        findings = check_paths(self.repository, paths)
+
+        self.assertTrue(any("AGENTS.local.md" in item for item in findings))
+        self.assertTrue(any(".env.local" in item for item in findings))
+        self.assertTrue(any("client_secret_desktop.json" in item for item in findings))
+        self.assertTrue(any(".pfx" in item for item in findings))
+
+    def test_rejects_additional_media_and_model_extensions(self):
+        paths = ["sample.m4v", "sound.m4a", "weights/model.gguf", "weights/model.h5"]
+        for path in paths:
+            self.write_file(path)
+
+        findings = check_paths(self.repository, paths)
+
+        for suffix in (".m4v", ".m4a", ".gguf", ".h5"):
+            self.assertTrue(any(suffix in item for item in findings))
+
+    def test_scans_sensitive_text_larger_than_two_megabytes(self):
+        github_token = "gh" + "p_" + ("A" * 36)
+        padding_size = (2 * 1024 * 1024) + 1
+        self.assertLess(padding_size, MAX_TEXT_SCAN_BYTES)
+        self.write_file("large-notes.txt", (b"x" * padding_size) + github_token.encode("utf-8"))
+
+        findings = check_paths(self.repository, ["large-notes.txt"])
+
+        self.assertTrue(any("GitHub token" in item for item in findings))
+
+    def test_scans_utf16_sensitive_text(self):
+        private_key = "-----BEGIN " + "PRIVATE KEY-----\nnot-a-real-key\n"
+        self.write_file("utf16-notes.txt", private_key.encode("utf-16"))
+
+        findings = check_paths(self.repository, ["utf16-notes.txt"])
+
+        self.assertTrue(any("private key" in item for item in findings))
 
 
 if __name__ == "__main__":

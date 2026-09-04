@@ -12,7 +12,7 @@ from typing import Iterable
 
 
 MAX_TRACKED_FILE_BYTES = 10 * 1024 * 1024
-MAX_TEXT_SCAN_BYTES = 2 * 1024 * 1024
+MAX_TEXT_SCAN_BYTES = MAX_TRACKED_FILE_BYTES
 
 FORBIDDEN_DIRECTORIES = {
     "analysis_outputs",
@@ -32,31 +32,64 @@ FORBIDDEN_DIRECTORIES = {
 
 FORBIDDEN_SUFFIXES = {
     ".7z",
+    ".aac",
     ".avi",
     ".bin",
     ".ckpt",
+    ".db",
     ".dll",
+    ".dmp",
     ".exe",
     ".flac",
+    ".gguf",
+    ".gz",
+    ".h5",
+    ".kdbx",
+    ".key",
     ".log",
+    ".m4a",
+    ".m4v",
     ".mkv",
     ".mov",
     ".mp3",
     ".mp4",
+    ".msi",
+    ".npy",
+    ".npz",
+    ".ogg",
     ".onnx",
+    ".opus",
     ".part",
+    ".p12",
+    ".pem",
+    ".pfx",
     ".pth",
     ".pt",
     ".pyd",
+    ".rar",
     ".safetensors",
+    ".sqlite",
+    ".sqlite3",
+    ".tar",
+    ".tflite",
     ".wav",
     ".webm",
+    ".whl",
     ".zip",
 }
 
 FORBIDDEN_FILENAMES = {
+    ".env",
+    "agents.local.md",
+    "credentials.json",
     "runtime-assets.json",
 }
+
+FORBIDDEN_FILENAME_PATTERNS = (
+    re.compile(r"\.env\..+", re.IGNORECASE),
+    re.compile(r"client_secret.*\.json", re.IGNORECASE),
+    re.compile(r"service-account.*\.json", re.IGNORECASE),
+)
 
 SENSITIVE_TEXT_PATTERNS = (
     (
@@ -110,9 +143,27 @@ def _text_findings(path: Path, relative_path: str) -> list[str]:
         return []
 
     try:
-        text = path.read_text(encoding="utf-8")
-    except (UnicodeDecodeError, OSError):
+        data = path.read_bytes()
+    except OSError:
         return []
+
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+        try:
+            text = data.decode("utf-16")
+        except UnicodeDecodeError:
+            return []
+    else:
+        if b"\x00" in data:
+            return []
+        text = ""
+        for encoding in ("utf-8-sig", "cp949"):
+            try:
+                text = data.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        if not text and data:
+            return []
 
     findings: list[str] = []
     for label, pattern in SENSITIVE_TEXT_PATTERNS:
@@ -138,7 +189,10 @@ def check_paths(repository: Path, paths: Iterable[str]) -> list[str]:
         if suffix in FORBIDDEN_SUFFIXES:
             findings.append(f"{normalized}: forbidden tracked file type '{suffix}'")
 
-        if parts and parts[-1] in FORBIDDEN_FILENAMES:
+        filename = parts[-1] if parts else ""
+        if filename in FORBIDDEN_FILENAMES or any(
+            pattern.fullmatch(filename) for pattern in FORBIDDEN_FILENAME_PATTERNS
+        ):
             findings.append(f"{normalized}: forbidden generated/runtime file")
 
         if not path.is_file():

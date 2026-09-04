@@ -16,6 +16,19 @@ video-music-separator-portable/
 /exe-backups/
 /ffmpeg-backups/
 runtime-assets.json
+/AGENTS.local.md
+
+# Local secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.kdbx
+credentials.json
+client_secret*.json
+service-account*.json
 
 # Bundled runtimes, upstream repositories, and model weights
 audiosep/
@@ -32,6 +45,7 @@ models/
 # Personal media and generated results
 /media/
 *.mp4
+*.m4v
 *.mov
 *.mkv
 *.avi
@@ -39,11 +53,31 @@ models/
 *.wav
 *.flac
 *.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus
 *_sound_work/
 analysis_outputs/
 test-output/
 work/
 *.log
+*.sqlite
+*.sqlite3
+*.db
+*.dmp
+
+# Additional model and binary archives
+*.gguf
+*.h5
+*.tflite
+*.npy
+*.npz
+*.rar
+*.tar
+*.gz
+*.msi
+*.whl
 
 # Editors and OS files
 .idea/
