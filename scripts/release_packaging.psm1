@@ -155,10 +155,10 @@ function Copy-AllowlistedTree {
     if ($AllowlistPath -and $RelativePaths.Count -gt 0) {
         throw "AllowlistPath와 RelativePaths는 동시에 지정할 수 없습니다."
     }
-    $entries = if ($AllowlistPath) {
-        @(Get-ReleaseAllowlist $AllowlistPath)
+    [string[]]$entries = if ($AllowlistPath) {
+        Get-ReleaseAllowlist $AllowlistPath
     } else {
-        @($RelativePaths | ForEach-Object { ConvertTo-ReleaseRelativePath $_ })
+        $RelativePaths | ForEach-Object { ConvertTo-ReleaseRelativePath $_ }
     }
     if ($entries.Count -eq 0) {
         throw "복사할 허용 파일 목록이 비어 있습니다."
