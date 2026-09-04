@@ -739,7 +739,7 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("Apache", license_texts)
         self.assertIn("LGPL", license_texts)
         self.assertIn("GPL", license_texts)
-        self.assertIn("Video Music Separator: 0.2.4", information)
+        self.assertIn("Video Music Separator: 0.2.5", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
         self.assertIn("ffmpeg version 9.0.1-test", information)
         self.assertIn("f" * 64, information)

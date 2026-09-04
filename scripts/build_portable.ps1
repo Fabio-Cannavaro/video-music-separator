@@ -1,6 +1,7 @@
 ﻿param(
     [string]$PythonPath = "",
-    [string]$PythonInstallerPath = "",
+    [string]$PythonNuGetPackagePath = "",
+    [string]$PythonTclTkMsiPath = "",
     [string]$OutputDirectory = "",
     [string]$FFmpegDirectory = "",
     [string]$AIRuntimeDirectory = "",
@@ -33,17 +34,18 @@ $ffmpegRoot = if ($FFmpegDirectory) {
 $ffmpegDir = Join-Path $ffmpegRoot "bin"
 
 if (-not $CodeSigningCertificateThumbprint) {
-    throw "공개 배포 ZIP에는 Authenticode 코드 서명 인증서 thumbprint가 필요합니다. 로컬 검증은 build_executables.ps1을 사용하세요."
+    Write-Warning "코드 서명 인증서가 지정되지 않았습니다. 공개 ZIP은 미서명 상태로 생성되며 Windows SmartScreen이 경고할 수 있습니다."
 }
 if ($PythonPath) {
-    throw "공개 배포 빌드는 임의 PythonPath를 허용하지 않습니다. 고정 해시의 공식 설치 파일은 -PythonInstallerPath로만 지정하세요."
+    throw "공개 배포 빌드는 임의 PythonPath를 허용하지 않습니다. 고정 해시의 공식 CI 패키지는 -PythonNuGetPackagePath로만 지정하세요."
 }
 
-$sourceCommit = (& git -C $projectDir rev-parse HEAD 2>$null | Out-String).Trim()
+$gitSafeDirectory = "safe.directory=$projectDir"
+$sourceCommit = (& git -c $gitSafeDirectory -C $projectDir rev-parse HEAD 2>$null | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or -not $sourceCommit) {
     throw "배포본에 기록할 Git 소스 커밋을 확인하지 못했습니다."
 }
-$trackedChanges = (& git -C $projectDir status --porcelain --untracked-files=normal 2>$null | Out-String).Trim()
+$trackedChanges = (& git -c $gitSafeDirectory -C $projectDir status --porcelain --untracked-files=normal 2>$null | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) {
     throw "배포 전 Git 작업 트리 상태를 확인하지 못했습니다."
 }
@@ -51,67 +53,106 @@ if ($trackedChanges) {
     throw "정확히 대응하는 소스를 기록하려면 추적 파일의 변경을 먼저 커밋해 주세요."
 }
 
-$pythonInstallerUrl = "https://www.python.org/ftp/python/3.13.7/python-3.13.7-amd64.exe"
-$pythonInstallerSize = [int64]28808040
-$pythonInstallerSha256 = "B12E2E82461AC8E51FC43289050BC8EB937A32D84CE4D242E2C88258C37CF2BB"
+$pythonPackageUrl = "https://api.nuget.org/v3-flatcontainer/python/3.13.7/python.3.13.7.nupkg"
+$pythonPackageSize = [int64]14176560
+$pythonPackageSha256 = "E74272A824E23702DFB5F3E11C3660CEABAC7487E3366D4551391DB5CD762853"
+$pythonTclTkUrl = "https://www.python.org/ftp/python/3.13.7/amd64/tcltk.msi"
+$pythonTclTkSize = [int64]3276800
+$pythonTclTkSha256 = "86F7C339A885A19306877281C058C8D49DF713624B7ED686F66993E0D16CE5B1"
 $pythonDownloads = Join-Path $buildDir "downloads"
 New-Item -ItemType Directory -Path $pythonDownloads -Force | Out-Null
-$pythonInstaller = if ($PythonInstallerPath) {
-    (Resolve-Path -LiteralPath $PythonInstallerPath -ErrorAction Stop).Path
+$pythonPackage = if ($PythonNuGetPackagePath) {
+    (Resolve-Path -LiteralPath $PythonNuGetPackagePath -ErrorAction Stop).Path
 } else {
-    Join-Path $pythonDownloads "python-3.13.7-amd64.exe"
+    Join-Path $pythonDownloads "python.3.13.7.nupkg"
 }
-if (-not (Test-Path -LiteralPath $pythonInstaller -PathType Leaf)) {
-    Invoke-WebRequest -UseBasicParsing -Uri $pythonInstallerUrl -OutFile $pythonInstaller
+if (-not (Test-Path -LiteralPath $pythonPackage -PathType Leaf)) {
+    Invoke-WebRequest -UseBasicParsing -Uri $pythonPackageUrl -OutFile $pythonPackage
 }
-$pythonInstallerItem = Get-Item -LiteralPath $pythonInstaller
-$pythonInstallerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $pythonInstaller).Hash
+$pythonPackageItem = Get-Item -LiteralPath $pythonPackage
+$pythonPackageHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $pythonPackage).Hash
 if (
-    $pythonInstallerItem.Length -ne $pythonInstallerSize -or
-    $pythonInstallerHash -ne $pythonInstallerSha256
+    $pythonPackageItem.Length -ne $pythonPackageSize -or
+    $pythonPackageHash -ne $pythonPackageSha256
 ) {
-    throw "공식 Python 3.13.7 설치 파일 무결성 검증에 실패했습니다."
+    throw "공식 Python 3.13.7 NuGet CI 패키지 무결성 검증에 실패했습니다."
 }
-$pythonInstallerSignature = Get-AuthenticodeSignature -LiteralPath $pythonInstaller
+$pythonTclTkMsi = if ($PythonTclTkMsiPath) {
+    (Resolve-Path -LiteralPath $PythonTclTkMsiPath -ErrorAction Stop).Path
+} else {
+    Join-Path $pythonDownloads "python-3.13.7-tcltk.msi"
+}
+if (-not (Test-Path -LiteralPath $pythonTclTkMsi -PathType Leaf)) {
+    Invoke-WebRequest -UseBasicParsing -Uri $pythonTclTkUrl -OutFile $pythonTclTkMsi
+}
+$pythonTclTkItem = Get-Item -LiteralPath $pythonTclTkMsi
+$pythonTclTkHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $pythonTclTkMsi).Hash
+$pythonTclTkSignature = Get-AuthenticodeSignature -LiteralPath $pythonTclTkMsi
 if (
-    $pythonInstallerSignature.Status -ne "Valid" -or
-    -not $pythonInstallerSignature.SignerCertificate -or
-    $pythonInstallerSignature.SignerCertificate.Subject -notlike "CN=Python Software Foundation,*"
+    $pythonTclTkItem.Length -ne $pythonTclTkSize -or
+    $pythonTclTkHash -ne $pythonTclTkSha256 -or
+    $pythonTclTkSignature.Status -ne "Valid" -or
+    -not $pythonTclTkSignature.SignerCertificate -or
+    $pythonTclTkSignature.SignerCertificate.Subject -notlike "CN=Python Software Foundation,*"
 ) {
-    throw "공식 Python 3.13.7 설치 파일의 Authenticode 서명을 확인하지 못했습니다."
+    throw "공식 Python 3.13.7 Tcl/Tk MSI의 무결성 또는 Authenticode 서명 검증에 실패했습니다."
 }
 $bootstrapRoot = Join-Path $buildDir "cpython-3.13.7"
 if (Test-Path -LiteralPath $bootstrapRoot) {
     Remove-Item -LiteralPath $bootstrapRoot -Recurse -Force
 }
-$pythonInstall = Start-Process `
-    -FilePath $pythonInstaller `
-    -ArgumentList @(
-        "/quiet",
-        "InstallAllUsers=0",
-        "TargetDir=$bootstrapRoot",
-        "Include_launcher=0",
-        "Include_test=0",
-        "Include_doc=0",
-        "Include_tcltk=0",
-        "Include_dev=0",
-        "Shortcuts=0",
-        "PrependPath=0",
-        "Include_pip=1"
-    ) `
+try {
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($pythonPackage, $bootstrapRoot)
+} catch {
+    throw "검증된 Python 3.13.7 NuGet CI 패키지를 추출하지 못했습니다: $($_.Exception.Message)"
+}
+$tclTkExtractRoot = Join-Path $buildDir "cpython-3.13.7-tcltk"
+if (Test-Path -LiteralPath $tclTkExtractRoot) {
+    Remove-Item -LiteralPath $tclTkExtractRoot -Recurse -Force
+}
+New-Item -ItemType Directory -Path $tclTkExtractRoot -Force | Out-Null
+$tclTkExtract = Start-Process `
+    -FilePath "msiexec.exe" `
+    -ArgumentList @("/a", $pythonTclTkMsi, "/qn", "TARGETDIR=$tclTkExtractRoot") `
     -Wait `
     -PassThru `
     -WindowStyle Hidden
-if ($pythonInstall.ExitCode -ne 0) {
-    throw "검증된 Python 3.13.7 빌드 환경 설치에 실패했습니다: $($pythonInstall.ExitCode)"
+if ($tclTkExtract.ExitCode -ne 0) {
+    throw "검증된 Python 3.13.7 Tcl/Tk MSI 관리 추출에 실패했습니다: $($tclTkExtract.ExitCode)"
 }
-$bootstrapPython = Join-Path $bootstrapRoot "python.exe"
+$bootstrapTools = Join-Path $bootstrapRoot "tools"
+Copy-Item -LiteralPath (Join-Path $tclTkExtractRoot "DLLs") -Destination $bootstrapTools -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $tclTkExtractRoot "Lib\tkinter") -Destination (Join-Path $bootstrapTools "Lib") -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $tclTkExtractRoot "tcl") -Destination $bootstrapTools -Recurse -Force
+$bootstrapPython = Join-Path $bootstrapRoot "tools\python.exe"
 if (-not (Test-Path -LiteralPath $bootstrapPython -PathType Leaf)) {
     throw "검증된 Python 3.13.7 실행 파일을 찾지 못했습니다."
+}
+$pythonSignedFiles = @(
+    $bootstrapPython,
+    (Join-Path $bootstrapRoot "tools\python3.dll"),
+    (Join-Path $bootstrapRoot "tools\python313.dll"),
+    (Join-Path $bootstrapRoot "tools\DLLs\_tkinter.pyd"),
+    (Join-Path $bootstrapRoot "tools\DLLs\tcl86t.dll"),
+    (Join-Path $bootstrapRoot "tools\DLLs\tk86t.dll")
+)
+foreach ($signedFile in $pythonSignedFiles) {
+    $signature = Get-AuthenticodeSignature -LiteralPath $signedFile
+    if (
+        $signature.Status -ne "Valid" -or
+        -not $signature.SignerCertificate -or
+        $signature.SignerCertificate.Subject -notlike "CN=Python Software Foundation,*"
+    ) {
+        throw "공식 Python 3.13.7 실행 파일의 Authenticode 서명을 확인하지 못했습니다: $signedFile"
+    }
 }
 $bootstrapVersion = (& $bootstrapPython -c "import platform; print(platform.python_version())" | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $bootstrapVersion -ne "3.13.7") {
     throw "공개 배포 빌드는 Python 3.13.7이 필요합니다. 현재: $bootstrapVersion"
+}
+$tclTkVersion = (& $bootstrapPython -c "import tkinter; print(tkinter.Tcl().eval('info patchlevel'))" | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $tclTkVersion -ne "8.6.15") {
+    throw "공개 배포 GUI 빌드는 검증된 Tcl/Tk 8.6.15가 필요합니다. 현재: $tclTkVersion"
 }
 $releaseVenv = Join-Path $buildDir "release-venv"
 & $bootstrapPython -m venv --clear $releaseVenv
@@ -328,7 +369,7 @@ if ($BundleRuntimeAssets) {
 $outputAppDir = Join-Path $outputDir "app"
 $outputDocsDir = Join-Path $outputDir "docs"
 New-Item -ItemType Directory -Path $outputAppDir, $outputDocsDir -Force | Out-Null
-$trackedDocs = @(& git -C $projectDir ls-files -- docs)
+$trackedDocs = @(& git -c $gitSafeDirectory -C $projectDir ls-files -- docs)
 if ($LASTEXITCODE -ne 0 -or $trackedDocs.Count -eq 0) {
     throw "배포 문서의 Git 추적 파일 목록을 읽지 못했습니다."
 }
@@ -339,7 +380,7 @@ foreach ($relativePath in $copiedDocs) {
 }
 Copy-Item -LiteralPath (Join-Path $projectDir "LICENSE") -Destination $outputDocsDir -Force
 $expectedPackageFiles.Add("docs/LICENSE")
-$trackedLicenses = @(& git -C $projectDir ls-files -- licenses)
+$trackedLicenses = @(& git -c $gitSafeDirectory -C $projectDir ls-files -- licenses)
 if ($LASTEXITCODE -ne 0 -or $trackedLicenses.Count -eq 0) {
     throw "배포 라이선스의 Git 추적 파일 목록을 읽지 못했습니다."
 }
@@ -381,26 +422,43 @@ foreach ($relativePath in Get-ReleaseTreeFiles $pythonLicenseDir) {
 
 $appSignature = Get-AuthenticodeSignature -FilePath $portableExecutable
 $setupSignature = Get-AuthenticodeSignature -FilePath (Join-Path $outputDir "video-music-separator-setup.exe")
-$expectedSigner = $CodeSigningCertificateThumbprint.Replace(" ", "").ToUpperInvariant()
-foreach ($signature in @($appSignature, $setupSignature)) {
-    $actualSigner = if ($signature.SignerCertificate) {
-        $signature.SignerCertificate.Thumbprint.Replace(" ", "").ToUpperInvariant()
-    } else { "" }
-    if (
-        $signature.Status -ne "Valid" -or
-        $actualSigner -ne $expectedSigner -or
-        -not $signature.TimeStamperCertificate
-    ) {
-        throw "공개 배포 파일의 Authenticode 서명·서명자·타임스탬프 검증에 실패했습니다."
+$signingStatus = if ($CodeSigningCertificateThumbprint) {
+    $expectedSigner = $CodeSigningCertificateThumbprint.Replace(" ", "").ToUpperInvariant()
+    foreach ($signature in @($appSignature, $setupSignature)) {
+        $actualSigner = if ($signature.SignerCertificate) {
+            $signature.SignerCertificate.Thumbprint.Replace(" ", "").ToUpperInvariant()
+        } else { "" }
+        if (
+            $signature.Status -ne "Valid" -or
+            $actualSigner -ne $expectedSigner -or
+            -not $signature.TimeStamperCertificate
+        ) {
+            throw "공개 배포 파일의 Authenticode 서명·서명자·타임스탬프 검증에 실패했습니다."
+        }
     }
+    @(
+        "Video Music Separator code-signing status",
+        "video-music-separator.exe: $($appSignature.Status)",
+        "video-music-separator-setup.exe: $($setupSignature.Status)",
+        "Certificate thumbprint: $CodeSigningCertificateThumbprint",
+        "RFC 3161 timestamp: present"
+    )
+} else {
+    foreach ($signature in @($appSignature, $setupSignature)) {
+        if ($signature.Status -ne "NotSigned") {
+            throw "인증서 없는 공개 빌드에서 예상하지 않은 Authenticode 상태를 확인했습니다: $($signature.Status)"
+        }
+    }
+    Write-Warning "UNSIGNED PUBLIC BUILD: 게시자 신원을 Windows가 확인할 수 없습니다. SHA-256을 Release 설명과 대조하세요."
+    @(
+        "Video Music Separator code-signing status",
+        "WARNING: UNSIGNED PUBLIC BUILD",
+        "video-music-separator.exe: $($appSignature.Status)",
+        "video-music-separator-setup.exe: $($setupSignature.Status)",
+        "Publisher identity: not verified by Authenticode",
+        "Integrity: compare docs/SHA256SUMS.txt and the Release .sha256 file"
+    )
 }
-$signingStatus = @(
-    "Video Music Separator code-signing status",
-    "video-music-separator.exe: $($appSignature.Status)",
-    "video-music-separator-setup.exe: $($setupSignature.Status)"
-    "Certificate thumbprint: $CodeSigningCertificateThumbprint",
-    "RFC 3161 timestamp: present"
-)
 $signingStatus | Set-Content -LiteralPath (Join-Path $outputDocsDir "SIGNING_STATUS.txt") -Encoding UTF8
 $expectedPackageFiles.Add("docs/SIGNING_STATUS.txt")
 

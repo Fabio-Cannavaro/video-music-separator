@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.2.4"
+APP_VERSION = "0.2.5"
 
 BASE_RUNTIME_VERSION = "0.2.0"
 BASE_RUNTIME_ARCHIVE = "video-music-separator-ai-runtime-0.2.0.zip"

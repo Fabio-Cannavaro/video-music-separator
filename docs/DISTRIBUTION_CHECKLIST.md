@@ -4,7 +4,8 @@
 
 - [x] 로컬 `media/` 폴더와 생성된 진단 파일을 Git 추적 대상에서 제외했다.
 - [x] AV-CASS와 CAVP 체크포인트를 제한된 `weights_only` 방식으로 읽고 실제 모델 파일로 검증했다.
-- [x] 미서명 Windows 설치 테스트본은 Draft로 보존하고, 필수 AI 런타임 자산만 공개 상태로 유지한다.
+- [x] 이전 미서명 `0.2.3` Windows 설치 테스트본은 Draft로 보존한다.
+- [x] `0.2.5` 미서명 공개 테스트 프리릴리스에는 미서명 상태, Windows SmartScreen 가능성, ZIP·EXE SHA-256 검증 방법을 한국어·영어로 표시한다.
 - [ ] AV-CASS 권리자에게 공개 앱의 체크포인트 자동 다운로드와 이용 범위를 서면으로 확인한다.
 - [x] 실제 `audiosep/env/`에 포함된 Python 패키지 전체의 이름·버전·라이선스·NOTICE를 자동 목록화한다.
 - [x] 공개 런타임에서 GPL `pedalboard`와 예전 AudioSep/BandIt 런타임을 제거한다.
@@ -20,13 +21,13 @@
   - [ ] 별도 배포되는 AI 런타임과 네이티브 바이너리 내부 동작은 소스 검사만으로 완전히 증명할 수 없으므로, 대표 실제 설치본의 네트워크 관찰 결과를 함께 확인한다.
 - [x] `THIRD_PARTY_NOTICES`, `MODEL_LICENSES`, `PRIVACY`와 라이선스 전문이 배포 ZIP에 들어 있는지 확인했다.
 - [x] `SHA256SUMS.txt`와 공개 ZIP의 `.sha256` 파일을 Release에 올렸다.
-- [x] AI 런타임 보호 트리를 서명 대상 소스의 고정 지문으로 매 실행 전 검증하고, 모델과 FFmpeg 실행 파일도 고정 크기·SHA-256으로 실행 전에 검증한다.
+- [x] AI 런타임 보호 트리를 앱 소스의 고정 지문으로 매 실행 전 검증하고, 모델과 FFmpeg 실행 파일도 고정 크기·SHA-256으로 실행 전에 검증한다.
 - [x] `<영상이름>_sound_work_<난수>`가 이번 앱 작업에서 만든 폴더임을 소유권 표식으로 확인하고, 기존의 무관한 폴더나 파일을 재사용·삭제하지 않는다.
-- [x] 공개 ZIP 빌드는 공식 Python 3.13.7 설치 파일의 고정 크기·SHA-256·PSF Authenticode 서명을 검증하고 해시 잠금 의존성만 설치한다.
+- [x] 공개 ZIP 빌드는 공식 Python 3.13.7 NuGet CI 패키지와 Tcl/Tk MSI의 고정 크기·SHA-256 및 핵심 실행 파일·MSI의 PSF Authenticode 서명을 검증한다. Tcl/Tk MSI는 관리 추출만 하며 시스템 Python을 변경하지 않고 해시 잠금 의존성만 설치한다.
 - [x] 입력 길이·스트림 수·해상도·오디오 채널·FFmpeg 할당·작업 공간·외부 로그 크기에 유한 상한을 적용한다.
 - [x] GitHub Actions, Windows 러너, Python, FFmpeg와 Python wheel을 불변 버전·커밋·SHA-256으로 고정한다.
 - [x] 기존 미서명 `0.2.3` Windows 자산은 GitHub Draft로 전환해 일반 다운로드에서 제외했다.
-- [ ] 앱 EXE와 설치 EXE에 신뢰 가능한 Authenticode 코드 서명과 타임스탬프를 적용한 새 패치 버전을 빌드한다.
+- [ ] 향후 인증서를 사용할 경우 앱 EXE와 설치 EXE에 신뢰 가능한 Authenticode 코드 서명과 타임스탬프를 적용한다. 현재 공개 테스트 프리릴리스는 코드 서명이 없음을 명시한다.
 - [ ] 깨끗한 Windows 사용자 계정에서 압축 해제 → 동의 → 다운로드 → 분리 → 미리보기 → 사본 저장 → 제거까지 시험한다.
 
 ## 라이선스 표시
