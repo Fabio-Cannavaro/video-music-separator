@@ -14,6 +14,7 @@
 - [x] AI 실행환경 분할 파일 두 개와 체크섬을 공개 `runtime-v0.2.0` prerelease에 올린다.
 - [ ] 다음 런타임 갱신 때 정리된 원본의 허용 목록을 검토하고 새 런타임 ZIP·분할 파일·크기·SHA-256으로 설치 정보를 함께 갱신한다.
 - [ ] GitHub 인증 제거 후 새 설치 EXE로 공개 Release의 전체 무인증 다운로드를 다시 시험한다.
+- [ ] GitHub 인증 제거가 반영된 깨끗한 설치 ZIP을 대응 소스 커밋에서 만들고 기존 Release 자산을 교체한다.
 - [ ] 앱과 설치 파일에서 영상·음원이 외부로 전송되지 않는지 다시 검사한다.
 - [ ] `THIRD_PARTY_NOTICES`, `MODEL_LICENSES`, `PRIVACY`와 라이선스 전문이 배포 ZIP에 들어 있는지 확인한다.
 - [ ] `SHA256SUMS.txt`와 공개 ZIP의 `.sha256` 파일을 Release에 올린다.
