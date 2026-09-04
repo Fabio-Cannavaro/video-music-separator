@@ -136,11 +136,11 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("#### 2. Download the Windows Installer", lines)
         self.assertIn("#### 6. Using and Moving the Installed Folder", lines)
         self.assertIn(
-            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.2",
+            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.3",
             readme,
         )
         self.assertIn("Source code (zip)", readme)
-        self.assertIn("video-music-separator-0.2.2-windows-x64.zip.sha256", readme)
+        self.assertIn("video-music-separator-0.2.3-windows-x64.zip.sha256", readme)
         self.assertIn("설치 ZIP 하나만 내려받으면 된다", readme)
         self.assertIn("only the installer ZIP is required", readme)
         self.assertIn("선택 사항(무결성 확인용)", readme)

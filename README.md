@@ -6,7 +6,7 @@
 
 영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
 
-- 현재 앱 버전: `0.2.2`
+- 현재 앱 버전: `0.2.3`
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### 설치 안내
@@ -27,12 +27,12 @@
 
 #### 2. Windows 설치 파일 다운로드
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.2)
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.3)
 
 위 릴리스의 `Assets`에서 설치 ZIP 하나만 내려받으면 된다.
 
-- 필수 설치 ZIP: `video-music-separator-0.2.2-windows-x64.zip`
-- 선택 사항(무결성 확인용): `video-music-separator-0.2.2-windows-x64.zip.sha256`
+- 필수 설치 ZIP: `video-music-separator-0.2.3-windows-x64.zip`
+- 선택 사항(무결성 확인용): `video-music-separator-0.2.3-windows-x64.zip.sha256`
 
 GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
 
@@ -50,7 +50,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 현재 실행 파일은 유료 코드 서명 인증서를 적용하지 않은 **미서명 빌드**일 수 있다. Windows SmartScreen에 `알 수 없는 게시자` 경고가 나오면 저장소·배포 주소와 SHA-256을 먼저 확인하고, 두 정보가 맞을 때에만 `추가 정보`에서 실행한다. 체크섬이 다르거나 출처가 불명확한 파일은 실행하지 않는다.
 
-> **현재 배포 상태:** 소스 저장소와 `0.2.2` 설치 테스트용 프리릴리스는 공개되어 있다. 다만 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사가 아직 완료되지 않았으므로, 일반 공개 배포가 아닌 검증용 프리릴리스다. 현재 Release ZIP은 GitHub 로그인 지원을 제거하기 전 빌드이며, `main`의 변경은 다음 검증 빌드와 자산 교체 전까지 그 ZIP에 포함되지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **현재 배포 상태:** 소스 저장소와 `0.2.3` 설치 테스트용 프리릴리스는 공개되어 있다. 이 빌드에는 명시적 허용 목록 배포 패키징과 GitHub 로그인 기능 제거가 반영되어 있다. 다만 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 새 Windows 계정 설치 검사가 아직 완료되지 않았으므로, 일반 공개 배포가 아닌 검증용 프리릴리스다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
@@ -226,7 +226,7 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
 
-- Current application version: `0.2.2`
+- Current application version: `0.2.3`
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### Installation Guide
@@ -247,12 +247,12 @@ For the first installation, keep the following two executables in the same folde
 
 #### 2. Download the Windows Installer
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.2)
+[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.3)
 
 Under `Assets` in the Release above, only the installer ZIP is required.
 
-- Required installer ZIP: `video-music-separator-0.2.2-windows-x64.zip`
-- Optional integrity check: `video-music-separator-0.2.2-windows-x64.zip.sha256`
+- Required installer ZIP: `video-music-separator-0.2.3-windows-x64.zip`
+- Optional integrity check: `video-music-separator-0.2.3-windows-x64.zip.sha256`
 
 The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
 
@@ -270,7 +270,7 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 
 The executables may be **unsigned builds** without a paid code-signing certificate. If Windows SmartScreen displays an `Unknown publisher` warning, first verify the repository, distribution URL, and SHA-256 value. Use `More info` to continue only when those details match. Do not run a file with a mismatched checksum or unclear origin.
 
-> **Current distribution status:** The source repository and the `0.2.2` installation-testing prerelease are public. However, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account are not yet complete, so this remains a validation prerelease rather than a general public release. The current Release ZIP was built before GitHub login support was removed; the `main` changes are not included in that ZIP until the next validation build and asset replacement. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Current distribution status:** The source repository and the `0.2.3` installation-testing prerelease are public. This build includes explicit-allowlist release packaging and removal of GitHub login support. However, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account are not yet complete, so this remains a validation prerelease rather than a general public release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
