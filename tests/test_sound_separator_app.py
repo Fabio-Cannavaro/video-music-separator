@@ -23,6 +23,7 @@ from avcass_worker import (
     INFERENCE_HOP,
     INFERENCE_LENGTH,
     configure_yapf_cache,
+    frame_paths,
     inference_starts,
     init_cavp_with_restricted_checkpoint,
     load_avcass_ema_state,
@@ -45,7 +46,6 @@ from sound_separator_app import (
     build_ffplay_command,
     build_partition_events,
     clamp_volume,
-    cleanup_work_directory,
     load_legal_information,
     load_legal_display,
     load_license_texts,
@@ -63,6 +63,11 @@ from sound_separator_app import (
     run_worker_command,
     terminate_preview_process,
     worker_progress_message,
+)
+from security_policy import (
+    allocate_owned_work_directory,
+    cleanup_owned_work_directory,
+    ensure_owned_work_directory,
 )
 
 
@@ -147,6 +152,24 @@ class PlaybackCommandTests(unittest.TestCase):
         )
         self.assertEqual(lines, ["[run 1/2] 0.00-8.00초"])
 
+    def test_stops_worker_after_idle_timeout(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "시간 제한"):
+            run_worker_command(
+                [sys.executable, "-c", "import time; time.sleep(10)"],
+                lambda _line: None,
+                idle_timeout=0.05,
+                timeout=2.0,
+            )
+
+    def test_stops_worker_on_oversized_log_line(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "로그 한 줄"):
+            run_worker_command(
+                [sys.executable, "-c", "print('x' * 20000)"],
+                lambda _line: None,
+                idle_timeout=2.0,
+                timeout=5.0,
+            )
+
     def test_starts_at_full_volume(self) -> None:
         self.assertEqual(DEFAULT_VOLUME, 100)
 
@@ -157,7 +180,10 @@ class PlaybackCommandTests(unittest.TestCase):
 
     @patch("sound_separator_app.require_program", return_value="ffplay.exe")
     def test_builds_shared_volume_command_and_keeps_offset(self, _require_program) -> None:
-        command = build_ffplay_command(Path("stem.wav"), 63, 4.25)
+        with tempfile.TemporaryDirectory() as temporary:
+            stem = Path(temporary) / "stem.wav"
+            stem.write_bytes(b"audio")
+            command = build_ffplay_command(stem, 63, 4.25)
         self.assertEqual(command[0], "ffplay.exe")
         self.assertIn("-nodisp", command)
         self.assertIn("-vn", command)
@@ -166,7 +192,9 @@ class PlaybackCommandTests(unittest.TestCase):
         self.assertEqual(command[command.index("-volume") + 1], "63")
         self.assertIn("-ss", command)
         self.assertIn("4.250", command)
-        self.assertEqual(command[-1], "stem.wav")
+        self.assertEqual(Path(command[-1]), stem.resolve())
+        self.assertEqual(command[command.index("-protocol_whitelist") + 1], "file")
+        self.assertEqual(command[command.index("-format_whitelist") + 1], "wav")
 
     def test_formats_short_and_long_playback_times(self) -> None:
         self.assertEqual(format_playback_time(65.2), "01:05")
@@ -225,6 +253,19 @@ class PlaybackCommandTests(unittest.TestCase):
 
 
 class MusicPartitionTests(unittest.TestCase):
+    def test_avcass_enumerates_bounded_frame_paths_without_full_stack(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            frame_dir = Path(temporary)
+            (frame_dir / "frame_000002.png").write_bytes(b"two")
+            (frame_dir / "frame_000001.png").write_bytes(b"one")
+            self.assertEqual(
+                [path.name for path in frame_paths(frame_dir)],
+                ["frame_000001.png", "frame_000002.png"],
+            )
+        source = (ROOT / "app" / "avcass_worker.py").read_text(encoding="utf-8")
+        self.assertIn("load_frame_chunk(\n                all_frame_paths", source)
+        self.assertNotIn("all_frames = load_frames", source)
+
     def test_loads_avcass_checkpoint_in_weights_only_mode(self) -> None:
         safe_globals_calls: list[list[object]] = []
         load_calls: list[tuple[Path, dict[str, object]]] = []
@@ -698,7 +739,7 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("Apache", license_texts)
         self.assertIn("LGPL", license_texts)
         self.assertIn("GPL", license_texts)
-        self.assertIn("Video Music Separator: 0.2.3", information)
+        self.assertIn("Video Music Separator: 0.2.4", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
         self.assertIn("ffmpeg version 9.0.1-test", information)
         self.assertIn("f" * 64, information)
@@ -706,7 +747,8 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("영상과 음원은 로컬 PC에서 처리", information)
         self.assertIn("AI Python 실행환경", information)
         self.assertIn("출처:", information)
-        self.assertIn("설치 중 Gyan 공식 체크섬에서 확인", no_record_information)
+        self.assertIn("Gyan FFmpeg 9.0.1 GPL Essentials", no_record_information)
+        self.assertIn("fec81ae03971d9dd4be3ebe02e263bd2", no_record_information)
         self.assertNotIn(
             "Resolved from Gyan's official checksum during installation",
             no_record_information,
@@ -726,27 +768,46 @@ class MusicPartitionTests(unittest.TestCase):
 
 
 class WorkDirectoryCleanupTests(unittest.TestCase):
-    def test_removes_only_the_expected_clip_work_directory(self) -> None:
+    def test_removes_only_the_owned_random_work_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             video_path = root / "clip.mp4"
-            work_dir = root / "clip_sound_work"
-            work_dir.mkdir()
+            video_path.write_bytes(b"video")
+            handle = allocate_owned_work_directory(video_path)
+            work_dir = ensure_owned_work_directory(handle)
             (work_dir / "sounds.json").write_text("{}", encoding="utf-8")
 
-            self.assertTrue(cleanup_work_directory(video_path, work_dir))
+            self.assertTrue(cleanup_owned_work_directory(handle))
             self.assertFalse(work_dir.exists())
 
-    def test_rejects_a_different_directory(self) -> None:
+    def test_rejects_a_tampered_ownership_marker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             video_path = root / "clip.mp4"
-            other_dir = root / "other_sound_work"
-            other_dir.mkdir()
+            video_path.write_bytes(b"video")
+            handle = allocate_owned_work_directory(video_path)
+            work_dir = ensure_owned_work_directory(handle)
+            marker = work_dir / ".video-music-separator-work.json"
+            marker.write_text("{}", encoding="utf-8")
 
             with self.assertRaises(RuntimeError):
-                cleanup_work_directory(video_path, other_dir)
-            self.assertTrue(other_dir.exists())
+                cleanup_owned_work_directory(handle)
+            self.assertTrue(work_dir.exists())
+
+    def test_does_not_reuse_or_delete_legacy_predictable_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video_path = root / "clip.mp4"
+            video_path.write_bytes(b"video")
+            legacy = root / "clip_sound_work"
+            legacy.mkdir()
+            user_file = legacy / "keep.txt"
+            user_file.write_text("keep", encoding="utf-8")
+            handle = allocate_owned_work_directory(video_path)
+            self.assertNotEqual(handle.path, legacy)
+            ensure_owned_work_directory(handle)
+            cleanup_owned_work_directory(handle)
+            self.assertEqual(user_file.read_text(encoding="utf-8"), "keep")
 
 
 if __name__ == "__main__":

@@ -4,11 +4,13 @@ import argparse
 import json
 import os
 import sys
+import wave
 from pathlib import Path
 
 
 MINIMUM_PAD_SECONDS = 12.0
 PCM16_SCALE = 32768.0
+MAX_MEDIA_DURATION_SECONDS = 10 * 60
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,6 +29,16 @@ def require_file(path_text: str, label: str) -> Path:
     if not path.is_file():
         raise FileNotFoundError(f"{label}을 찾을 수 없습니다: {path}")
     return path
+
+
+def require_bounded_wav(path: Path) -> None:
+    try:
+        with wave.open(str(path), "rb") as source:
+            duration = source.getnframes() / source.getframerate()
+    except (OSError, wave.Error, ZeroDivisionError) as error:
+        raise ValueError("입력 WAV 헤더를 안전하게 읽지 못했습니다.") from error
+    if not 0 < duration <= MAX_MEDIA_DURATION_SECONDS:
+        raise ValueError("입력 오디오는 최대 10분까지 처리할 수 있습니다.")
 
 
 def centered_correlation(first, second) -> float:
@@ -50,6 +62,7 @@ def main() -> int:
     hparams = require_file(args.hparams, "BandIt 설정 파일")
     checkpoint = require_file(args.checkpoint, "BandIt 체크포인트")
     input_path = require_file(args.input, "입력 오디오")
+    require_bounded_wav(input_path)
     music_output = Path(args.music_output).resolve()
     non_music_output = Path(args.non_music_output).resolve()
     music_output.parent.mkdir(parents=True, exist_ok=True)

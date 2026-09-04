@@ -12,16 +12,29 @@ $destinationDir = if ($DestinationDirectory) {
     Join-Path $projectDir "third_party\ffmpeg-gpl"
 }
 
-$archiveName = "ffmpeg-release-essentials.zip"
-$downloadUrl = "https://www.gyan.dev/ffmpeg/builds/$archiveName"
-$checksumUrl = "${downloadUrl}.sha256"
-$versionUrl = "${downloadUrl}.ver"
+$archiveName = "ffmpeg-9.0.1-essentials_build.zip"
+$downloadUrl = "https://www.gyan.dev/ffmpeg/builds/packages/$archiveName"
+$expectedVersion = "9.0.1"
+$expectedSize = [int64]111253802
+$expectedSha256 = "FEC81AE03971D9DD4BE3EBE02E263BD2EC1D789483F931BDBA5F5715E65DA2E9"
+$expectedExecutables = @{
+    "ffmpeg.exe" = @{ Size = [int64]102856192; Sha256 = "72A489ECCD008C2EC2C0A5856C5C75BC3D8BBFA90166C4566865C246445E6AA3" }
+    "ffplay.exe" = @{ Size = [int64]104339968; Sha256 = "39A9BA4F207FE9EECFB094E632998C29E1DA88A5D5D23D0B8B71A357A7C47EB5" }
+    "ffprobe.exe" = @{ Size = [int64]102652416; Sha256 = "19202B23C0043F15AD1B7BCE2344F406FD52BD6EFD8F995CE02E7392A1CEC52F" }
+}
 
 function Test-GplFfmpeg([string]$Root, [string]$ExpectedVersion) {
     $binDir = Join-Path $Root "bin"
     foreach ($name in @("ffmpeg.exe", "ffprobe.exe", "ffplay.exe")) {
         $program = Join-Path $binDir $name
         if (-not (Test-Path -LiteralPath $program -PathType Leaf)) {
+            return $false
+        }
+        $expected = $expectedExecutables[$name]
+        if (
+            (Get-Item -LiteralPath $program).Length -ne $expected.Size -or
+            (Get-FileHash -LiteralPath $program -Algorithm SHA256).Hash -ne $expected.Sha256
+        ) {
             return $false
         }
         $versionText = (& $program -version 2>&1 | Out-String)
@@ -40,15 +53,6 @@ function Test-GplFfmpeg([string]$Root, [string]$ExpectedVersion) {
     return $true
 }
 
-$expectedVersion = ([string](Invoke-RestMethod -Uri $versionUrl)).Trim()
-$expectedSha256 = ([string](Invoke-RestMethod -Uri $checksumUrl)).Trim().ToUpperInvariant()
-if ($expectedVersion -notmatch '^\d+\.\d+(\.\d+)?$') {
-    throw "Gyan FFmpeg 버전 정보가 올바르지 않습니다: $expectedVersion"
-}
-if ($expectedSha256 -notmatch '^[0-9A-F]{64}$') {
-    throw "Gyan FFmpeg SHA-256 정보가 올바르지 않습니다."
-}
-
 if (Test-GplFfmpeg $destinationDir $expectedVersion) {
     Write-Host "GPL FFmpeg 준비 완료: $destinationDir"
     exit 0
@@ -62,6 +66,9 @@ try {
     New-Item -ItemType Directory -Path $temporaryRoot -Force | Out-Null
     Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath
 
+    if ((Get-Item -LiteralPath $archivePath).Length -ne $expectedSize) {
+        throw "FFmpeg 다운로드 크기가 고정값과 일치하지 않습니다."
+    }
     $actualSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
     if ($actualSha256 -ne $expectedSha256) {
         throw "FFmpeg 다운로드 체크섬이 일치하지 않습니다. 예상: $expectedSha256 / 실제: $actualSha256"

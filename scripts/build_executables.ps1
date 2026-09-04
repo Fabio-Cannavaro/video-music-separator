@@ -33,6 +33,8 @@ New-Item -ItemType Directory -Path $outputDir, $appDistDir, $appWorkDir, $specDi
     --onefile `
     --name "video-music-separator" `
     --paths $appDir `
+    --add-data "$(Join-Path $appDir 'avcass_worker.py');app" `
+    --add-data "$(Join-Path $appDir 'separation_quality.py');app" `
     --distpath $appDistDir `
     --workpath $appWorkDir `
     --specpath $specDir `

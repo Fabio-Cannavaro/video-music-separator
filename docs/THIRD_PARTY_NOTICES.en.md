@@ -53,14 +53,14 @@ Legacy compatibility worker code that is not exposed in the user interface remai
 This application runs the FFmpeg command-line programs as external processes.
 
 - Project and legal information: <https://ffmpeg.org/legal.html>
-- Online installation target: Gyan's current `release essentials` Windows x64 GPLv3 static build
+- Online installation target: Gyan's `9.0.1 release essentials` Windows x64 GPLv3 static build
 - Applicable license: GNU General Public License version 3
 - Binary source, checksums, and build configuration: `FFMPEG_BUILD.en.md`
 - Full license texts: `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt`
 
 The installer accepts only a Gyan Essentials build containing `--enable-gpl`, `--enable-version3`, and `--enable-static` while excluding `--enable-nonfree`. Before publicly distributing an offline bundle that contains FFmpeg binaries, provide the exact corresponding FFmpeg and build-dependency sources, build instructions, copyright notices, and the full GPLv3 text.
 
-The default online installer does not contain FFmpeg binaries. During installation it downloads Gyan's current official GPL Essentials build directly to the user's PC and verifies the official version, SHA-256, final URL, and build options of all three executables.
+The default online installer does not contain FFmpeg binaries. During installation it downloads Gyan's pinned 9.0.1 GPL Essentials build directly to the user's PC and verifies the pinned size, SHA-256, URL, and build options of all three executables.
 
 ## Python packages
 

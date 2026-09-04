@@ -1,5 +1,6 @@
 ﻿param(
     [string]$PythonPath = "",
+    [string]$PythonInstallerPath = "",
     [string]$OutputDirectory = "",
     [string]$FFmpegDirectory = "",
     [string]$AIRuntimeDirectory = "",
@@ -24,13 +25,19 @@ $finalOutputDir = if ($OutputDirectory) {
 $buildDir = Join-Path $projectDir "build"
 $distDir = Join-Path $projectDir "dist"
 $releaseDir = Join-Path $distDir "release"
-$python = if ($PythonPath) { $PythonPath } else { Join-Path $projectDir ".venv\Scripts\python.exe" }
 $ffmpegRoot = if ($FFmpegDirectory) {
     [System.IO.Path]::GetFullPath($FFmpegDirectory)
 } else {
     Join-Path $projectDir "third_party\ffmpeg-gpl"
 }
 $ffmpegDir = Join-Path $ffmpegRoot "bin"
+
+if (-not $CodeSigningCertificateThumbprint) {
+    throw "공개 배포 ZIP에는 Authenticode 코드 서명 인증서 thumbprint가 필요합니다. 로컬 검증은 build_executables.ps1을 사용하세요."
+}
+if ($PythonPath) {
+    throw "공개 배포 빌드는 임의 PythonPath를 허용하지 않습니다. 고정 해시의 공식 설치 파일은 -PythonInstallerPath로만 지정하세요."
+}
 
 $sourceCommit = (& git -C $projectDir rev-parse HEAD 2>$null | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or -not $sourceCommit) {
@@ -44,8 +51,85 @@ if ($trackedChanges) {
     throw "정확히 대응하는 소스를 기록하려면 추적 파일의 변경을 먼저 커밋해 주세요."
 }
 
-if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
-    throw "빌드용 Python을 찾을 수 없습니다: $python"
+$pythonInstallerUrl = "https://www.python.org/ftp/python/3.13.7/python-3.13.7-amd64.exe"
+$pythonInstallerSize = [int64]28808040
+$pythonInstallerSha256 = "B12E2E82461AC8E51FC43289050BC8EB937A32D84CE4D242E2C88258C37CF2BB"
+$pythonDownloads = Join-Path $buildDir "downloads"
+New-Item -ItemType Directory -Path $pythonDownloads -Force | Out-Null
+$pythonInstaller = if ($PythonInstallerPath) {
+    (Resolve-Path -LiteralPath $PythonInstallerPath -ErrorAction Stop).Path
+} else {
+    Join-Path $pythonDownloads "python-3.13.7-amd64.exe"
+}
+if (-not (Test-Path -LiteralPath $pythonInstaller -PathType Leaf)) {
+    Invoke-WebRequest -UseBasicParsing -Uri $pythonInstallerUrl -OutFile $pythonInstaller
+}
+$pythonInstallerItem = Get-Item -LiteralPath $pythonInstaller
+$pythonInstallerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $pythonInstaller).Hash
+if (
+    $pythonInstallerItem.Length -ne $pythonInstallerSize -or
+    $pythonInstallerHash -ne $pythonInstallerSha256
+) {
+    throw "공식 Python 3.13.7 설치 파일 무결성 검증에 실패했습니다."
+}
+$pythonInstallerSignature = Get-AuthenticodeSignature -LiteralPath $pythonInstaller
+if (
+    $pythonInstallerSignature.Status -ne "Valid" -or
+    -not $pythonInstallerSignature.SignerCertificate -or
+    $pythonInstallerSignature.SignerCertificate.Subject -notlike "CN=Python Software Foundation,*"
+) {
+    throw "공식 Python 3.13.7 설치 파일의 Authenticode 서명을 확인하지 못했습니다."
+}
+$bootstrapRoot = Join-Path $buildDir "cpython-3.13.7"
+if (Test-Path -LiteralPath $bootstrapRoot) {
+    Remove-Item -LiteralPath $bootstrapRoot -Recurse -Force
+}
+$pythonInstall = Start-Process `
+    -FilePath $pythonInstaller `
+    -ArgumentList @(
+        "/quiet",
+        "InstallAllUsers=0",
+        "TargetDir=$bootstrapRoot",
+        "Include_launcher=0",
+        "Include_test=0",
+        "Include_doc=0",
+        "Include_tcltk=0",
+        "Include_dev=0",
+        "Shortcuts=0",
+        "PrependPath=0",
+        "Include_pip=1"
+    ) `
+    -Wait `
+    -PassThru `
+    -WindowStyle Hidden
+if ($pythonInstall.ExitCode -ne 0) {
+    throw "검증된 Python 3.13.7 빌드 환경 설치에 실패했습니다: $($pythonInstall.ExitCode)"
+}
+$bootstrapPython = Join-Path $bootstrapRoot "python.exe"
+if (-not (Test-Path -LiteralPath $bootstrapPython -PathType Leaf)) {
+    throw "검증된 Python 3.13.7 실행 파일을 찾지 못했습니다."
+}
+$bootstrapVersion = (& $bootstrapPython -c "import platform; print(platform.python_version())" | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $bootstrapVersion -ne "3.13.7") {
+    throw "공개 배포 빌드는 Python 3.13.7이 필요합니다. 현재: $bootstrapVersion"
+}
+$releaseVenv = Join-Path $buildDir "release-venv"
+& $bootstrapPython -m venv --clear $releaseVenv
+if ($LASTEXITCODE -ne 0) {
+    throw "격리된 공개 배포 빌드 환경을 만들지 못했습니다."
+}
+$python = Join-Path $releaseVenv "Scripts\python.exe"
+$pipVersion = (& $python -m pip --version | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $pipVersion -notmatch '^pip 25\.2 ') {
+    throw "공식 Python 3.13.7에 포함된 pip 25.2를 확인하지 못했습니다: $pipVersion"
+}
+& $python -m pip install --disable-pip-version-check --require-hashes -r (Join-Path $projectDir "requirements.txt")
+if ($LASTEXITCODE -ne 0) {
+    throw "해시 잠금된 공개 배포 의존성을 설치하지 못했습니다."
+}
+& $python -m pip check
+if ($LASTEXITCODE -ne 0) {
+    throw "공개 배포 빌드 환경의 의존성 검증에 실패했습니다."
 }
 if (-not $AIRuntimeDirectory) {
     throw "라이선스 목록 생성을 위한 정리된 AI 런타임 원본을 -AIRuntimeDirectory로 지정해 주세요."
@@ -100,8 +184,19 @@ $requiredFfmpegFiles = @(
     "ffplay.exe"
 )
 if ($BundleRuntimeAssets) {
+    $expectedFfmpegExecutables = @{
+        "ffmpeg.exe" = @{ Size = [int64]102856192; Sha256 = "72A489ECCD008C2EC2C0A5856C5C75BC3D8BBFA90166C4566865C246445E6AA3" }
+        "ffplay.exe" = @{ Size = [int64]104339968; Sha256 = "39A9BA4F207FE9EECFB094E632998C29E1DA88A5D5D23D0B8B71A357A7C47EB5" }
+        "ffprobe.exe" = @{ Size = [int64]102652416; Sha256 = "19202B23C0043F15AD1B7BCE2344F406FD52BD6EFD8F995CE02E7392A1CEC52F" }
+    }
     foreach ($name in $requiredFfmpegFiles) {
-        if (-not (Test-Path -LiteralPath (Join-Path $ffmpegDir $name) -PathType Leaf)) {
+        $program = Join-Path $ffmpegDir $name
+        $expected = $expectedFfmpegExecutables[$name]
+        if (
+            -not (Test-Path -LiteralPath $program -PathType Leaf) -or
+            (Get-Item -LiteralPath $program).Length -ne $expected.Size -or
+            (Get-FileHash -LiteralPath $program -Algorithm SHA256).Hash -ne $expected.Sha256
+        ) {
             throw "GPL FFmpeg 구성 파일을 찾을 수 없습니다: $name"
         }
     }
@@ -233,10 +328,6 @@ if ($BundleRuntimeAssets) {
 $outputAppDir = Join-Path $outputDir "app"
 $outputDocsDir = Join-Path $outputDir "docs"
 New-Item -ItemType Directory -Path $outputAppDir, $outputDocsDir -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $appDir "avcass_worker.py") -Destination $outputAppDir -Force
-Copy-Item -LiteralPath (Join-Path $appDir "separation_quality.py") -Destination $outputAppDir -Force
-$expectedPackageFiles.Add("app/avcass_worker.py")
-$expectedPackageFiles.Add("app/separation_quality.py")
 $trackedDocs = @(& git -C $projectDir ls-files -- docs)
 if ($LASTEXITCODE -ne 0 -or $trackedDocs.Count -eq 0) {
     throw "배포 문서의 Git 추적 파일 목록을 읽지 못했습니다."
@@ -290,17 +381,26 @@ foreach ($relativePath in Get-ReleaseTreeFiles $pythonLicenseDir) {
 
 $appSignature = Get-AuthenticodeSignature -FilePath $portableExecutable
 $setupSignature = Get-AuthenticodeSignature -FilePath (Join-Path $outputDir "video-music-separator-setup.exe")
+$expectedSigner = $CodeSigningCertificateThumbprint.Replace(" ", "").ToUpperInvariant()
+foreach ($signature in @($appSignature, $setupSignature)) {
+    $actualSigner = if ($signature.SignerCertificate) {
+        $signature.SignerCertificate.Thumbprint.Replace(" ", "").ToUpperInvariant()
+    } else { "" }
+    if (
+        $signature.Status -ne "Valid" -or
+        $actualSigner -ne $expectedSigner -or
+        -not $signature.TimeStamperCertificate
+    ) {
+        throw "공개 배포 파일의 Authenticode 서명·서명자·타임스탬프 검증에 실패했습니다."
+    }
+}
 $signingStatus = @(
     "Video Music Separator code-signing status",
     "video-music-separator.exe: $($appSignature.Status)",
     "video-music-separator-setup.exe: $($setupSignature.Status)"
+    "Certificate thumbprint: $CodeSigningCertificateThumbprint",
+    "RFC 3161 timestamp: present"
 )
-if ($CodeSigningCertificateThumbprint) {
-    $signingStatus += "Certificate thumbprint: $CodeSigningCertificateThumbprint"
-} else {
-    $signingStatus += "UNSIGNED BUILD"
-    $signingStatus += "이 앱과 설치 파일에는 Authenticode 코드 서명이 적용되지 않았습니다. Windows에서 게시자 경고가 표시될 수 있습니다."
-}
 $signingStatus | Set-Content -LiteralPath (Join-Path $outputDocsDir "SIGNING_STATUS.txt") -Encoding UTF8
 $expectedPackageFiles.Add("docs/SIGNING_STATUS.txt")
 

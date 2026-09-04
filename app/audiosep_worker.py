@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import contextlib
 import json
 import os
 import shutil
 import sys
 import tempfile
+import wave
 from pathlib import Path
 
 
 AUDIOSEP_SAMPLE_RATE = 32000
 MINIMUM_CHUNK_SECONDS = 5.0
+MAX_MEDIA_DURATION_SECONDS = 10 * 60
 
 
 @contextlib.contextmanager
@@ -58,6 +61,16 @@ def require_file(path_text: str, label: str) -> Path:
     if not path.is_file():
         raise FileNotFoundError(f"{label}을 찾을 수 없습니다: {path}")
     return path
+
+
+def require_bounded_wav(path: Path) -> None:
+    try:
+        with wave.open(str(path), "rb") as source:
+            duration = source.getnframes() / source.getframerate()
+    except (OSError, wave.Error, ZeroDivisionError) as error:
+        raise ValueError("입력 WAV 헤더를 안전하게 읽지 못했습니다.") from error
+    if not 0 < duration <= MAX_MEDIA_DURATION_SECONDS:
+        raise ValueError("입력 오디오는 최대 10분까지 처리할 수 있습니다.")
 
 
 def centered_correlation(first, second) -> float:
@@ -120,11 +133,16 @@ def main() -> int:
         raise FileNotFoundError("AudioSep의 RoBERTa safetensors를 찾을 수 없습니다.")
     model_path = require_file(args.model, "AudioSep 상태 사전")
     input_path = require_file(args.input, "입력 오디오")
+    require_bounded_wav(input_path)
 
     os.chdir(runtime_root)
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     os.environ["HF_HUB_OFFLINE"] = "1"
-    ascii_runtime = Path(tempfile.gettempdir()) / "video-sound-separator-audiosep"
+    ascii_runtime_handle = tempfile.TemporaryDirectory(
+        prefix="video-music-separator-audiosep-"
+    )
+    atexit.register(ascii_runtime_handle.cleanup)
+    ascii_runtime = Path(ascii_runtime_handle.name)
     numba_cache = ascii_runtime / "numba-cache"
     numba_cache.mkdir(parents=True, exist_ok=True)
     os.environ["NUMBA_CACHE_DIR"] = str(numba_cache)
@@ -138,17 +156,7 @@ def main() -> int:
     librosa_copy = ascii_runtime / "librosa"
     if not librosa_source.is_dir():
         raise FileNotFoundError(f"librosa 패키지를 찾을 수 없습니다: {librosa_source}")
-    source_version = (librosa_source / "version.py").read_bytes()
-    marker = ascii_runtime / "librosa-version.py"
-    if (
-        not librosa_copy.is_dir()
-        or not marker.is_file()
-        or marker.read_bytes() != source_version
-    ):
-        if librosa_copy.exists():
-            shutil.rmtree(librosa_copy)
-        shutil.copytree(librosa_source, librosa_copy)
-        marker.write_bytes(source_version)
+    shutil.copytree(librosa_source, librosa_copy)
     sys.path.insert(0, str(ascii_runtime))
     sys.path.insert(0, str(repo))
 

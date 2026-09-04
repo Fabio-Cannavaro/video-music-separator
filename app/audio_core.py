@@ -1,14 +1,29 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
+
+from release_info import FFMPEG_EXECUTABLES
+from security_policy import (
+    ffmpeg_file_input,
+    ffmpeg_resource_args,
+    media_command_timeout,
+    require_local_media_file,
+    require_work_disk_space,
+    validate_media_duration,
+    validate_media_streams,
+)
 
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
@@ -17,6 +32,8 @@ PREVIEW_VIDEO_FILTER = (
     "scale=420:236:force_original_aspect_ratio=decrease,"
     "pad=420:236:(ow-iw)/2:(oh-ih)/2:black,fps=24"
 )
+MAX_COMMAND_OUTPUT_BYTES = 1024 * 1024
+COMMAND_POLL_SECONDS = 0.05
 
 
 def application_root() -> Path:
@@ -49,37 +66,125 @@ class SoundEvent:
 def require_program(name: str) -> str:
     bundled = application_root() / "ffmpeg" / f"{name}.exe"
     if bundled.is_file():
+        expected = FFMPEG_EXECUTABLES.get(bundled.name.lower())
+        if expected is None or bundled.stat().st_size != expected["size"]:
+            raise RuntimeError(f"{name} 실행 파일 무결성 검증에 실패했습니다.")
+        digest = hashlib.sha256()
+        with bundled.open("rb") as stream:
+            while chunk := stream.read(4 * 1024 * 1024):
+                digest.update(chunk)
+        if digest.hexdigest().lower() != expected["sha256"].lower():
+            raise RuntimeError(f"{name} 실행 파일 무결성 검증에 실패했습니다.")
         return str(bundled)
+    if getattr(sys, "frozen", False):
+        raise RuntimeError(f"검증된 {name} 실행 파일을 찾을 수 없습니다.")
     path = shutil.which(name)
     if not path:
         raise RuntimeError(f"{name} 실행 파일을 찾을 수 없습니다.")
     return path
 
 
-def run_command(command: Sequence[str]) -> None:
-    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    completed = subprocess.run(
-        list(command),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        creationflags=creationflags,
+def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+    if os.name == "nt":
+        system_root = Path(os.environ.get("SystemRoot", r"C:\Windows"))
+        taskkill = system_root / "System32" / "taskkill.exe"
+        subprocess.run(
+            [str(taskkill), "/PID", str(process.pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+        )
+    if process.poll() is None:
+        try:
+            process.kill()
+        except OSError:
+            pass
+    try:
+        process.wait(timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def _read_bounded_output(stream, size: int) -> str:
+    stream.seek(0)
+    return stream.read(min(size, MAX_COMMAND_OUTPUT_BYTES)).decode(
+        "utf-8", errors="replace"
     )
+
+
+def run_bounded_command(
+    command: Sequence[str],
+    *,
+    timeout: float,
+) -> subprocess.CompletedProcess[str]:
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+        process = subprocess.Popen(
+            list(command),
+            stdout=stdout_file,
+            stderr=stderr_file,
+            creationflags=creationflags,
+            start_new_session=os.name != "nt",
+        )
+        deadline = time.monotonic() + timeout
+        while process.poll() is None:
+            stdout_size = os.fstat(stdout_file.fileno()).st_size
+            stderr_size = os.fstat(stderr_file.fileno()).st_size
+            if stdout_size > MAX_COMMAND_OUTPUT_BYTES or stderr_size > MAX_COMMAND_OUTPUT_BYTES:
+                _terminate_process_tree(process)
+                raise RuntimeError(
+                    "외부 미디어 도구의 출력이 안전 제한을 초과해 중단됐습니다."
+                )
+            if time.monotonic() >= deadline:
+                _terminate_process_tree(process)
+                raise RuntimeError("외부 미디어 도구가 시간 제한을 초과해 중단됐습니다.")
+            time.sleep(COMMAND_POLL_SECONDS)
+        return_code = process.wait(timeout=10)
+        stdout_size = os.fstat(stdout_file.fileno()).st_size
+        stderr_size = os.fstat(stderr_file.fileno()).st_size
+        if stdout_size > MAX_COMMAND_OUTPUT_BYTES or stderr_size > MAX_COMMAND_OUTPUT_BYTES:
+            raise RuntimeError("외부 미디어 도구의 출력이 안전 제한을 초과했습니다.")
+        return subprocess.CompletedProcess(
+            list(command),
+            return_code,
+            _read_bounded_output(stdout_file, stdout_size),
+            _read_bounded_output(stderr_file, stderr_size),
+        )
+
+
+def run_command(command: Sequence[str], *, timeout: float = 4 * 60 * 60) -> None:
+    completed = run_bounded_command(command, timeout=timeout)
     if completed.returncode:
         detail = completed.stderr.strip() or completed.stdout.strip()
         raise RuntimeError(detail or f"명령 실행 실패: {' '.join(command)}")
 
 
+def ffmpeg_command_prefix(name: str) -> list[str]:
+    return [
+        require_program(name),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        *ffmpeg_resource_args(),
+    ]
+
+
 def extract_audio(video_path: Path, output_wav: Path) -> None:
+    video_path = require_local_media_file(video_path, "영상")
+    duration = probe_duration(video_path)
     output_wav.parent.mkdir(parents=True, exist_ok=True)
+    require_work_disk_space(video_path, output_wav.parent, duration)
     run_command(
         [
-            require_program("ffmpeg"),
+            *ffmpeg_command_prefix("ffmpeg"),
             "-y",
-            "-i",
-            str(video_path),
+            *ffmpeg_file_input(video_path, "영상"),
+            "-t",
+            f"{duration:.3f}",
             "-vn",
             "-ac",
             "2",
@@ -88,32 +193,33 @@ def extract_audio(video_path: Path, output_wav: Path) -> None:
             "-c:a",
             "pcm_s16le",
             str(output_wav),
-        ]
+        ],
+        timeout=media_command_timeout(duration),
     )
 
 
 def probe_duration(media_path: Path) -> float:
-    completed = subprocess.run(
+    media_path = require_local_media_file(media_path)
+    completed = run_bounded_command(
         [
-            require_program("ffprobe"),
-            "-v",
-            "error",
+            *ffmpeg_command_prefix("ffprobe"),
             "-show_entries",
-            "format=duration",
+            "format=duration:stream=codec_type,width,height,sample_rate,channels",
             "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            str(media_path),
+            "json",
+            *ffmpeg_file_input(media_path),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        timeout=120,
     )
     if completed.returncode:
         raise RuntimeError(completed.stderr.strip() or "미디어 길이를 읽지 못했습니다.")
-    return float(completed.stdout.strip())
+    try:
+        metadata = json.loads(completed.stdout)
+        duration = float(metadata["format"]["duration"])
+        validate_media_streams(metadata.get("streams"))
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise RuntimeError("미디어 스트림 정보가 올바르지 않습니다.") from error
+    return validate_media_duration(duration)
 
 
 def _preview_video_args() -> list[str]:
@@ -134,11 +240,11 @@ def _preview_video_args() -> list[str]:
 def create_preview_proxy(video_path: Path, output_path: Path) -> None:
     """Create a small A/V proxy used only by the in-app player."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    duration = probe_duration(video_path)
     command = [
-        require_program("ffmpeg"),
+        *ffmpeg_command_prefix("ffmpeg"),
         "-y",
-        "-i",
-        str(video_path),
+        *ffmpeg_file_input(video_path, "영상"),
         "-map",
         "0:v:0",
         "-map",
@@ -148,7 +254,7 @@ def create_preview_proxy(video_path: Path, output_path: Path) -> None:
     command.extend(
         ["-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
     )
-    run_command(command)
+    run_command(command, timeout=media_command_timeout(duration))
 
 
 def preview_proxy_is_current(video_path: Path, output_path: Path) -> bool:
@@ -167,13 +273,12 @@ def preview_proxy_is_current(video_path: Path, output_path: Path) -> bool:
 def create_preview_video(video_path: Path, audio_path: Path, output_path: Path) -> None:
     """Create a small video proxy paired with a chosen audio track."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    duration = probe_duration(video_path)
     command = [
-        require_program("ffmpeg"),
+        *ffmpeg_command_prefix("ffmpeg"),
         "-y",
-        "-i",
-        str(video_path),
-        "-i",
-        str(audio_path),
+        *ffmpeg_file_input(video_path, "영상"),
+        *ffmpeg_file_input(audio_path, "오디오"),
         "-map",
         "0:v:0",
         "-map",
@@ -183,7 +288,7 @@ def create_preview_video(video_path: Path, audio_path: Path, output_path: Path) 
     command.extend(
         ["-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
     )
-    run_command(command)
+    run_command(command, timeout=media_command_timeout(duration))
 
 
 def extract_event_clip(
@@ -193,19 +298,19 @@ def extract_event_clip(
     end: float,
     padding: float = 0.25,
 ) -> float:
+    source_wav = require_local_media_file(source_wav, "오디오")
     clip_start = max(0.0, start - padding)
     duration = max(0.05, end - clip_start + padding)
     output_wav.parent.mkdir(parents=True, exist_ok=True)
     run_command(
         [
-            require_program("ffmpeg"),
+            *ffmpeg_command_prefix("ffmpeg"),
             "-y",
             "-ss",
             f"{clip_start:.3f}",
             "-t",
             f"{duration:.3f}",
-            "-i",
-            str(source_wav),
+            *ffmpeg_file_input(source_wav, "오디오"),
             "-ac",
             "1",
             "-ar",
@@ -213,7 +318,8 @@ def extract_event_clip(
             "-c:a",
             "pcm_s16le",
             str(output_wav),
-        ]
+        ],
+        timeout=media_command_timeout(duration),
     )
     return clip_start
 
@@ -289,8 +395,13 @@ def load_manifest(path: Path) -> tuple[Path, list[SoundEvent]]:
     for item in data["events"]:
         item.setdefault("query", item.get("label", ""))
         item.setdefault("extracted_duration", 0.0)
-        events.append(SoundEvent(**item))
-    return Path(data["video_path"]), events
+        event = SoundEvent(**item)
+        if event.extracted_path:
+            event.extracted_path = str(
+                require_local_media_file(event.extracted_path, "분리 오디오")
+            )
+        events.append(event)
+    return require_local_media_file(data["video_path"], "영상"), events
 
 
 def build_mute_filter(events: Sequence[SoundEvent]) -> tuple[str, str]:
@@ -357,10 +468,15 @@ def _build_mixed_video_command(
     if missing:
         raise ValueError("AI 추출이 끝나지 않은 뮤트 항목: " + ", ".join(missing))
 
-    command = [require_program("ffmpeg"), "-y", "-i", str(video_path)]
+    video_path = require_local_media_file(video_path, "영상")
+    command = [
+        *ffmpeg_command_prefix("ffmpeg"),
+        "-y",
+        *ffmpeg_file_input(video_path, "영상"),
+    ]
     inputs = list(events) if partition else muted
     for event in inputs:
-        command.extend(["-i", event.extracted_path])
+        command.extend(ffmpeg_file_input(event.extracted_path, "분리 오디오"))
     if partition:
         filter_graph, output_label = build_partition_filter(events)
     else:
@@ -400,7 +516,7 @@ def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEven
         command = _build_mixed_video_command(
             video_path, temporary_output, events, preview=False
         )
-        run_command(command)
+        run_command(command, timeout=media_command_timeout(probe_duration(video_path)))
         temporary_output.rename(output_path)
     finally:
         temporary_output.unlink(missing_ok=True)

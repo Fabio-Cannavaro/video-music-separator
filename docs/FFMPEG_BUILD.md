@@ -5,24 +5,24 @@
 ## 설치 대상
 
 - 배포자: Gyan Doshi의 Windows용 FFmpeg 빌드
-- 채널: 최신 `release essentials`
-- 고정 진입 주소: <https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip>
-- 버전 정보: <https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.ver>
-- SHA-256: <https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256>
+- 버전: `9.0.1 release essentials`
+- 고정 아카이브: <https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.1-essentials_build.zip>
+- 아카이브 크기: `111253802` 바이트
+- 아카이브 SHA-256: `fec81ae03971d9dd4be3ebe02e263bd2ec1d789483f931bdba5f5715e65da2e9`
 - 배포 안내: <https://www.gyan.dev/ffmpeg/builds/>
 - FFmpeg 소스: <https://github.com/FFmpeg/FFmpeg>
 - 적용 라이선스: GNU General Public License version 3
 
-고정 진입 주소가 가리키는 실제 바이너리 버전과 체크섬은 Gyan의 새 릴리스에 따라 달라진다. 설치 프로그램은 `.ver`와 `.sha256`을 먼저 읽고, 다운로드 주소의 최종 리다이렉트가 정확히 `packages/ffmpeg-<버전>-essentials_build.zip`인지와 응답 크기를 확인한다. 다운로드 후에는 SHA-256을 대조하고 `ffmpeg`, `ffprobe`, `ffplay` 각각의 `-version` 출력에서 다음 조건을 모두 검증한다.
+버전·주소·크기·SHA-256은 이 저장소의 검토된 first-party 잠금값이다. 새 upstream 릴리스는 코드와 테스트의 잠금값을 명시적으로 갱신하기 전에는 자동 채택하지 않는다. 설치 프로그램은 다운로드 아카이브를 검증하고, 압축을 푼 `ffmpeg`, `ffprobe`, `ffplay` 각각의 고정 크기·SHA-256을 실행 전에 먼저 확인한다. 그 뒤 `-version` 출력에서 다음 조건을 모두 검증한다.
 
-- 세 실행 파일 모두 `.ver`에 적힌 정확한 버전이다.
+- 세 실행 파일 모두 정확히 9.0.1 버전이다.
 - Gyan의 `essentials_build` 식별자가 포함되어 있다.
 - `--enable-gpl`, `--enable-version3`, `--enable-static`이 포함되어 있다.
 - `--enable-nonfree`가 포함되어 있지 않다.
 
 검증을 통과한 세 실행 파일만 앱의 `ffmpeg/` 폴더에 설치한다. 정확히 설치된 버전, 최종 다운로드 URL, 파일 크기와 SHA-256은 앱 폴더의 `docs/runtime-assets.json`에 기록되며 앱의 `앱 정보·라이선스` 화면에서도 확인할 수 있다.
 
-개발·내부 오프라인 빌드에서는 `scripts/prepare_ffmpeg_gpl.ps1`가 같은 공식 최신 자산을 내려받아 동일한 검증을 수행한다.
+개발·내부 오프라인 빌드에서는 `scripts/prepare_ffmpeg_gpl.ps1`가 같은 고정 자산을 내려받아 동일한 검증을 수행한다.
 
 ## 배포 범위와 의무
 

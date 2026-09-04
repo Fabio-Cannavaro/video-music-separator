@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -40,12 +39,15 @@ from release_info import (
     CAVP_VERSION,
     FFMPEG_DOWNLOAD_URL,
     FFMPEG_ASSET_NAME,
-    FFMPEG_CHECKSUM_URL,
+    FFMPEG_EXECUTABLES,
     FFMPEG_SHA256,
     FFMPEG_SIZE,
     FFMPEG_SOURCE,
     FFMPEG_VERSION,
-    FFMPEG_VERSION_URL,
+)
+from runtime_integrity import (
+    record_runtime_integrity,
+    runtime_integrity_is_valid,
 )
 
 
@@ -112,12 +114,16 @@ FFMPEG_ARCHIVE = DownloadAsset(
     sha256=FFMPEG_SHA256,
     size=FFMPEG_SIZE,
     source=FFMPEG_SOURCE,
+    version=FFMPEG_VERSION,
 )
 FFMPEG_REQUIRED_FILES = (
     "ffmpeg.exe",
     "ffprobe.exe",
     "ffplay.exe",
 )
+MAX_ARCHIVE_ENTRIES = 250_000
+MAX_EXTRACTED_BYTES = 16 * 1024**3
+MAX_COMPRESSION_RATIO = 1_000
 
 ProgressCallback = Callable[[str, int, int], None]
 
@@ -357,8 +363,14 @@ def download_asset(
                     break
                 stream.write(chunk)
                 downloaded += len(chunk)
+                if downloaded > asset.size:
+                    raise RuntimeError(
+                        f"{asset.label} 다운로드가 고정된 크기를 초과했습니다."
+                    )
                 progress(asset.label, downloaded, asset.size)
     except BaseException:
+        if partial.is_file() and partial.stat().st_size > asset.size:
+            partial.unlink(missing_ok=True)
         progress(f"{asset.label} · 다운로드 중단", downloaded, asset.size)
         raise
 
@@ -398,61 +410,23 @@ def download_base_runtime_asset(
 
 
 def resolve_ffmpeg_archive() -> DownloadAsset:
-    def read_metadata(url: str) -> str:
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            payload = response.read(4097)
-        if len(payload) > 4096:
-            raise ValueError("metadata response is too large")
-        return payload.decode("utf-8").strip()
-
-    try:
-        digest = read_metadata(FFMPEG_CHECKSUM_URL).lower()
-        version = read_metadata(FFMPEG_VERSION_URL)
-        head_request = urllib.request.Request(
-            FFMPEG_DOWNLOAD_URL,
-            headers={"User-Agent": USER_AGENT},
-            method="HEAD",
-        )
-        with urllib.request.urlopen(head_request, timeout=60) as response:
-            url = response.geturl()
-            size = int(response.headers["Content-Length"])
-    except (
-        KeyError,
-        UnicodeDecodeError,
-        ValueError,
-        OSError,
-    ) as error:
-        raise RuntimeError(
-            "Gyan 공식 최신 FFmpeg GPL Essentials 정보를 확인하지 못했습니다."
-        ) from error
-    expected_url = f"{FFMPEG_SOURCE}packages/ffmpeg-{version}-essentials_build.zip"
-    if (
-        not re.fullmatch(r"[0-9a-f]{64}", digest)
-        or not re.fullmatch(r"\d+\.\d+(?:\.\d+)?", version)
-        or size <= 0
-        or url != expected_url
-    ):
-        raise RuntimeError("Gyan FFmpeg 배포 정보가 올바르지 않습니다.")
-    return DownloadAsset(
-        asset_id="ffmpeg",
-        label="FFmpeg GPL Essentials 빌드",
-        url=url,
-        relative_path=f".downloads/ffmpeg-{version}-essentials_build.zip",
-        sha256=digest,
-        size=size,
-        source=FFMPEG_SOURCE,
-        version=version,
-    )
+    """Return the first-party reviewed immutable FFmpeg lock."""
+    return FFMPEG_ARCHIVE
 
 
 def validate_ffmpeg(directory: Path, expected_version: str = "") -> bool:
     if any(not (directory / name).is_file() for name in FFMPEG_REQUIRED_FILES):
         return False
     for program in FFMPEG_REQUIRED_FILES:
+        expected = FFMPEG_EXECUTABLES[program]
+        candidate = directory / program
+        if candidate.stat().st_size != expected["size"]:
+            return False
+        if sha256_file(candidate).lower() != expected["sha256"].lower():
+            return False
         try:
             result = subprocess.run(
-                [str(directory / program), "-version"],
+                [str(candidate), "-version"],
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -492,6 +466,19 @@ def _extract_zip_with_progress(
     destination_resolved = destination.resolve()
     with zipfile.ZipFile(archive) as package:
         items = package.infolist()
+        if len(items) > MAX_ARCHIVE_ENTRIES:
+            raise RuntimeError("압축 파일의 항목 수가 안전 한도를 초과합니다.")
+        extracted_total = sum(item.file_size for item in items)
+        if extracted_total > MAX_EXTRACTED_BYTES:
+            raise RuntimeError("압축 해제 크기가 안전 한도를 초과합니다.")
+        for item in items:
+            if item.file_size > 0 and item.compress_size == 0:
+                raise RuntimeError("압축 파일 항목의 압축 비율이 올바르지 않습니다.")
+            if (
+                item.compress_size > 0
+                and item.file_size / item.compress_size > MAX_COMPRESSION_RATIO
+            ):
+                raise RuntimeError("압축 파일 항목의 압축 비율이 안전 한도를 초과합니다.")
         for item in items:
             target = (destination / item.filename).resolve()
             try:
@@ -500,7 +487,7 @@ def _extract_zip_with_progress(
                 raise RuntimeError(
                     f"압축 파일에 안전하지 않은 경로가 있습니다: {item.filename}"
                 ) from error
-        total = max(sum(item.file_size for item in items), 1)
+        total = max(extracted_total, 1)
         current = 0
         progress(label, 0, total)
         update_step = max(total // 500, 1)
@@ -537,9 +524,9 @@ def _copy_directory_with_progress(
 
 def install_ffmpeg(root: Path, progress: ProgressCallback) -> DownloadAsset | None:
     destination = root / "ffmpeg"
-    progress("FFmpeg · 최신 배포 정보 확인 중", 0, 1)
+    progress("FFmpeg · 고정 배포 정보 확인 중", 0, 1)
     ffmpeg_archive = resolve_ffmpeg_archive()
-    progress("FFmpeg · 최신 배포 정보 확인 중", 1, 1)
+    progress("FFmpeg · 고정 배포 정보 확인 중", 1, 1)
     progress("FFmpeg · 설치 검증 중", 0, 1)
     if validate_ffmpeg(destination, ffmpeg_archive.version):
         progress("FFmpeg · 설치 검증 중", 1, 1)
@@ -673,6 +660,7 @@ def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
             ),
             encoding="utf-8",
         )
+        record_runtime_integrity(root, progress)
 
     archive.unlink(missing_ok=True)
     for part_path in part_paths:
@@ -697,12 +685,13 @@ def base_runtime_is_current(root: Path) -> bool:
         data = json.loads(marker.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return False
-    return (
+    marker_current = (
         data.get("version") == BASE_RUNTIME_VERSION
         and data.get("archive") == BASE_RUNTIME_ARCHIVE
         and data.get("size") == BASE_RUNTIME_ARCHIVE_SIZE
         and str(data.get("sha256", "")).lower() == BASE_RUNTIME_ARCHIVE_SHA256.lower()
     )
+    return marker_current and runtime_integrity_is_valid(root)
 
 
 def verify_installation(
@@ -735,7 +724,7 @@ def verify_installation(
             problems.append(f"설치 또는 검증 필요: {target}")
         current_step += 1
         progress_callback(label, current_step, total_steps)
-    if not validate_ffmpeg(root / "ffmpeg"):
+    if not validate_ffmpeg(root / "ffmpeg", FFMPEG_VERSION):
         problems.append("설치 또는 검증 필요: FFmpeg GPL Essentials 빌드")
     current_step += 1
     progress_callback(label, current_step, total_steps)

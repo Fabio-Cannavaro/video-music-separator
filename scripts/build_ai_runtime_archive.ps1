@@ -77,11 +77,12 @@ try {
             [ordered]@{
                 path = $relativePath
                 size = (Get-Item -LiteralPath $copiedFile).Length
+                sha256 = Get-ReleaseFileSha256 $copiedFile
             }
         }
     )
     [ordered]@{
-        schema = 1
+        schema = 2
         files = $inventory
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $inventoryPath -Encoding UTF8
 

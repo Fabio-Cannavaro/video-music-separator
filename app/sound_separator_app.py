@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import queue
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -33,10 +33,21 @@ from audio_core import (
     probe_duration,
     preview_proxy_is_current,
     require_program,
-    run_command,
     save_manifest,
 )
 from release_info import APP_VERSION, RUNTIME_COMPONENTS
+from release_info import AVCASS_SHA256, AVCASS_SIZE, CAVP_SHA256, CAVP_SIZE
+from runtime_integrity import verify_runtime_integrity_once
+from security_policy import (
+    OwnedWorkDirectory,
+    allocate_owned_work_directory,
+    cleanup_owned_work_directory,
+    ensure_owned_work_directory,
+    ffmpeg_file_input,
+    ffmpeg_resource_args,
+    require_local_media_file,
+    require_work_disk_space,
+)
 
 
 APP_TITLE = "영상 음악 분리·제거기"
@@ -417,7 +428,7 @@ class PreviewFrameDecoder:
     """Decode video away from Tk's UI thread and retain only the newest frame."""
 
     def __init__(self, source: Path, offset: float, fps: float) -> None:
-        self.source = source
+        self.source = require_local_media_file(source)
         self.position = max(0.0, offset)
         self.fps = normalized_preview_fps(fps)
         self._requests: queue.Queue[tuple[float, bool] | None] = queue.Queue(
@@ -549,7 +560,7 @@ def worker_progress_key(
 def worker_script_path(name: str) -> Path:
     """Locate a worker in the organized source or packaged application folder."""
     if getattr(sys, "frozen", False):
-        return application_root() / "app" / name
+        return Path(sys._MEIPASS) / "app" / name
     return Path(__file__).resolve().parent / name
 
 
@@ -598,9 +609,8 @@ def load_legal_information(root: Path, language: str = "ko") -> str:
                 version = "공식 영상 기반 체크포인트 (별도 버전 표기 없음)"
             elif component["name"] == "CAVP":
                 version = version.replace("Diff-Foley commit", "Diff-Foley 커밋")
-            elif component["name"] == "FFmpeg" and not record:
-                version = "Gyan 최신 FFmpeg GPL Essentials 정적 빌드"
-                sha256 = "설치 중 Gyan 공식 체크섬에서 확인"
+            elif component["name"] == "FFmpeg":
+                version = f"Gyan FFmpeg {version} GPL Essentials 정적 빌드"
         if component["name"] == "FFmpeg" and record:
             version = record.get("ffmpeg_version", version)
             ffmpeg_record = record.get("ffmpeg", {})
@@ -670,41 +680,131 @@ def load_legal_display(root: Path, language: str = "ko") -> str:
 
 
 def run_worker_command(
-    command: Sequence[str], on_output: Callable[[str], None]
+    command: Sequence[str],
+    on_output: Callable[[str], None],
+    *,
+    timeout: float = 24 * 60 * 60,
+    idle_timeout: float = 30 * 60,
 ) -> None:
+    max_line_characters = 16 * 1024
+    output_limit = object()
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     environment = os.environ.copy()
     environment["PYTHONIOENCODING"] = "utf-8"
-    process = subprocess.Popen(
-        list(command),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        creationflags=creationflags,
-        env=environment,
-    )
-    output: list[str] = []
-    if process.stdout is not None:
+    pycache = tempfile.TemporaryDirectory(prefix="video-music-separator-pycache-")
+    environment["PYTHONPYCACHEPREFIX"] = pycache.name
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    process: subprocess.Popen[str] | None = None
+
+    def stop_process() -> None:
+        if process is None or process.poll() is not None:
+            return
         try:
-            for raw_line in process.stdout:
-                line = raw_line.strip()
-                if not line:
-                    continue
-                output.append(line)
-                on_output(line)
+            if os.name == "nt":
+                taskkill = (
+                    Path(os.environ.get("SystemRoot", r"C:\Windows"))
+                    / "System32"
+                    / "taskkill.exe"
+                )
+                subprocess.run(
+                    [str(taskkill), "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                )
+            else:
+                os.killpg(process.pid, 15)
         finally:
-            process.stdout.close()
-    return_code = process.wait()
-    if return_code:
-        detail = "\n".join(output[-40:])
-        raise RuntimeError(detail or f"분리 작업 실행 실패: {' '.join(command)}")
+            if process.poll() is None:
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+            try:
+                process.wait(timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+
+    try:
+        process = subprocess.Popen(
+            list(command),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            creationflags=creationflags,
+            env=environment,
+            start_new_session=os.name != "nt",
+        )
+        output: list[str] = []
+        lines: queue.Queue[object] = queue.Queue(maxsize=128)
+
+        def read_output() -> None:
+            assert process is not None
+            if process.stdout is None:
+                lines.put(None)
+                return
+            try:
+                while True:
+                    raw_line = process.stdout.readline(max_line_characters + 1)
+                    if raw_line == "":
+                        break
+                    if len(raw_line) > max_line_characters:
+                        lines.put(output_limit)
+                        return
+                    lines.put(raw_line)
+            finally:
+                process.stdout.close()
+                lines.put(None)
+
+        threading.Thread(target=read_output, daemon=True).start()
+        started = time.monotonic()
+        last_output = started
+        stream_closed = False
+        while not stream_closed:
+            now = time.monotonic()
+            if now - started > timeout or now - last_output > idle_timeout:
+                stop_process()
+                raise RuntimeError("분리 작업이 시간 제한을 초과해 안전하게 중단됐습니다.")
+            try:
+                raw_line = lines.get(timeout=1.0)
+            except queue.Empty:
+                if process.poll() is not None:
+                    stream_closed = True
+                continue
+            if raw_line is output_limit:
+                stop_process()
+                raise RuntimeError("분리 작업 로그 한 줄이 안전 제한을 초과해 중단됐습니다.")
+            if raw_line is None:
+                stream_closed = True
+                continue
+            last_output = time.monotonic()
+            line = str(raw_line).strip()
+            if not line:
+                continue
+            output.append(line)
+            del output[:-40]
+            on_output(line)
+        return_code = process.wait(timeout=30)
+        if return_code:
+            detail = "\n".join(output[-40:])
+            raise RuntimeError(detail or f"분리 작업 실행 실패: {' '.join(command)}")
+    finally:
+        stop_process()
+        pycache.cleanup()
 
 
 def build_ffplay_command(media_path: Path, volume: float, offset: float = 0.0) -> list[str]:
+    media_path = require_local_media_file(media_path)
     command = [
         require_program("ffplay"),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        *ffmpeg_resource_args(),
         "-nodisp",
         "-autoexit",
         "-vn",
@@ -714,7 +814,7 @@ def build_ffplay_command(media_path: Path, volume: float, offset: float = 0.0) -
     ]
     if offset > 0.05:
         command.extend(["-ss", f"{offset:.3f}"])
-    command.append(str(media_path))
+    command.extend(ffmpeg_file_input(media_path))
     return command
 
 
@@ -830,6 +930,24 @@ def avcass_runtime_paths(
     )
 
 
+def verify_avcass_runtime(install_root: Path, checkpoint: Path, cavp_checkpoint: Path) -> None:
+    if getattr(sys, "frozen", False):
+        verify_runtime_integrity_once(install_root)
+    for path, expected_size, expected_hash, label in (
+        (checkpoint, AVCASS_SIZE, AVCASS_SHA256, "AV-CASS"),
+        (cavp_checkpoint, CAVP_SIZE, CAVP_SHA256, "CAVP"),
+    ):
+        path = require_local_media_file(path, f"{label} 모델")
+        if path.stat().st_size != expected_size:
+            raise RuntimeError(f"{label} 모델 무결성 검증에 실패했습니다.")
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            while chunk := stream.read(4 * 1024 * 1024):
+                digest.update(chunk)
+        if digest.hexdigest().lower() != expected_hash.lower():
+            raise RuntimeError(f"{label} 모델 무결성 검증에 실패했습니다.")
+
+
 def muted_copy_output_path(video_path: Path, events: list[SoundEvent]) -> Path:
     muted_ids = {event.event_id for event in events if event.muted}
     suffix = {
@@ -854,18 +972,6 @@ def available_output_path(preferred_path: Path) -> Path:
         serial += 1
 
 
-def cleanup_work_directory(video_path: Path, work_dir: Path) -> bool:
-    expected = video_path.parent / f"{video_path.stem}_sound_work"
-    if work_dir.resolve() != expected.resolve():
-        raise RuntimeError(f"예상한 작업 폴더가 아니어서 삭제하지 않았습니다: {work_dir}")
-    if not work_dir.exists():
-        return False
-    if not work_dir.is_dir() or work_dir.is_symlink():
-        raise RuntimeError(f"안전하게 삭제할 수 없는 작업 폴더입니다: {work_dir}")
-    shutil.rmtree(work_dir)
-    return True
-
-
 class SoundSeparatorApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
@@ -874,6 +980,7 @@ class SoundSeparatorApp(tk.Tk):
         self.geometry("1120x860")
         self.minsize(920, 740)
         self.video_path: Path | None = None
+        self.work_handle: OwnedWorkDirectory | None = None
         self.work_dir: Path | None = None
         self.result_dir: Path | None = None
         self.source_wav: Path | None = None
@@ -1283,12 +1390,17 @@ class SoundSeparatorApp(tk.Tk):
         )
         if not selected:
             return
-        path = Path(selected)
+        try:
+            path = require_local_media_file(selected, "영상")
+        except (OSError, ValueError) as error:
+            messagebox.showerror(self._t("app_title"), str(error))
+            return
         if path.suffix.lower() not in VIDEO_EXTENSIONS:
             messagebox.showerror(self._t("app_title"), self._t("unsupported_video"))
             return
         self.video_path = path
-        self.work_dir = path.parent / f"{path.stem}_sound_work"
+        self.work_handle = allocate_owned_work_directory(path)
+        self.work_dir = self.work_handle.path
         self.result_dir = model_result_directory(
             self.work_dir, self._active_result_key()
         )
@@ -1301,6 +1413,11 @@ class SoundSeparatorApp(tk.Tk):
         self.events.clear()
         self.refresh_rows()
         self._set_status("status_video_opened")
+
+    def _ensure_work_dir(self) -> Path:
+        if self.work_handle is None:
+            raise RuntimeError("이번 실행이 소유한 작업 폴더 정보가 없습니다.")
+        return ensure_owned_work_directory(self.work_handle)
 
     def _bandit_is_available(self) -> bool:
         return all(path.exists() for path in bandit_runtime_paths(self.portable_runtime))
@@ -1487,6 +1604,9 @@ class SoundSeparatorApp(tk.Tk):
         model_label = self._active_result_label()
 
         def operation() -> None:
+            self._ensure_work_dir()
+            video_duration = probe_duration(video_path)
+            require_work_disk_space(video_path, work_dir.parent, video_duration)
             if not self.source_ready:
                 self._show_progress("status_prepare_audio", model=model_label)
                 extract_audio(video_path, source_wav)
@@ -1570,6 +1690,9 @@ class SoundSeparatorApp(tk.Tk):
         python_path, repo, checkpoint, runtime_root = runtime_paths
 
         def operation() -> None:
+            self._ensure_work_dir()
+            video_duration = probe_duration(video_path)
+            require_work_disk_space(video_path, work_dir.parent, video_duration)
             if not self.source_ready:
                 self._show_progress("status_prepare_audio", model="AudioSep")
                 extract_audio(video_path, source_wav)
@@ -1615,7 +1738,12 @@ class SoundSeparatorApp(tk.Tk):
                 "--jobs-json",
                 str(jobs_path),
             ]
-            run_command(command)
+            run_worker_command(
+                command,
+                lambda line: self._show_progress(
+                    "status_audiosep_compare_running", model="AudioSep"
+                ),
+            )
 
             completed_results: dict[str, list[SoundEvent]] = {}
             for result_key, result_dir, _label, query, music_path, non_music_path in result_specs:
@@ -1890,6 +2018,7 @@ class SoundSeparatorApp(tk.Tk):
             video_path = self.video_path
 
             def operation() -> None:
+                self._ensure_work_dir()
                 create_preview_proxy(video_path, target)
                 self.after(0, lambda: self._start_audio_preview(target, "original"))
                 self.after(0, lambda: self._set_status("status_playing_original"))
@@ -1910,6 +2039,7 @@ class SoundSeparatorApp(tk.Tk):
         result_key = self._active_result_key()
 
         def operation() -> None:
+            self._ensure_work_dir()
             create_muted_preview_video(video_path, target, events)
             self.model_preview_dirty[result_key] = False
             self.after(0, lambda: self._start_audio_preview(target, "original"))
@@ -2106,6 +2236,7 @@ class SoundSeparatorApp(tk.Tk):
                 cavp_checkpoint,
                 runtime_root,
             ) = runtime_paths
+            verify_avcass_runtime(application_root(), checkpoint, cavp_checkpoint)
             command = [
                 str(python_path),
                 str(worker_script_path("avcass_worker.py")),
@@ -2243,6 +2374,10 @@ class SoundSeparatorApp(tk.Tk):
             return
         video_path = self.video_path
         work_dir = self.work_dir
+        work_handle = self.work_handle
+        if work_handle is None:
+            messagebox.showerror(self._t("app_title"), "작업 폴더 소유 정보를 찾을 수 없습니다.")
+            return
         events = list(self.events)
         target = available_output_path(muted_copy_output_path(video_path, events))
         self.stop_preview()
@@ -2254,7 +2389,7 @@ class SoundSeparatorApp(tk.Tk):
 
             try:
                 if work_dir is not None:
-                    cleanup_work_directory(video_path, work_dir)
+                    cleanup_owned_work_directory(work_handle)
             except (OSError, RuntimeError) as exc:
                 message = self._t(
                     "save_cleanup_warning",
@@ -2276,10 +2411,13 @@ class SoundSeparatorApp(tk.Tk):
 
             def finish() -> None:
                 if self.video_path == video_path and self.work_dir == work_dir:
+                    self.work_handle = allocate_owned_work_directory(video_path)
+                    self.work_dir = self.work_handle.path
                     self.events.clear()
                     self.result_dir = model_result_directory(
-                        work_dir, self._active_result_key()
+                        self.work_dir, self._active_result_key()
                     )
+                    self.source_wav = self.work_dir / "source_44k.wav"
                     self.model_results.clear()
                     self.model_preview_dirty.clear()
                     self.source_ready = False
@@ -2325,6 +2463,7 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
             deps = avcass_root / "deps"
             checkpoint = avcass_root / "model" / "av_cass_checkpoint.pt"
             cavp_checkpoint = avcass_root / "model" / "cavp" / "cavp_epoch66.ckpt"
+            verify_avcass_runtime(application_root(), checkpoint, cavp_checkpoint)
             stem_dir = test_root / "stems"
             stem_dir.mkdir(parents=True, exist_ok=True)
             music_path = stem_dir / "music.wav"

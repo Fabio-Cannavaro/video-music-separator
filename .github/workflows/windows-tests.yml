@@ -15,26 +15,35 @@ concurrency:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: windows-2025
     timeout-minutes: 15
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: "3.13"
+          python-version: "3.13.7"
           cache: pip
 
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install --disable-pip-version-check --require-hashes -r requirements.txt
 
       - name: Install FFmpeg for integration tests
-        run: choco install ffmpeg --yes --no-progress
+        shell: pwsh
+        run: |
+          $url = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.1-essentials_build.zip"
+          $archive = Join-Path $env:RUNNER_TEMP "ffmpeg-9.0.1-essentials_build.zip"
+          $destination = Join-Path $env:RUNNER_TEMP "ffmpeg-9.0.1"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          if ((Get-Item -LiteralPath $archive).Length -ne 111253802) { throw "FFmpeg size mismatch" }
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne "FEC81AE03971D9DD4BE3EBE02E263BD2EC1D789483F931BDBA5F5715E65DA2E9") { throw "FFmpeg SHA-256 mismatch" }
+          Expand-Archive -LiteralPath $archive -DestinationPath $destination
+          $bin = (Get-ChildItem -LiteralPath $destination -Directory | Select-Object -First 1).FullName + "\bin"
+          $bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Run tests
         run: python -m unittest discover -s tests -t . -v

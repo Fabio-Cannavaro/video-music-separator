@@ -47,7 +47,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertNotIn("GitHub CLI가 처리", privacy)
         self.assertNotIn("handled by GitHub CLI", privacy_en)
 
-    def test_builds_generate_checksums_and_support_optional_code_signing(self) -> None:
+    def test_public_build_requires_signing_and_locked_isolated_dependencies(self) -> None:
         installer_build = (SCRIPTS / "build_runtime_installer.ps1").read_text(encoding="utf-8")
         portable_build = (SCRIPTS / "build_portable.ps1").read_text(encoding="utf-8")
         executable_build = (SCRIPTS / "build_executables.ps1").read_text(encoding="utf-8")
@@ -61,6 +61,17 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("SHA256SUMS.txt", portable_build)
         self.assertIn("$archivePath.sha256", portable_build)
         self.assertIn("SIGNING_STATUS.txt", portable_build)
+        self.assertIn("if (-not $CodeSigningCertificateThumbprint)", portable_build)
+        self.assertIn("TimeStamperCertificate", portable_build)
+        self.assertIn("3.13.7", portable_build)
+        self.assertIn("python-3.13.7-amd64.exe", portable_build)
+        self.assertIn("B12E2E82461AC8E51FC43289050BC8EB937A32D84CE4D242E2C88258C37CF2BB", portable_build)
+        self.assertIn("Python Software Foundation", portable_build)
+        self.assertIn("pip 25\\.2", portable_build)
+        self.assertIn("if ($PythonPath)", portable_build)
+        self.assertIn("--require-hashes", portable_build)
+        self.assertIn("release-venv", portable_build)
+        self.assertNotIn("UNSIGNED BUILD", portable_build)
         self.assertIn("git -C $projectDir rev-parse HEAD", portable_build)
         self.assertIn("git -C $projectDir status --porcelain --untracked-files=normal", portable_build)
         self.assertIn('Join-Path $outputDocsDir "SOURCE_COMMIT.txt"', portable_build)
@@ -79,6 +90,8 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertNotIn('Copy-Item -Path (Join-Path $docsDir "*")', portable_build)
         self.assertNotIn('Copy-Item -Path (Join-Path $ffmpegDir "*")', portable_build)
         self.assertIn('--onefile', executable_build)
+        self.assertIn("avcass_worker.py');app", executable_build)
+        self.assertIn("separation_quality.py');app", executable_build)
         self.assertIn('Join-Path $appDir "sound_separator_app.py"', executable_build)
 
         runtime_build = (SCRIPTS / "build_ai_runtime_archive.ps1").read_text(encoding="utf-8")
@@ -88,6 +101,21 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("Copy-AllowlistedTree", runtime_build)
         self.assertIn("New-ReleaseZipFromDirectory", runtime_build)
         self.assertNotIn("tar.exe -a -c -f", runtime_build)
+        self.assertIn("sha256 = Get-ReleaseFileSha256", runtime_build)
+
+    def test_ci_dependencies_and_actions_are_immutable(self) -> None:
+        windows = (ROOT / ".github" / "workflows" / "windows-tests.yml").read_text(encoding="utf-8")
+        safety = (ROOT / ".github" / "workflows" / "repository-safety.yml").read_text(encoding="utf-8")
+        for workflow in (windows, safety):
+            for line in workflow.splitlines():
+                if "uses:" in line:
+                    reference = line.split("@", 1)[1].split()[0]
+                    self.assertRegex(reference, r"^[0-9a-f]{40}$")
+        self.assertIn("--require-hashes", windows)
+        self.assertNotIn("pip install --upgrade pip", windows)
+        self.assertNotIn("choco install ffmpeg", windows)
+        self.assertIn("ffmpeg-9.0.1-essentials_build.zip", windows)
+        self.assertIn("FEC81AE03971D9DD4BE3EBE02E263BD2", windows)
 
     def test_public_build_excludes_legacy_workers(self) -> None:
         portable_build = (SCRIPTS / "build_portable.ps1").read_text(encoding="utf-8")
@@ -97,6 +125,10 @@ class DistributionDocumentTests(unittest.TestCase):
         )
         self.assertNotIn(
             'Copy-Item -LiteralPath (Join-Path $projectDir "bandit_worker.py")',
+            portable_build,
+        )
+        self.assertNotIn(
+            'Copy-Item -LiteralPath (Join-Path $appDir "avcass_worker.py")',
             portable_build,
         )
 
@@ -113,7 +145,9 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("약 5.9GB", readme)
         self.assertIn("약 15GB", readme)
         self.assertIn("video-music-separator-setup.exe", readme)
-        self.assertIn("미서명 빌드", readme)
+        self.assertIn("GitHub Draft로 전환", readme)
+        self.assertIn("일반 다운로드 가능한 Windows 설치 ZIP은 없다", readme)
+        self.assertIn("유효한 Authenticode 서명과 타임스탬프", readme)
         self.assertIn("https://www.youtube.com/@ms-0606", readme)
 
         korean = lines.index("## 한국어")
@@ -135,16 +169,10 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("#### 6. 설치 후 폴더 사용과 이동", lines)
         self.assertIn("#### 2. Download the Windows Installer", lines)
         self.assertIn("#### 6. Using and Moving the Installed Folder", lines)
-        self.assertIn(
-            "https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.3",
-            readme,
-        )
+        self.assertNotIn("releases/tag/installer-v0.2.3", readme)
         self.assertIn("Source code (zip)", readme)
-        self.assertIn("video-music-separator-0.2.3-windows-x64.zip.sha256", readme)
-        self.assertIn("설치 ZIP 하나만 내려받으면 된다", readme)
-        self.assertIn("only the installer ZIP is required", readme)
-        self.assertIn("선택 사항(무결성 확인용)", readme)
-        self.assertIn("Optional integrity check", readme)
+        self.assertIn("선택 사항인 `.sha256`", readme)
+        self.assertIn("optional `.sha256`", readme)
         self.assertIn("빌드·배포 스크립트, 문서와 라이선스 전문", readme)
         self.assertIn("build and distribution scripts, documentation, and full license texts", readme)
         self.assertNotIn("## 이동용 폴더", readme)

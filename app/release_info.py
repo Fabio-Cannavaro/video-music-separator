@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 
-APP_VERSION = "0.2.3"
+APP_VERSION = "0.2.4"
 
 BASE_RUNTIME_VERSION = "0.2.0"
 BASE_RUNTIME_ARCHIVE = "video-music-separator-ai-runtime-0.2.0.zip"
 BASE_RUNTIME_ARCHIVE_SIZE = 3_764_354_481
 BASE_RUNTIME_ARCHIVE_SHA256 = "70e521a80ce24f530238ef95973130f8f17b6f8c8254a94822109dcb4adb995f"
+BASE_RUNTIME_TREE_SHA256 = "9713018be8142b9cd1aac4d2aef6c3ea4bc60427e21c4d21f4192f6efa4d89d6"
+BASE_RUNTIME_TREE_FILES = 32_833
+BASE_RUNTIME_TREE_BYTES = 8_182_758_900
 BASE_RUNTIME_SOURCE = "https://github.com/Fabio-Cannavaro/video-music-separator"
 BASE_RUNTIME_RELEASE_TAG = "runtime-v0.2.0"
 BASE_RUNTIME_RELEASE_BASE_URL = (
@@ -45,14 +48,26 @@ CAVP_DOWNLOAD_URL = (
     "diff_foley_ckpt/cavp_epoch66.ckpt?download=true"
 )
 
-FFMPEG_VERSION = "Gyan latest FFmpeg release essentials GPLv3 static build"
-FFMPEG_SHA256 = "Resolved from Gyan's official checksum during installation"
-FFMPEG_SIZE = 0
+FFMPEG_VERSION = "9.0.1"
+FFMPEG_SHA256 = "fec81ae03971d9dd4be3ebe02e263bd2ec1d789483f931bdba5f5715e65da2e9"
+FFMPEG_SIZE = 111_253_802
 FFMPEG_SOURCE = "https://www.gyan.dev/ffmpeg/builds/"
-FFMPEG_ASSET_NAME = "ffmpeg-release-essentials.zip"
-FFMPEG_DOWNLOAD_URL = FFMPEG_SOURCE + FFMPEG_ASSET_NAME
-FFMPEG_CHECKSUM_URL = FFMPEG_DOWNLOAD_URL + ".sha256"
-FFMPEG_VERSION_URL = FFMPEG_DOWNLOAD_URL + ".ver"
+FFMPEG_ASSET_NAME = "ffmpeg-9.0.1-essentials_build.zip"
+FFMPEG_DOWNLOAD_URL = FFMPEG_SOURCE + "packages/" + FFMPEG_ASSET_NAME
+FFMPEG_EXECUTABLES = {
+    "ffmpeg.exe": {
+        "size": 102_856_192,
+        "sha256": "72a489eccd008c2ec2c0a5856c5c75bc3d8bbfa90166c4566865c246445e6aa3",
+    },
+    "ffplay.exe": {
+        "size": 104_339_968,
+        "sha256": "39a9ba4f207fe9eecfb094e632998c29e1da88a5d5d23d0b8b71a357a7c47eb5",
+    },
+    "ffprobe.exe": {
+        "size": 102_652_416,
+        "sha256": "19202b23c0043f15ad1b7bce2344f406fd52bd6efd8f995ce02e7392a1cec52f",
+    },
+}
 
 
 RUNTIME_COMPONENTS = (

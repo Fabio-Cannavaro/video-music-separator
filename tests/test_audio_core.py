@@ -24,6 +24,7 @@ from audio_core import (
     load_manifest,
     merge_window_detections,
     preview_proxy_is_current,
+    probe_duration,
     save_manifest,
     export_video,
     run_command,
@@ -32,33 +33,42 @@ from audio_core import (
 
 
 class RunCommandTests(unittest.TestCase):
-    @patch("audio_core.subprocess.run")
-    def test_hides_child_console_on_windows(self, mocked_run) -> None:
-        mocked_run.return_value.returncode = 0
+    @patch("audio_core.run_bounded_command")
+    def test_uses_bounded_capture(self, mocked_run) -> None:
+        mocked_run.return_value = subprocess.CompletedProcess(
+            ["worker.exe", "--test"], 0, "", ""
+        )
         run_command(["worker.exe", "--test"])
-        self.assertEqual(
-            mocked_run.call_args.kwargs["creationflags"],
-            getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        mocked_run.assert_called_once_with(
+            ["worker.exe", "--test"], timeout=4 * 60 * 60
         )
 
     @patch("audio_core.run_command")
+    @patch("audio_core.require_work_disk_space")
+    @patch("audio_core.probe_duration", return_value=1.0)
     @patch("audio_core.require_program", return_value="ffmpeg.exe")
     def test_extracts_model_input_as_44100hz_pcm16(
-        self, _mocked_require, mocked_command
+        self, _mocked_require, _mocked_duration, _mocked_disk, mocked_command
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            extract_audio(Path("clip.mp4"), Path(temp_dir) / "work" / "source.wav")
+            source = Path(temp_dir) / "clip.mp4"
+            source.write_bytes(b"video")
+            extract_audio(source, Path(temp_dir) / "work" / "source.wav")
         command = mocked_command.call_args.args[0]
         self.assertIn("44100", command)
         self.assertIn("pcm_s16le", command)
         self.assertNotIn("pcm_s24le", command)
 
     @patch("audio_core.run_command")
+    @patch("audio_core.probe_duration", return_value=1.0)
     @patch("audio_core.require_program", return_value="ffmpeg.exe")
     def test_preview_proxy_is_small_fixed_rate_h264(
-        self, _mocked_require, mocked_command
+        self, _mocked_require, _mocked_duration, mocked_command
     ) -> None:
-        create_preview_proxy(Path("source.mp4"), Path("preview.mkv"))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.mp4"
+            source.write_bytes(b"video")
+            create_preview_proxy(source, Path(temporary) / "preview.mkv")
         command = mocked_command.call_args.args[0]
         video_filter = command[command.index("-vf") + 1]
         self.assertIn(
@@ -68,38 +78,48 @@ class RunCommandTests(unittest.TestCase):
         self.assertEqual(command[command.index("-c:v") + 1], "libx264")
 
     @patch("audio_core.run_command")
+    @patch("audio_core.probe_duration", return_value=1.0)
     @patch("audio_core.require_program", return_value="ffmpeg.exe")
     def test_final_export_copies_video_but_muted_preview_transcodes_it(
-        self, _mocked_require, mocked_command
+        self, _mocked_require, _mocked_duration, mocked_command
     ) -> None:
-        event = SoundEvent(
-            "music", "Music", 0.0, 1.0, 1.0, muted=True, extracted_path="music.wav"
-        )
         with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.mp4"
+            stem = Path(temporary) / "music.wav"
+            source.write_bytes(b"video")
+            stem.write_bytes(b"audio")
+            event = SoundEvent(
+                "music", "Music", 0.0, 1.0, 1.0,
+                muted=True, extracted_path=str(stem)
+            )
             saved = Path(temporary) / "saved.mp4"
 
-            def create_output(command) -> None:
+            def create_output(command, **_kwargs) -> None:
                 Path(command[-1]).write_bytes(b"saved")
 
             mocked_command.side_effect = create_output
-            export_video(Path("source.mp4"), saved, [event])
+            export_video(source, saved, [event])
             final_command = mocked_command.call_args.args[0]
             self.assertIn("-y", final_command)
+            self.assertEqual(final_command.count("-protocol_whitelist"), 2)
+            for index, value in enumerate(final_command):
+                if value == "-i":
+                    self.assertEqual(final_command[index - 4], "-protocol_whitelist")
+                    self.assertEqual(final_command[index - 3], "file")
+                    self.assertEqual(final_command[index - 2], "-format_whitelist")
             self.assertEqual(
                 final_command[final_command.index("-c:v") + 1], "copy"
             )
             self.assertEqual(saved.read_bytes(), b"saved")
             self.assertEqual(list(saved.parent.glob(".*.tmp.mp4")), [])
 
-        mocked_command.side_effect = None
-        create_muted_preview_video(
-            Path("source.mp4"), Path("preview.mkv"), [event]
-        )
-        preview_command = mocked_command.call_args.args[0]
-        self.assertIn("-y", preview_command)
-        self.assertEqual(
-            preview_command[preview_command.index("-c:v") + 1], "libx264"
-        )
+            mocked_command.side_effect = None
+            create_muted_preview_video(source, Path(temporary) / "preview.mkv", [event])
+            preview_command = mocked_command.call_args.args[0]
+            self.assertIn("-y", preview_command)
+            self.assertEqual(
+                preview_command[preview_command.index("-c:v") + 1], "libx264"
+            )
 
     def test_preview_cache_requires_nonempty_proxy_newer_than_source(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -146,17 +166,21 @@ class ManifestTests(unittest.TestCase):
         event = SoundEvent("sound-0001", "발자국 (Footsteps)", 1.2, 2.4, 0.8, query="Footsteps", muted=True)
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "sounds.json"
-            save_manifest(path, Path("clip.mp4"), [event])
+            clip = Path(temporary) / "clip.mp4"
+            clip.write_bytes(b"video")
+            save_manifest(path, clip, [event])
             video, loaded = load_manifest(path)
-        self.assertEqual(video, Path("clip.mp4"))
+        self.assertEqual(video, clip.resolve())
         self.assertEqual(loaded, [event])
 
     def test_loads_older_manifest_without_query(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "sounds.json"
+            clip = Path(temporary) / "clip.mp4"
+            clip.write_bytes(b"video")
             path.write_text(json.dumps({
                 "version": 1,
-                "video_path": "clip.mp4",
+                "video_path": str(clip),
                 "events": [{
                     "event_id": "sound-0001",
                     "label": "Wind",
@@ -217,6 +241,17 @@ class MuteFilterTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg 필요")
 class FfmpegIntegrationTests(unittest.TestCase):
+    def test_local_playlist_cannot_open_remote_segment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            playlist = Path(temporary) / "remote.m3u8"
+            playlist.write_text(
+                "#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\n"
+                "https://example.invalid/segment.ts\n#EXT-X-ENDLIST\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                probe_duration(playlist)
+
     def test_exports_video_with_one_muted_event(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

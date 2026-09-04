@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import wave
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -22,6 +23,65 @@ INFERENCE_HOP = INFERENCE_LENGTH - DEFAULT_OVERLAP_SAMPLES
 INFERENCE_STEPS = 250
 VIDEO_FPS = 4
 MODEL_BAND_LIMIT = 8000.0
+MAX_MEDIA_DURATION_SECONDS = 10 * 60
+MAX_VIDEO_FRAMES = MAX_MEDIA_DURATION_SECONDS * VIDEO_FPS
+MAX_FFMPEG_OUTPUT_BYTES = 1024 * 1024
+FFMPEG_RESOURCE_ARGS = (
+    "-max_alloc",
+    str(128 * 1024**2),
+    "-probesize",
+    str(32 * 1024**2),
+    "-analyzeduration",
+    str(30 * 1_000_000),
+)
+VIDEO_FORMAT_WHITELISTS = {
+    ".avi": "avi",
+    ".m4v": "mov,mp4,m4a,3gp,3g2,mj2",
+    ".mkv": "matroska,webm",
+    ".mov": "mov,mp4,m4a,3gp,3g2,mj2",
+    ".mp4": "mov,mp4,m4a,3gp,3g2,mj2",
+    ".webm": "matroska,webm",
+}
+
+
+def run_bounded_ffmpeg(command: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+        process = subprocess.Popen(
+            command,
+            stdout=stdout_file,
+            stderr=stderr_file,
+            creationflags=creationflags,
+            start_new_session=os.name != "nt",
+        )
+        deadline = time.monotonic() + timeout
+        while process.poll() is None:
+            if (
+                os.fstat(stdout_file.fileno()).st_size > MAX_FFMPEG_OUTPUT_BYTES
+                or os.fstat(stderr_file.fileno()).st_size > MAX_FFMPEG_OUTPUT_BYTES
+            ):
+                process.kill()
+                process.wait(timeout=10)
+                raise RuntimeError("FFmpeg 로그가 안전 제한을 초과했습니다.")
+            if time.monotonic() >= deadline:
+                process.kill()
+                process.wait(timeout=10)
+                raise RuntimeError("FFmpeg 영상 프레임 추출 시간이 제한을 초과했습니다.")
+            time.sleep(0.05)
+        return_code = process.wait(timeout=10)
+        stdout_size = os.fstat(stdout_file.fileno()).st_size
+        stderr_size = os.fstat(stderr_file.fileno()).st_size
+        if stdout_size > MAX_FFMPEG_OUTPUT_BYTES or stderr_size > MAX_FFMPEG_OUTPUT_BYTES:
+            raise RuntimeError("FFmpeg 로그가 안전 제한을 초과했습니다.")
+        stdout_file.seek(0)
+        stderr_file.seek(0)
+        return subprocess.CompletedProcess(
+            command,
+            return_code,
+            stdout_file.read(stdout_size).decode("utf-8", errors="replace"),
+            stderr_file.read(stderr_size).decode("utf-8", errors="replace"),
+        )
 
 
 def load_avcass_ema_state(checkpoint: Path, torch_module):
@@ -112,50 +172,85 @@ def require_file(path_text: str | Path, label: str) -> Path:
     return path
 
 
-def extract_video_frames(ffmpeg: Path, video: Path, frame_dir: Path) -> None:
+def extract_video_frames(
+    ffmpeg: Path, video: Path, frame_dir: Path, duration: float
+) -> None:
+    if not 0 < duration <= MAX_MEDIA_DURATION_SECONDS:
+        raise ValueError("AV-CASS 영상은 최대 10분까지 처리할 수 있습니다.")
+    video_format = VIDEO_FORMAT_WHITELISTS.get(video.suffix.lower())
+    if video_format is None:
+        raise ValueError("AV-CASS가 지원하지 않는 영상 컨테이너입니다.")
     frame_dir.mkdir(parents=True, exist_ok=True)
     command = [
         str(ffmpeg),
         "-hide_banner",
         "-loglevel",
         "error",
+        *FFMPEG_RESOURCE_ARGS,
         "-y",
+        "-protocol_whitelist",
+        "file",
+        "-format_whitelist",
+        video_format,
         "-i",
         str(video),
+        "-t",
+        f"{duration:.3f}",
         "-vf",
         (
             f"fps={VIDEO_FPS},"
             "scale=224:224:force_original_aspect_ratio=increase,"
             "crop=224:224"
         ),
+        "-frames:v",
+        str(MAX_VIDEO_FRAMES),
         str(frame_dir / "frame_%06d.png"),
     ]
-    completed = subprocess.run(
+    completed = run_bounded_ffmpeg(
         command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        timeout=max(300.0, min(4 * 60 * 60.0, duration * 3.0 + 300.0)),
     )
     if completed.returncode:
         raise RuntimeError(completed.stderr.strip() or "영상 프레임 추출에 실패했습니다.")
 
 
-def load_frames(frame_dir: Path):
+def frame_paths(frame_dir: Path) -> list[Path]:
+    paths = sorted(frame_dir.glob("frame_*.png"))
+    if not paths:
+        raise RuntimeError("AV-CASS용 영상 프레임이 생성되지 않았습니다.")
+    if len(paths) > MAX_VIDEO_FRAMES:
+        raise RuntimeError("AV-CASS용 영상 프레임 수가 안전 한도를 초과했습니다.")
+    return paths
+
+
+def load_frame_chunk(paths: list[Path], start: int, count: int):
     import numpy as np
     import torch
     from PIL import Image
 
-    paths = sorted(frame_dir.glob("frame_*.png"))
     if not paths:
         raise RuntimeError("AV-CASS용 영상 프레임이 생성되지 않았습니다.")
-    frames = [
-        np.asarray(Image.open(path).convert("RGB"), dtype=np.uint8).transpose(2, 0, 1)
-        for path in paths
-    ]
+    selected = paths[start : start + count]
+    if len(selected) < count:
+        selected.extend([selected[-1] if selected else paths[-1]] * (count - len(selected)))
+    frames = []
+    for path in selected:
+        with Image.open(path) as image:
+            frames.append(
+                np.asarray(image.convert("RGB"), dtype=np.uint8).transpose(2, 0, 1)
+            )
     return torch.from_numpy(np.stack(frames))
+
+
+def pcm_wav_duration(path: Path) -> float:
+    try:
+        with wave.open(str(path), "rb") as source:
+            duration = source.getnframes() / source.getframerate()
+    except (OSError, wave.Error, ZeroDivisionError) as error:
+        raise ValueError("입력 WAV 헤더를 안전하게 읽지 못했습니다.") from error
+    if not 0 < duration <= MAX_MEDIA_DURATION_SECONDS:
+        raise ValueError("AV-CASS 입력은 최대 10분까지 처리할 수 있습니다.")
+    return duration
 
 
 def centered_correlation(first, second) -> float:
@@ -267,6 +362,8 @@ def main() -> int:
     non_music_output = Path(args.non_music_output).resolve()
     music_output.parent.mkdir(parents=True, exist_ok=True)
     non_music_output.parent.mkdir(parents=True, exist_ok=True)
+    duration_seconds = pcm_wav_duration(input_path)
+    os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
     # YAPF is imported indirectly by MMCV while CAVP starts. Its grammar
     # cache uses exclusive temporary files and can spin forever when the
@@ -328,8 +425,8 @@ def main() -> int:
     ) as temporary:
         frame_dir = Path(temporary)
         print("[setup] 영상 프레임 분석 준비 중", flush=True)
-        extract_video_frames(ffmpeg, video, frame_dir)
-        all_frames = load_frames(frame_dir)
+        extract_video_frames(ffmpeg, video, frame_dir, duration_seconds)
+        all_frame_paths = frame_paths(frame_dir)
 
         setup_started = time.perf_counter()
         print("[setup] AV-CASS 모델 구조 생성 중", flush=True)
@@ -395,16 +492,9 @@ def main() -> int:
 
             frame_start = int(start / AVCASS_SAMPLE_RATE * VIDEO_FPS)
             frame_count = int(INFERENCE_LENGTH / AVCASS_SAMPLE_RATE * VIDEO_FPS)
-            video_chunk = all_frames[frame_start : frame_start + frame_count]
-            if len(video_chunk) < frame_count:
-                pad_frame = video_chunk[-1:] if len(video_chunk) else all_frames[-1:]
-                video_chunk = torch.cat(
-                    [
-                        video_chunk,
-                        pad_frame.repeat(frame_count - len(video_chunk), 1, 1, 1),
-                    ],
-                    dim=0,
-                )
+            video_chunk = load_frame_chunk(
+                all_frame_paths, frame_start, frame_count
+            )
             video_chunk = video_chunk.unsqueeze(0).to(device)
 
             with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):

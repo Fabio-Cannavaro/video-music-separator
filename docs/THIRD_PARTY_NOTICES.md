@@ -53,14 +53,14 @@ AV-CASS의 영상 특징 추출에 Diff-Foley의 CAVP 체크포인트와 관련 
 이 앱은 FFmpeg 명령줄 프로그램을 외부 프로세스로 실행한다.
 
 - 프로젝트 및 법적 안내: <https://ffmpeg.org/legal.html>
-- 온라인 설치 대상: Gyan 최신 `release essentials` Windows x64 GPLv3 정적 빌드
+- 온라인 설치 대상: Gyan `9.0.1 release essentials` Windows x64 GPLv3 정적 빌드
 - 적용 라이선스: GNU General Public License version 3
 - 바이너리와 정확한 출처·체크섬·빌드 설정: `FFMPEG_BUILD.md`
 - 라이선스 전문: `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt`
 
 설치 프로그램은 `--enable-gpl`, `--enable-version3`, `--enable-static`이 포함되고 `--enable-nonfree`는 없는 Gyan Essentials 빌드만 허용한다. FFmpeg 바이너리를 포함한 오프라인 묶음을 공개 배포할 때에는 정확히 대응하는 FFmpeg 및 빌드 의존성 소스, 빌드 방법, 저작권 고지와 GPLv3 전문을 함께 제공해야 한다.
 
-기본 온라인 설치 파일은 FFmpeg 바이너리를 포함하지 않는다. 설치 시 Gyan의 공식 최신 GPL Essentials 빌드를 사용자 PC로 직접 내려받고, 공식 버전·SHA-256·최종 URL과 세 실행 파일의 빌드 옵션을 검사한다.
+기본 온라인 설치 파일은 FFmpeg 바이너리를 포함하지 않는다. 설치 시 Gyan의 고정된 9.0.1 GPL Essentials 빌드를 사용자 PC로 직접 내려받고, 고정 크기·SHA-256·URL과 세 실행 파일의 빌드 옵션을 검사한다.
 
 ## Python packages
 

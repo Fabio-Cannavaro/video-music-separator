@@ -6,7 +6,7 @@
 
 영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
 
-- 현재 앱 버전: `0.2.3`
+- 현재 소스 앱 버전: `0.2.4` (서명된 Windows 설치본은 아직 공개되지 않음)
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### 설치 안내
@@ -22,17 +22,14 @@
 | 저장 공간 | 첫 설치 때 약 5.9GB를 내려받으며, 압축 해제와 설치 중에는 약 15GB의 여유 공간을 권장한다. |
 | 인터넷 | 첫 설치, 재설치 또는 런타임 업데이트 때 필요하다. 설치가 끝난 뒤 일반적인 영상 분리·저장에는 필요하지 않다. |
 | GitHub 계정·CLI | 필요하지 않다. 설치 프로그램은 공개 Release 자산을 인증 없이 내려받는다. |
-| Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 Gyan 공식 최신 FFmpeg GPL Essentials 정적 빌드를 내려받는다. |
+| Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 Gyan FFmpeg 9.0.1 GPL Essentials 정적 빌드를 내려받는다. |
 | 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. |
 
 #### 2. Windows 설치 파일 다운로드
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.3)
+현재 일반 다운로드 가능한 Windows 설치 ZIP은 없다. 미서명 `0.2.3` 검증 자산은 보안 점검 후 GitHub Draft로 전환했다. 유효한 Authenticode 서명과 타임스탬프를 적용한 다음 패치 버전만 다시 공개한다.
 
-위 릴리스의 `Assets`에서 설치 ZIP 하나만 내려받으면 된다.
-
-- 필수 설치 ZIP: `video-music-separator-0.2.3-windows-x64.zip`
-- 선택 사항(무결성 확인용): `video-music-separator-0.2.3-windows-x64.zip.sha256`
+다음 공개 릴리스가 준비되면 `Assets`에서 설치 ZIP 하나와 선택 사항인 `.sha256` 파일을 제공한다.
 
 GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
 
@@ -48,9 +45,9 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 6. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다.
 7. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
 
-현재 실행 파일은 유료 코드 서명 인증서를 적용하지 않은 **미서명 빌드**일 수 있다. Windows SmartScreen에 `알 수 없는 게시자` 경고가 나오면 저장소·배포 주소와 SHA-256을 먼저 확인하고, 두 정보가 맞을 때에만 `추가 정보`에서 실행한다. 체크섬이 다르거나 출처가 불명확한 파일은 실행하지 않는다.
+보안 보완 이후의 공개 ZIP 빌드는 앱 EXE와 설치 EXE 모두 유효한 Authenticode 서명과 타임스탬프가 없으면 중단되며 ZIP을 만들지 않는다. Draft에 보존된 과거 미서명 자산은 설치용으로 제공하지 않는다.
 
-> **현재 배포 상태:** 소스 저장소와 `0.2.3` 설치 테스트용 프리릴리스는 공개되어 있다. 이 빌드에는 명시적 허용 목록 배포 패키징과 GitHub 로그인 기능 제거가 반영되어 있다. 다만 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 새 Windows 계정 설치 검사가 아직 완료되지 않았으므로, 일반 공개 배포가 아닌 검증용 프리릴리스다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **현재 배포 상태:** 소스 저장소와 필수 AI 런타임 자산은 공개되어 있지만 Windows 설치 자산은 Draft 상태다. 코드 서명 인증서, AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 새 Windows 계정 설치 검사가 끝나기 전에는 일반 공개 설치본으로 배포하지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
@@ -58,13 +55,13 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
    - AI Python 실행환경: 이 프로젝트의 공개 Release에 고정된 두 분할 파일. GitHub 인증 없이 내려받는다.
    - AV-CASS `av_cass_checkpoint.pt`: AV-CASS 공식 Google Drive
    - CAVP `cavp_epoch66.ckpt`: Diff-Foley 공식 Hugging Face의 고정 커밋
-   - FFmpeg: Gyan 공식 최신 FFmpeg release essentials GPLv3 정적 빌드
-2. AI 실행환경과 모델은 고정된 크기·SHA-256을 확인한다. FFmpeg는 Gyan 공식 `.ver`·`.sha256`과 최종 다운로드 URL에서 현재 버전·크기·SHA-256을 확인하고, 빌드 옵션도 검증한다.
+   - FFmpeg: Gyan FFmpeg 9.0.1 release essentials GPLv3 정적 빌드의 고정 URL
+2. AI 실행환경과 모델은 고정된 크기·SHA-256을 확인한다. FFmpeg는 앱에 고정된 아카이브 URL·크기·SHA-256과 세 실행 파일 각각의 크기·SHA-256을 실행 전에 확인하고, 그 뒤 빌드 옵션도 검증한다.
 3. 중단된 다운로드는 `.part` 파일에서 이어받으며, 모든 파일은 검증이 끝난 뒤에만 실제 설치 위치로 교체한다.
 
 설치 화면에는 다운로드 출처, 적용되는 이용조건, 외부 통신 정보와 사용자 책임이 표시된다. 사용자가 이를 확인하고 동의해야 설치를 시작할 수 있다. Video Music Separator는 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며 제휴하거나 보증받지 않았다.
 
-설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 Gyan의 공식 버전·체크섬·최종 다운로드 URL 및 GPL Essentials 빌드 조건과 다르면 설치를 중단한다. 다운로드, 분할 파일 결합, 무결성 확인, 압축 해제, 파일 배치, 최종 검증은 단계별 퍼센트로 표시한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
+설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 고정된 9.0.1 아카이브 및 실행 파일 해시·GPL Essentials 빌드 조건과 다르면 설치를 중단한다. AI 실행환경은 서명 대상 앱 소스에 고정한 전체 보호 파일 트리 지문과 비교하고, Python 작업자를 시작할 때마다 다시 해시한다. 수정 가능한 사용자별 기록은 신뢰 기준으로 사용하지 않는다. 모델 파일은 각각의 고정 크기·SHA-256으로 별도 검증한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
 
 앱은 검증된 체크포인트를 읽을 때도 PyTorch의 제한된 `weights_only` 모드를 사용하며, 각 공식 체크포인트에 필요한 최소 메타데이터 형식만 허용한다. 따라서 일반 Python 객체를 제한 없이 역직렬화하지 않는다.
 
@@ -76,6 +73,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 - 설치 파일을 ZIP 안에서 직접 실행했거나 `Program Files`처럼 쓰기가 제한된 위치에 두었다면, 폴더 전체를 문서 폴더 같은 사용자 쓰기 가능 위치로 옮긴 뒤 다시 실행한다.
 - 다운로드가 중단되면 같은 설치 파일을 다시 실행한다. 검증된 파일은 재사용하고 완료되지 않은 `.part` 다운로드는 이어받는다.
 - 체크섬 불일치는 파일을 임의로 사용하지 않기 위한 정상적인 중단이다. 검증을 우회하지 말고 배포 안내의 주소·버전이 최신인지 확인한다.
+- 보안 보완 버전에서 AI 실행환경 무결성 오류가 나오면 새 `video-music-separator-setup.exe`를 다시 실행해 검증된 아카이브에서 런타임을 재설치한다. 수정 가능한 표식 파일만으로는 런타임을 신뢰하지 않는다.
 - `NVIDIA GPU가 필요합니다` 오류가 나오면 지원되는 NVIDIA GPU와 정상 설치된 드라이버가 필요하다. 현재 CPU 전용 대체 실행은 제공하지 않는다.
 
 #### 6. 설치 후 폴더 사용과 이동
@@ -92,7 +90,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 같은 PC에서는 이 앱 폴더를 영상 폴더마다 복사할 필요가 없다. 한곳에 그대로 두고 `video-music-separator.exe`의 바로가기만 바탕화면에 만든다. 앱에서 `영상 열기`를 누르면 어느 폴더의 영상이든 선택할 수 있으며, 작업 폴더와 결과 사본은 선택한 원본 영상 옆에 생긴다.
 
-앱 자체의 위치를 바꾸려면 EXE만 따로 옮기지 말고 설치된 앱 폴더 전체를 함께 옮긴다. `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다.
+앱 자체의 위치를 바꾸려면 EXE만 따로 옮기지 말고 설치된 앱 폴더 전체를 함께 옮긴다. 런타임 검증은 설치 경로가 아니라 고정 트리 지문을 기준으로 하므로, 모든 구성요소가 그대로 이동했다면 경로 갱신용 재설치는 필요하지 않다. `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다.
 
 ### 사용 방법
 
@@ -107,7 +105,9 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 전체 볼륨 슬라이더는 앱을 시작할 때 100으로 설정되며 원본·뮤트 믹스·두 분리본에 공통 적용된다. AV-CASS 실행 경로는 휴대용 폴더 안에서 자동으로 관리된다.
 
-영상 옆에는 처리 중 `<영상이름>_sound_work` 임시 폴더가 생긴다. 원본 WAV는 한 번만 추출하며, `models/avcass` 아래에 `stems`, `previews`, `sounds.json`을 저장한다. 최종 MP4 저장과 파일 확인이 성공하면 이 임시 폴더 전체가 자동으로 삭제된다. 저장 실패·취소 또는 폴더 정리 실패 시에는 진단과 재시도를 위해 남겨 둔다.
+영상 옆에는 처리 중 `<영상이름>_sound_work_<난수>` 임시 폴더가 생긴다. 앱은 실행별 난수와 원본 영상 경로가 든 소유 표식을 만들며, 둘이 일치하는 이번 실행의 폴더만 삭제한다. 기존 `<영상이름>_sound_work` 폴더나 다른 파일은 재사용하거나 삭제하지 않는다. 최종 MP4 저장과 파일 확인이 성공하면 소유한 임시 폴더를 삭제하고, 저장 실패·취소 또는 표식 불일치 시에는 남겨 둔다.
+
+입력은 로컬 고정 디스크의 지원 미디어 형식만 허용하며 UNC·네트워크 드라이브·재분석 지점·재생목록 형식을 거부한다. 한 번의 입력은 최대 10분, 영상은 최대 7680×4320, 오디오는 최대 8채널·192kHz다. FFmpeg 메모리 할당과 분석량, 외부 도구 로그 크기, 작업자 로그 한 줄·대기 큐에도 상한을 적용한다.
 
 ### 처리 구조
 
@@ -147,12 +147,12 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 ### 개발 실행
 
-GUI 자체는 가벼운 Python 환경으로 실행하고, AI 추론은 휴대용 폴더의 별도 환경을 사용한다.
+GUI 자체는 가벼운 격리 Python 환경으로 실행하고, AI 추론은 휴대용 폴더의 별도 환경을 사용한다.
 
 ```powershell
 cd video-music-separator
-py -m venv --system-site-packages .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements.txt
 .\.venv\Scripts\python.exe app\sound_separator_app.py
 ```
 
@@ -165,10 +165,10 @@ py -m venv --system-site-packages .venv
 .\scripts\prepare_ffmpeg_gpl.ps1
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
-.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
+.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep -CodeSigningCertificateThumbprint <인증서지문>
 ```
 
-`build_executables.ps1`는 루트에 단일 파일형 앱 EXE와 설치 EXE를 만든다. `build_runtime_installer.ps1`는 설치 EXE와 대응하는 `.sha256` 파일만 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 이 스크립트는 기존 출력 폴더를 재사용하지 않고 새 스테이징 폴더에 Git으로 추적되는 문서와 명시된 파일만 조립한 뒤, 압축 전과 압축 후의 파일 목록이 정확히 같은지 검증한다. 따라서 로컬 `docs/runtime-assets.json`이나 예전 빌드의 잔여 파일은 새 ZIP에 포함되지 않는다. 인증서 지문을 `-CodeSigningCertificateThumbprint`로 제공한 경우에만 Authenticode 서명을 적용하며, 인증서가 없으면 미서명 상태로 빌드한다.
+`build_executables.ps1`와 `build_runtime_installer.ps1`는 로컬 시험용 EXE를 만들며 인증서가 없으면 미서명일 수 있다. 공개 ZIP 경계인 `build_portable.ps1`는 Python.org의 공식 Python 3.13.7 설치 파일을 고정 크기·SHA-256·PSF Authenticode 서명으로 검증한 뒤 새 격리 환경을 만들고, 그 설치 파일에 포함된 pip 25.2와 해시 잠금된 wheel만 사용한다. 또한 지정한 인증서와 일치하는 두 EXE의 유효한 Authenticode 서명과 RFC 3161 타임스탬프를 확인하지 못하면 ZIP을 만들지 않는다. 기본 ZIP에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않으며, 새 스테이징 폴더에서 Git 추적 문서와 명시된 파일만 조립한 뒤 압축 전후 파일 목록을 대조한다.
 
 AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토한 정확한 파일 허용 목록이 필요하다. 목록은 UTF-8 텍스트로 작성하고 `audiosep` 아래의 파일 상대 경로를 슬래시(`/`) 형식으로 한 줄에 하나씩 적는다. 빈 줄과 `#`으로 시작하는 주석은 허용한다. 빌드 스크립트는 목록에 없는 파일을 복사하지 않고, 절대 경로·상위 폴더 이동·중복 경로·링크와 필수 런타임 파일 누락을 거부한다. 현재 설치 폴더를 자동 승인하지 말고 캐시, 모델 가중치, 로그와 개인 파일이 없는 정리된 런타임을 기준으로 목록을 검토해야 한다.
 
@@ -183,7 +183,7 @@ AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토�
   -RuntimeAllowlistPath .\runtime-release-allowlist.txt
 ```
 
-`prepare_ffmpeg_gpl.ps1`는 개발·오프라인 빌드용 Gyan 공식 최신 FFmpeg GPL Essentials 정적 빌드를 찾고, 공식 `.ver`·`.sha256`, 실제 다운로드 URL과 빌드 옵션을 검증한다. 설치된 정확한 버전과 체크섬은 `docs/runtime-assets.json`에 기록하며, 검증 방식과 출처는 [FFMPEG_BUILD.md](docs/FFMPEG_BUILD.md)에 설명한다.
+`prepare_ffmpeg_gpl.ps1`는 개발·오프라인 빌드용 Gyan FFmpeg 9.0.1 GPL Essentials 정적 빌드를 고정 URL에서 받고, 아카이브와 세 실행 파일의 고정 크기·SHA-256을 실행 전에 확인한 뒤 빌드 옵션을 검증한다. 검증 방식과 출처는 [FFMPEG_BUILD.md](docs/FFMPEG_BUILD.md)에 설명한다.
 
 휴대용 실동작 검사는 다음처럼 실행한다.
 
@@ -195,6 +195,7 @@ AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토�
 
 ### 한계
 
+- 로컬 일반 파일만 입력할 수 있고 FFmpeg 계열 입력 프로토콜은 `file`로 제한된다. 한 번에 처리할 수 있는 영상은 최대 10분이며, 더 긴 영상은 나눠야 한다. 처리 전에 예상 임시 공간과 2GB 안전 여유를 확인한다.
 - 음악/비음악 분리는 세부 소리 이름별 독립 추출보다 안정적이지만 AI 분리이므로 100% 무누출을 보장하지 않는다.
 - 매우 작은 음악, 음악처럼 반복되는 효과음, 노래·신음처럼 음악과 사람 발성의 경계가 애매한 소리는 반대 트랙에 일부 남을 수 있다.
 - AV-CASS는 16kHz 모노로 장면과 소리를 판단하지만, 최종 출력은 그 판정 마스크를 원본 스테레오에 적용한다. 모델이 판단할 수 없는 8kHz 이상은 음악 아님 쪽에 보존한다.
@@ -226,7 +227,7 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
 
-- Current application version: `0.2.3`
+- Current source application version: `0.2.4` (no signed Windows installer is published yet)
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### Installation Guide
@@ -242,17 +243,14 @@ For the first installation, keep the following two executables in the same folde
 | Disk space | The first installation downloads approximately 5.9 GB. Approximately 15 GB of free space is recommended while downloading, extracting, and installing. |
 | Internet | Required for the first installation, reinstallation, or runtime updates. Normal separation and saving do not require an internet connection after installation. |
 | GitHub account and CLI | Not required. The installer downloads public Release assets without authentication. |
-| Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and the current official Gyan FFmpeg GPL Essentials static build. |
+| Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and the pinned Gyan FFmpeg 9.0.1 GPL Essentials static build. |
 | Installation location | Do not run the application from inside the ZIP. Extract the entire ZIP into a normal user-writable folder such as Documents. |
 
 #### 2. Download the Windows Installer
 
-[Video Music Separator Windows Installer Release](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.3)
+No Windows installer ZIP is currently available for general download. The unsigned `0.2.3` validation assets were moved to a GitHub Draft after the security review. Only a subsequent patch release with valid Authenticode signatures and timestamps will be published again.
 
-Under `Assets` in the Release above, only the installer ZIP is required.
-
-- Required installer ZIP: `video-music-separator-0.2.3-windows-x64.zip`
-- Optional integrity check: `video-music-separator-0.2.3-windows-x64.zip.sha256`
+When the next public release is ready, its `Assets` will provide one installer ZIP and an optional `.sha256` file.
 
 The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
 
@@ -268,9 +266,9 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 6. Wait for all downloads and SHA-256 verification to finish.
 7. After the completion message appears, run `video-music-separator.exe`.
 
-The executables may be **unsigned builds** without a paid code-signing certificate. If Windows SmartScreen displays an `Unknown publisher` warning, first verify the repository, distribution URL, and SHA-256 value. Use `More info` to continue only when those details match. Do not run a file with a mismatched checksum or unclear origin.
+After this security hardening, the public ZIP build stops before packaging unless both EXEs have a valid Authenticode signature and timestamp. The older unsigned assets retained in Draft are not offered for installation.
 
-> **Current distribution status:** The source repository and the `0.2.3` installation-testing prerelease are public. This build includes explicit-allowlist release packaging and removal of GitHub login support. However, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account are not yet complete, so this remains a validation prerelease rather than a general public release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Current distribution status:** The source repository and required AI runtime assets are public, but the Windows installer assets are in Draft. No general public installer will be released until a code-signing certificate, written permission for automatic AV-CASS checkpoint downloads, and clean installation tests with a new Windows account are complete. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
@@ -278,13 +276,13 @@ The executables may be **unsigned builds** without a paid code-signing certifica
    - AI Python runtime: two pinned split files from this project's public Release, downloaded without GitHub authentication.
    - AV-CASS `av_cass_checkpoint.pt`: the official AV-CASS Google Drive location
    - CAVP `cavp_epoch66.ckpt`: the pinned commit in the official Diff-Foley Hugging Face repository
-   - FFmpeg: Gyan's current official FFmpeg release essentials GPLv3 static build
-2. It verifies the pinned sizes and SHA-256 values of the AI runtime and models. For FFmpeg, it resolves the current version, size, and SHA-256 from Gyan's official `.ver`, `.sha256`, and final download URL, then verifies the build options.
+   - FFmpeg: Gyan FFmpeg 9.0.1 release essentials GPLv3 static build at an immutable URL
+2. It verifies the pinned sizes and SHA-256 values of the AI runtime and models. For FFmpeg, it checks the archive URL, size, SHA-256, and the size and SHA-256 of all three executables before running them, then verifies the build options.
 3. Interrupted downloads resume from their `.part` files. Files replace their installation targets only after verification succeeds.
 
 The installer displays the download sources, applicable terms, network-access information, and user responsibilities. Installation begins only after the user reviews and accepts them. Video Music Separator is not an official application of, affiliated with, or endorsed by the AV-CASS researchers or their institutions.
 
-The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if the AI runtime or models no longer match their pinned checksums, or if FFmpeg does not match Gyan's official version, checksum, final download URL, and GPL Essentials build requirements. Downloads, split-file combining, integrity checks, extraction, file placement, and final verification display a percentage for each stage. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
+The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops on any pinned hash or GPL build mismatch. The installer compares the AI runtime with the complete protected-tree fingerprint pinned in the application source covered by code signing, and the application re-hashes that tree before every Python worker launch. Editable per-user records are not trust anchors. Model files are verified separately against their pinned sizes and SHA-256 values. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
 
 Even after checksum verification, the application reads checkpoints through PyTorch's restricted `weights_only` mode and allowlists only the minimal metadata types required by each official checkpoint. It does not deserialize arbitrary Python objects without restriction.
 
@@ -296,6 +294,7 @@ The public application ZIP and separate AI runtime assets exclude the former Aud
 - If the installer was run from inside the ZIP or from a write-restricted location such as `Program Files`, move the entire folder to a user-writable location such as Documents and try again.
 - If a download is interrupted, rerun the same installer. Verified files are reused, and incomplete `.part` downloads resume where supported.
 - A checksum mismatch is an intentional safety stop. Do not bypass verification; confirm that the distribution URL and pinned version are current.
+- If the hardened version reports an AI runtime integrity error, rerun the new `video-music-separator-setup.exe` to reinstall it from the verified archive. An editable marker file alone is not trusted.
 - The `An NVIDIA GPU is required` error means a supported NVIDIA GPU and a correctly installed driver are required. No CPU-only fallback is currently provided.
 
 #### 6. Using and Moving the Installed Folder
@@ -312,7 +311,7 @@ After installation, the application folder contains:
 
 On the same PC, do not copy this application folder beside every video. Keep it in one location and create a desktop shortcut to `video-music-separator.exe`. `Open Video` can select a video from any folder, and the work folder and saved copy are created beside the selected source video.
 
-To move the application itself, move the entire installed folder rather than either EXE alone. The `audiosep` folder name is retained for compatibility with the former portable runtime layout.
+To move the application itself, move the entire installed folder rather than either EXE alone. Runtime verification uses the pinned tree fingerprint rather than an installation-path record, so reinstalling only to update a path is unnecessary when every component was moved intact. The `audiosep` folder name is retained for compatibility with the former portable runtime layout.
 
 ### Usage
 
@@ -327,7 +326,9 @@ Selecting `한국어 / English` to the right of the video preview immediately ch
 
 The master volume slider starts at 100 and applies to the source, muted mix, and both separated tracks. AV-CASS runtime paths are managed automatically inside the portable folder.
 
-During processing, a temporary `<video name>_sound_work` folder is created beside the video. The source WAV is extracted only once, and `stems`, `previews`, and `sounds.json` are stored under `models/avcass`. The entire temporary folder is deleted after the final MP4 is saved and verified successfully. It remains available for diagnosis and retry if saving is cancelled, fails, or cleanup fails.
+During processing, a random `<video name>_sound_work_<nonce>` folder is created beside the video. The application creates an ownership marker containing the per-run nonce and canonical source path, and deletes only the folder owned by that run. It never reuses or deletes a pre-existing predictable work folder. The owned folder remains for diagnosis if saving is cancelled, fails, or its marker no longer matches.
+
+Inputs are restricted to supported media formats on fixed local disks. UNC paths, network drives, reparse points, and playlist formats are rejected. Each input is limited to 10 minutes, video to 7680×4320, and audio to 8 channels at 192 kHz. FFmpeg allocation and probing, external-tool output, worker log-line length, and the pending log queue are also bounded.
 
 ### Processing Pipeline
 
@@ -371,8 +372,8 @@ The GUI runs in a lightweight Python environment, while AI inference uses a sepa
 
 ```powershell
 cd video-music-separator
-py -m venv --system-site-packages .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements.txt
 .\.venv\Scripts\python.exe app\sound_separator_app.py
 ```
 
@@ -385,10 +386,10 @@ If `py` cannot find the installed Python interpreter, use the full path to the i
 .\scripts\prepare_ffmpeg_gpl.ps1
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
-.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
+.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep -CodeSigningCertificateThumbprint <thumbprint>
 ```
 
-`build_executables.ps1` creates the single-file application EXE and installer EXE in the repository root. `build_runtime_installer.ps1` creates only the installer EXE and its matching `.sha256` file. The default `build_portable.ps1` result excludes AV-CASS/CAVP weights and FFmpeg and includes the installer. It assembles only Git-tracked documentation and explicitly selected files in a fresh staging directory, then verifies that the file sets before and after ZIP creation match exactly. Local `docs/runtime-assets.json` files and leftovers from an older build therefore cannot enter a new ZIP. Authenticode signing is applied only when a certificate thumbprint is supplied with `-CodeSigningCertificateThumbprint`; otherwise the build remains unsigned.
+`build_executables.ps1` and `build_runtime_installer.ps1` can create unsigned local-test EXEs. The public boundary, `build_portable.ps1`, verifies the official Python.org 3.13.7 installer by pinned size, SHA-256, and PSF Authenticode signature before creating a fresh environment. It uses only pip 25.2 from that verified installer and hash-locked wheels. It refuses to create a ZIP unless both EXEs have valid Authenticode signatures from the requested certificate and RFC 3161 timestamps. The package is assembled in a fresh staging directory from tracked documentation and explicitly selected files, with exact pre- and post-ZIP file-set checks.
 
 Building the base AI runtime or an internal offline bundle requires a reviewed exact-file allowlist. Save it as UTF-8 text with one slash-separated file path relative to `audiosep` per line; blank lines and comments beginning with `#` are allowed. Files not listed are not copied, and the scripts reject absolute paths, parent traversal, duplicates, links, and missing required runtime files. Do not automatically approve the current installed folder. Review the list against a clean runtime that contains no caches, model weights, logs, or personal files.
 
@@ -403,7 +404,7 @@ Building the base AI runtime or an internal offline bundle requires a reviewed e
   -RuntimeAllowlistPath .\runtime-release-allowlist.txt
 ```
 
-`prepare_ffmpeg_gpl.ps1` resolves Gyan's current official FFmpeg GPL Essentials static build for development and offline builds, then verifies the official `.ver` and `.sha256` metadata, final download URL, and build options. The installed version and checksum are recorded in `docs/runtime-assets.json`; the source and verification method are described in [FFMPEG_BUILD.en.md](docs/FFMPEG_BUILD.en.md).
+`prepare_ffmpeg_gpl.ps1` downloads the pinned Gyan FFmpeg 9.0.1 GPL Essentials static build from an immutable URL. It verifies the archive and all three executables against first-party size and SHA-256 locks before executing them, then checks the build options. See [FFMPEG_BUILD.en.md](docs/FFMPEG_BUILD.en.md).
 
 Run the portable smoke test as follows:
 
@@ -415,6 +416,7 @@ Run the portable smoke test as follows:
 
 ### Limitations
 
+- Inputs must be local regular files, and FFmpeg-family input protocols are restricted to `file`. A single job is limited to 10 minutes; split longer media first. The application checks estimated scratch use plus a 2 GB safety reserve before extraction.
 - Music/non-music separation is more stable than independent extraction by detailed sound name, but no AI separation can guarantee zero leakage.
 - Very quiet music, rhythmically repeated effects, and sounds near the boundary between music and human vocalization—such as singing or moaning—may partially remain in the opposite track.
 - AV-CASS analyzes the scene and audio at 16 kHz mono, but the final output applies its decision mask to the original stereo signal. Frequencies above 8 kHz that the model cannot evaluate are preserved in the non-music track.

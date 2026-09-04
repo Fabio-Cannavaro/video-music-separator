@@ -4,6 +4,7 @@ import hashlib
 import io
 import argparse
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -136,54 +137,40 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
         self.assertEqual(len(cavp.sha256), 64)
         self.assertEqual(
             installer.FFMPEG_ASSET_NAME,
-            "ffmpeg-release-essentials.zip",
+            "ffmpeg-9.0.1-essentials_build.zip",
         )
         self.assertEqual(
             installer.FFMPEG_ARCHIVE.url,
-            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+            "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.1-essentials_build.zip",
+        )
+        self.assertEqual(installer.FFMPEG_ARCHIVE.size, 111_253_802)
+        self.assertEqual(
+            installer.FFMPEG_ARCHIVE.sha256,
+            "fec81ae03971d9dd4be3ebe02e263bd2ec1d789483f931bdba5f5715e65da2e9",
         )
 
-    def test_resolves_latest_official_ffmpeg_asset_and_digest(self) -> None:
-        digest = "a" * 64
-        version = "9.0.1"
-        download_url = (
-            "https://www.gyan.dev/ffmpeg/builds/packages/"
-            f"ffmpeg-{version}-essentials_build.zip"
-        )
-        responses = (
-            FakeResponse(digest.encode("ascii")),
-            FakeResponse(version.encode("ascii")),
-            FakeResponse(
-                b"",
-                url=download_url,
-                headers={"Content-Length": "111253802"},
-            ),
-        )
-        with patch.object(
-            installer.urllib.request,
-            "urlopen",
-            side_effect=responses,
-        ) as urlopen:
+    def test_resolves_first_party_locked_ffmpeg_without_network(self) -> None:
+        with patch.object(installer.urllib.request, "urlopen") as urlopen:
             asset = installer.resolve_ffmpeg_archive()
         self.assertEqual(asset.size, 111_253_802)
-        self.assertEqual(asset.sha256, digest)
-        self.assertEqual(asset.url, download_url)
-        self.assertEqual(asset.version, version)
+        self.assertEqual(asset.sha256, installer.FFMPEG_SHA256)
+        self.assertEqual(asset.url, installer.FFMPEG_DOWNLOAD_URL)
+        self.assertEqual(asset.version, "9.0.1")
         self.assertEqual(
             asset.relative_path,
             ".downloads/ffmpeg-9.0.1-essentials_build.zip",
         )
-        requests = [call.args[0] for call in urlopen.call_args_list]
-        self.assertEqual(requests[0].full_url, installer.FFMPEG_CHECKSUM_URL)
-        self.assertEqual(requests[1].full_url, installer.FFMPEG_VERSION_URL)
-        self.assertEqual(requests[2].full_url, installer.FFMPEG_DOWNLOAD_URL)
-        self.assertEqual(requests[2].method, "HEAD")
+        urlopen.assert_not_called()
 
     def test_validates_matching_gpl_essentials_static_tools(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             directory = Path(temp_name)
             for name in installer.FFMPEG_REQUIRED_FILES:
                 (directory / name).write_bytes(b"exe")
+            locked = {
+                name: {"size": 3, "sha256": hashlib.sha256(b"exe").hexdigest()}
+                for name in installer.FFMPEG_REQUIRED_FILES
+            }
 
             def version_result(command, **_kwargs):
                 program = Path(command[0]).stem
@@ -198,7 +185,10 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                     "",
                 )
 
-            with patch.object(installer.subprocess, "run", side_effect=version_result):
+            with (
+                patch.object(installer, "FFMPEG_EXECUTABLES", locked),
+                patch.object(installer.subprocess, "run", side_effect=version_result),
+            ):
                 self.assertTrue(installer.validate_ffmpeg(directory, "9.0.1"))
                 self.assertFalse(installer.validate_ffmpeg(directory, "9.1"))
 
@@ -207,6 +197,10 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
             directory = Path(temp_name)
             for name in installer.FFMPEG_REQUIRED_FILES:
                 (directory / name).write_bytes(b"exe")
+            locked = {
+                name: {"size": 3, "sha256": hashlib.sha256(b"exe").hexdigest()}
+                for name in installer.FFMPEG_REQUIRED_FILES
+            }
             version_text = (
                 "ffmpeg version 9.0.1-essentials_build-www.gyan.dev\n"
                 "configuration: --enable-gpl --enable-version3 --enable-static "
@@ -216,8 +210,17 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                 installer.subprocess,
                 "run",
                 return_value=CompletedProcess([], 0, version_text, ""),
-            ):
+            ), patch.object(installer, "FFMPEG_EXECUTABLES", locked):
                 self.assertFalse(installer.validate_ffmpeg(directory, "9.0.1"))
+
+    def test_rejects_tampered_ffmpeg_before_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            directory = Path(temp_name)
+            for name in installer.FFMPEG_REQUIRED_FILES:
+                (directory / name).write_bytes(b"tampered")
+            with patch.object(installer.subprocess, "run") as run:
+                self.assertFalse(installer.validate_ffmpeg(directory, "9.0.1"))
+            run.assert_not_called()
 
     def test_base_runtime_parts_are_below_github_asset_limit(self) -> None:
         self.assertEqual(len(installer.BASE_RUNTIME_ASSETS), 2)
@@ -314,6 +317,7 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(chunk)
             with (
+                patch.dict(os.environ, {"LOCALAPPDATA": temp_name}),
                 patch.object(installer, "BASE_RUNTIME_ASSETS", assets),
                 patch.object(installer, "BASE_RUNTIME_ARCHIVE", "runtime.zip"),
                 patch.object(installer, "BASE_RUNTIME_ARCHIVE_SIZE", len(payload)),
@@ -322,6 +326,8 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                     "BASE_RUNTIME_ARCHIVE_SHA256",
                     hashlib.sha256(payload).hexdigest(),
                 ),
+                patch.object(installer, "record_runtime_integrity") as record_integrity,
+                patch.object(installer, "runtime_integrity_is_valid", return_value=True),
             ):
                 updates: list[tuple[str, int, int]] = []
                 installer.install_base_runtime(
@@ -331,6 +337,7 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                     ),
                 )
                 self.assertTrue(installer.base_runtime_is_current(root))
+                record_integrity.assert_called_once()
             self.assertEqual(installer.validate_base_runtime(root), [])
             self.assertFalse((root / ".downloads" / "runtime.zip").exists())
             labels = [label for label, _, _ in updates]
@@ -358,6 +365,20 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                 )
             self.assertEqual(destination.read_bytes(), payload)
             self.assertTrue(installer.asset_is_valid(destination, asset))
+
+    def test_oversized_download_is_stopped_and_partial_removed(self) -> None:
+        payload = b"expected"
+        asset = fake_asset(payload)
+        with tempfile.TemporaryDirectory() as temp_name:
+            destination = Path(temp_name) / asset.relative_path
+            with patch.object(
+                installer,
+                "_open_download",
+                return_value=FakeResponse(payload + b"unexpected"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "초과"):
+                    installer.download_asset(asset, destination, lambda *_: None)
+            self.assertFalse(destination.with_name(destination.name + ".part").exists())
 
     def test_keeps_partial_download_after_network_failure(self) -> None:
         payload = b"partial payload"
