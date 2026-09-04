@@ -42,7 +42,14 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 
 이전 `0.2.3`, `0.2.5`, `0.2.6` 자산은 설치용으로 제공하지 않는다. `0.2.5`는 깨끗한 설치 검증에 실패했고, `0.2.6`은 원본 영상보다 오디오가 짧을 때 끝 프레임을 자르는 문제가 있어 GitHub Draft로 전환했다.
 
-이 `0.2.7` 프리릴리스는 Authenticode 코드 서명이 없으므로 Windows가 게시자를 확인할 수 없고 Windows SmartScreen 경고가 나타날 수 있다. 공식 GitHub Release 주소에서만 받고 `.sha256` 파일로 ZIP 무결성을 확인한다. 코드 서명 부재와 별개로 앱 ZIP 안의 `docs/SHA256SUMS.txt`에서 두 EXE의 해시도 확인할 수 있다.
+이 `0.2.7` 프리릴리스는 코드 서명 없이 배포하므로 Windows가 게시자를 확인할 수 없고 SmartScreen 경고가 나타날 수 있다. 이 프로젝트는 Windows 배포본에 코드 서명 인증서를 적용할 계획이 없다. 다음 순서로 출처와 파일을 먼저 확인한 뒤 실행한다.
+
+1. 위의 공식 GitHub Release에서 받은 ZIP인지 확인하고 `.sha256` 파일로 ZIP 무결성을 검증한다.
+2. `video-music-separator-setup.exe`를 실행했을 때 `Windows의 PC 보호` 창이 나타나면 `추가 정보`를 누른다.
+3. 앱 이름이 `video-music-separator-setup.exe`이고 게시자가 `알 수 없는 게시자`로 표시되는지 확인한 뒤 `실행`을 누른다.
+4. 설치가 끝난 뒤 `video-music-separator.exe`에도 같은 경고가 나타나면 앱 이름을 확인하고 같은 방법으로 실행한다.
+
+SmartScreen이나 Smart App Control을 끄지는 않는다. `실행` 선택이 보이지 않으면 조직의 보안 정책이나 Smart App Control이 미서명 앱 실행을 차단한 환경일 수 있으며, 이 배포본은 해당 환경에서 실행할 수 없다. 앱 ZIP 안의 `docs/SHA256SUMS.txt`에서는 두 EXE의 해시를 추가로 확인할 수 있다. 자세한 동작은 Microsoft의 [SmartScreen 앱 평판 안내](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation)와 [Smart App Control 안내](https://support.microsoft.com/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)에서 확인할 수 있다.
 
 GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)`는 설치 파일이 아니므로 받지 않는다.
 
@@ -58,9 +65,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 6. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다.
 7. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
 
-공개 ZIP 빌드는 인증서가 있으면 앱 EXE와 설치 EXE의 Authenticode 서명·서명자·타임스탬프를 검증한다. 인증서가 없으면 두 파일이 미서명임을 확인하고 `docs/SIGNING_STATUS.txt`, 두 EXE의 `docs/SHA256SUMS.txt`, ZIP의 별도 `.sha256` 파일을 생성한다. 미서명 사실을 서명된 것처럼 표시하지 않는다.
-
-> **현재 배포 상태:** `0.2.7` Windows 설치 자산은 기능 확인을 위한 미서명 공개 프리릴리스다. AV-CASS 체크포인트 자동 다운로드에 대한 연구진의 서면 허가와 깨끗한 새 Windows 사용자 계정 검사가 아직 끝나지 않았으므로, 일반 사용이 승인된 최종 배포판이나 AV-CASS 연구진의 공식 앱으로 표현하지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **현재 배포 상태:** `0.2.7` Windows 설치 자산은 기능 확인을 위한 미서명 공개 프리릴리스다. AV-CASS 체크포인트 자동 다운로드에 대한 연구진의 서면 허가와 깨끗한 새 Windows 사용자 계정 검사가 아직 끝나지 않았으므로, 일반 사용이 승인된 최종 배포판으로 표현하지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
@@ -193,11 +198,9 @@ py -m venv .venv
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
 .\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
-# 인증서가 있는 경우에만 선택적으로 추가:
-.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep -CodeSigningCertificateThumbprint <인증서지문>
 ```
 
-`build_executables.ps1`와 `build_runtime_installer.ps1`는 인증서가 지정되면 서명하고, 없으면 미서명 EXE를 만든다. 공개 ZIP 경계인 `build_portable.ps1`는 CPython이 빌드 시스템용으로 제공하는 공식 Python 3.13.7 NuGet CI 패키지와 Python.org Tcl/Tk MSI를 고정 크기·SHA-256으로 확인하고 핵심 실행 파일과 Tcl/Tk MSI의 PSF Authenticode 서명을 검증한 뒤 새 격리 환경을 만든다. Tcl/Tk MSI는 관리 추출(`/a`)만 하므로 시스템에 설치된 Python은 변경하지 않으며, NuGet 패키지에 포함된 pip 25.2와 해시 잠금된 wheel만 사용한다. 인증서가 지정되면 두 EXE의 서명·서명자·RFC 3161 타임스탬프를 검증하고, 없으면 두 EXE가 `NotSigned` 상태인지 확인한 뒤 그 사실과 SHA-256을 패키지에 기록한다. 기본 ZIP에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않으며, 새 스테이징 폴더에서 Git 추적 문서와 명시된 파일만 조립한 뒤 압축 전후 파일 목록을 대조한다.
+이 프로젝트의 공개 배포 절차에서는 코드 서명 인증서를 지정하지 않고 `build_executables.ps1`와 `build_runtime_installer.ps1`로 미서명 EXE를 만든다. 공개 ZIP 경계인 `build_portable.ps1`는 CPython이 빌드 시스템용으로 제공하는 공식 Python 3.13.7 NuGet CI 패키지와 Python.org Tcl/Tk MSI를 고정 크기·SHA-256으로 확인하고 핵심 실행 파일과 Tcl/Tk MSI의 PSF Authenticode 서명을 검증한 뒤 새 격리 환경을 만든다. Tcl/Tk MSI는 관리 추출(`/a`)만 하므로 시스템에 설치된 Python은 변경하지 않으며, NuGet 패키지에 포함된 pip 25.2와 해시 잠금된 wheel만 사용한다. 공개 패키지를 만들 때는 두 앱 EXE가 `NotSigned` 상태인지 확인한 뒤 미서명 상태와 SHA-256을 기록한다. 기본 ZIP에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않으며, 새 스테이징 폴더에서 Git 추적 문서와 명시된 파일만 조립한 뒤 압축 전후 파일 목록을 대조한다.
 
 AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토한 정확한 파일 허용 목록이 필요하다. 목록은 UTF-8 텍스트로 작성하고 `audiosep` 아래의 파일 상대 경로를 슬래시(`/`) 형식으로 한 줄에 하나씩 적는다. 빈 줄과 `#`으로 시작하는 주석은 허용한다. 빌드 스크립트는 목록에 없는 파일을 복사하지 않고, 절대 경로·상위 폴더 이동·중복 경로·링크와 필수 런타임 파일 누락을 거부한다. 현재 설치 폴더를 자동 승인하지 말고 캐시, 모델 가중치, 로그와 개인 파일이 없는 정리된 런타임을 기준으로 목록을 검토해야 한다.
 
@@ -292,7 +295,14 @@ The Windows installer is available as an unsigned public testing prerelease at [
 
 The older `0.2.3`, `0.2.5`, and `0.2.6` assets are not offered for installation. Version `0.2.5` failed clean-install validation, while `0.2.6` could trim trailing video frames when the source audio was shorter than the video; those assets were moved to GitHub Drafts.
 
-This `0.2.7` prerelease has no Authenticode code signature, so Windows cannot verify its publisher and Windows SmartScreen may display a warning. Download it only from the official GitHub Release and verify the ZIP against the `.sha256` file. The package also provides hashes for both EXEs in `docs/SHA256SUMS.txt` and records the unsigned state in `docs/SIGNING_STATUS.txt`.
+This `0.2.7` prerelease is distributed without a code signature, so Windows cannot verify its publisher and SmartScreen may display a warning. This project does not plan to apply a code-signing certificate to its Windows releases. Verify the source and files before proceeding:
+
+1. Confirm that the ZIP came from the official GitHub Release above and verify it with the matching `.sha256` file.
+2. If `Windows protected your PC` appears when you run `video-music-separator-setup.exe`, select `More info`.
+3. Confirm that the app name is `video-music-separator-setup.exe` and the publisher is shown as `Unknown publisher`, then select `Run anyway`.
+4. If the same warning appears for `video-music-separator.exe` after installation, verify the app name and follow the same steps.
+
+Do not disable SmartScreen or Smart App Control. If `Run anyway` is unavailable, an organization policy or Smart App Control may be blocking unsigned applications, and this build cannot run in that environment. The package also provides hashes for both EXEs in `docs/SHA256SUMS.txt`. See Microsoft's [SmartScreen app reputation guidance](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation) and [Smart App Control guidance](https://support.microsoft.com/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions) for details.
 
 The automatically generated `Source code (zip)` and `Source code (tar.gz)` files are not installers and should not be downloaded for installation.
 
@@ -308,9 +318,7 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 6. Wait for all downloads and SHA-256 verification to finish.
 7. After the completion message appears, run `video-music-separator.exe`.
 
-When a certificate is provided, the public ZIP build verifies both EXEs' Authenticode signatures, signer, and timestamp. Without a certificate, it verifies that both files are unsigned and creates `docs/SIGNING_STATUS.txt`, `docs/SHA256SUMS.txt` for the EXEs, and a separate `.sha256` file for the ZIP. It never presents an unsigned build as signed.
-
-> **Current distribution status:** The `0.2.7` Windows installer assets are an unsigned public prerelease for functional testing. Written permission from the AV-CASS researchers for automatic checkpoint downloads and clean installation testing with a new Windows user account are still pending. This is not represented as an approved final general-use release or an official AV-CASS application. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Current distribution status:** The `0.2.7` Windows installer assets are an unsigned public prerelease for functional testing. Written permission from the AV-CASS researchers for automatic checkpoint downloads and clean installation testing with a new Windows user account are still pending. This is not represented as an approved final general-use release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
@@ -443,11 +451,9 @@ If `py` cannot find the installed Python interpreter, use the full path to the i
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
 .\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
-# Optional only when a certificate is available:
-.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep -CodeSigningCertificateThumbprint <thumbprint>
 ```
 
-`build_executables.ps1` and `build_runtime_installer.ps1` sign when a certificate is supplied and otherwise create unsigned EXEs. The public boundary, `build_portable.ps1`, verifies the official Python 3.13.7 NuGet CI package provided by CPython for build systems and the Python.org Tcl/Tk MSI against pinned size and SHA-256 values, then verifies PSF Authenticode signatures on the critical executables and the Tcl/Tk MSI before creating a fresh isolated environment. The Tcl/Tk MSI is administratively extracted (`/a`), so the build does not modify a system Python installation. It uses only the NuGet package's pip 25.2 and hash-locked wheels. With a certificate, it verifies both EXEs' signature, signer, and RFC 3161 timestamp. Without one, it requires both EXEs to report `NotSigned` and records that state and their SHA-256 values in the package. The package is assembled in a fresh staging directory from tracked documentation and explicitly selected files, with exact pre- and post-ZIP file-set checks.
+For public releases, this project does not supply a code-signing certificate to `build_executables.ps1` or `build_runtime_installer.ps1`, so they create unsigned EXEs. The public boundary, `build_portable.ps1`, verifies the official Python 3.13.7 NuGet CI package provided by CPython for build systems and the Python.org Tcl/Tk MSI against pinned size and SHA-256 values, then verifies PSF Authenticode signatures on the critical executables and the Tcl/Tk MSI before creating a fresh isolated environment. The Tcl/Tk MSI is administratively extracted (`/a`), so the build does not modify a system Python installation. It uses only the NuGet package's pip 25.2 and hash-locked wheels. For a public package, both application EXEs must report `NotSigned`; the build records that status and their SHA-256 values in the package. The package is assembled in a fresh staging directory from tracked documentation and explicitly selected files, with exact pre- and post-ZIP file-set checks.
 
 Building the base AI runtime or an internal offline bundle requires a reviewed exact-file allowlist. Save it as UTF-8 text with one slash-separated file path relative to `audiosep` per line; blank lines and comments beginning with `#` are allowed. Files not listed are not copied, and the scripts reject absolute paths, parent traversal, duplicates, links, and missing required runtime files. Do not automatically approve the current installed folder. Review the list against a clean runtime that contains no caches, model weights, logs, or personal files.
 
