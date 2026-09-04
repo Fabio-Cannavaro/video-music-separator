@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Mapping
 from pathlib import Path
 
 
@@ -21,6 +22,47 @@ INFERENCE_HOP = INFERENCE_LENGTH - DEFAULT_OVERLAP_SAMPLES
 INFERENCE_STEPS = 250
 VIDEO_FPS = 4
 MODEL_BAND_LIMIT = 8000.0
+
+
+def load_avcass_ema_state(checkpoint: Path, torch_module):
+    """Load only tensor weights and the small argparse metadata AV-CASS needs."""
+    with torch_module.serialization.safe_globals([argparse.Namespace]):
+        payload = torch_module.load(
+            checkpoint,
+            map_location="cpu",
+            weights_only=True,
+        )
+    if not isinstance(payload, Mapping) or "ema" not in payload:
+        raise RuntimeError("AV-CASS 체크포인트에 ema 가중치가 없습니다.")
+    state = payload["ema"]
+    if not isinstance(state, Mapping):
+        raise RuntimeError("AV-CASS ema 가중치 형식이 올바르지 않습니다.")
+    return state
+
+
+def init_cavp_with_restricted_checkpoint(
+    init_visual_encoder,
+    torch_module,
+    numpy_module,
+):
+    """Restrict the upstream CAVP loader to weights-only checkpoint contents."""
+    safe_globals = [
+        numpy_module.dtype,
+        numpy_module.core.multiarray.scalar,
+        type(numpy_module.dtype(numpy_module.float64)),
+    ]
+    original_load = torch_module.load
+
+    def restricted_load(*args, **kwargs):
+        kwargs["weights_only"] = True
+        with torch_module.serialization.safe_globals(safe_globals):
+            return original_load(*args, **kwargs)
+
+    torch_module.load = restricted_load
+    try:
+        return init_visual_encoder("cavp")
+    finally:
+        torch_module.load = original_load
 
 
 def parse_args() -> argparse.Namespace:
@@ -236,6 +278,7 @@ def main() -> int:
     sys.path.insert(0, str(deps))
     sys.path.insert(0, str(repo))
 
+    import numpy as np
     import torch
     import torch.nn.functional as functional
     import torchaudio
@@ -300,7 +343,7 @@ def main() -> int:
             f"[setup] AV-CASS 체크포인트 읽는 중 ({time.perf_counter() - setup_started:.1f}초)",
             flush=True,
         )
-        state = torch.load(checkpoint, map_location="cpu", weights_only=False)["ema"]
+        state = load_avcass_ema_state(checkpoint, torch)
         print(
             f"[setup] AV-CASS 가중치 적용 중 ({time.perf_counter() - setup_started:.1f}초)",
             flush=True,
@@ -318,7 +361,11 @@ def main() -> int:
             f"({time.perf_counter() - setup_started:.1f}초)",
             flush=True,
         )
-        image_model, _ = init_visual_encoder("cavp")
+        image_model, _ = init_cavp_with_restricted_checkpoint(
+            init_visual_encoder,
+            torch,
+            np,
+        )
         print(
             f"[setup] CAVP CUDA 이동 중 ({time.perf_counter() - setup_started:.1f}초)",
             flush=True,

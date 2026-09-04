@@ -24,6 +24,8 @@ from avcass_worker import (
     INFERENCE_LENGTH,
     configure_yapf_cache,
     inference_starts,
+    init_cavp_with_restricted_checkpoint,
+    load_avcass_ema_state,
 )
 
 from sound_separator_app import (
@@ -223,6 +225,127 @@ class PlaybackCommandTests(unittest.TestCase):
 
 
 class MusicPartitionTests(unittest.TestCase):
+    def test_loads_avcass_checkpoint_in_weights_only_mode(self) -> None:
+        safe_globals_calls: list[list[object]] = []
+        load_calls: list[tuple[Path, dict[str, object]]] = []
+
+        class SafeGlobalsContext:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                return False
+
+        def safe_globals(values):
+            safe_globals_calls.append(values)
+            return SafeGlobalsContext()
+
+        def load(path, **kwargs):
+            load_calls.append((path, kwargs))
+            return {"ema": {"weight": "tensor"}}
+
+        torch_module = SimpleNamespace(
+            load=load,
+            serialization=SimpleNamespace(safe_globals=safe_globals),
+        )
+        checkpoint = Path("avcass.pt")
+
+        state = load_avcass_ema_state(checkpoint, torch_module)
+
+        self.assertEqual(state, {"weight": "tensor"})
+        self.assertEqual(
+            load_calls,
+            [(checkpoint, {"map_location": "cpu", "weights_only": True})],
+        )
+        self.assertIn(argparse.Namespace, safe_globals_calls[0])
+
+    def test_restricts_cavp_checkpoint_load_and_restores_torch(self) -> None:
+        safe_globals_calls: list[list[object]] = []
+        load_calls: list[dict[str, object]] = []
+
+        class SafeGlobalsContext:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                return False
+
+        class FakeDtype:
+            def __init__(self, value):
+                self.value = value
+
+        def safe_globals(values):
+            safe_globals_calls.append(values)
+            return SafeGlobalsContext()
+
+        def original_load(*args, **kwargs):
+            load_calls.append(kwargs)
+            return {"state_dict": {}}
+
+        torch_module = SimpleNamespace(
+            load=original_load,
+            serialization=SimpleNamespace(safe_globals=safe_globals),
+        )
+        numpy_module = SimpleNamespace(
+            dtype=FakeDtype,
+            float64=object(),
+            core=SimpleNamespace(
+                multiarray=SimpleNamespace(scalar=object()),
+            ),
+        )
+
+        def init_visual_encoder(model_name):
+            self.assertEqual(model_name, "cavp")
+            torch_module.load("cavp.pth", weights_only=False)
+            return "image-model", "metadata"
+
+        result = init_cavp_with_restricted_checkpoint(
+            init_visual_encoder,
+            torch_module,
+            numpy_module,
+        )
+
+        self.assertEqual(result, ("image-model", "metadata"))
+        self.assertEqual(load_calls, [{"weights_only": True}])
+        self.assertEqual(len(safe_globals_calls[0]), 3)
+        self.assertIs(torch_module.load, original_load)
+
+    def test_restores_torch_load_when_cavp_initialization_fails(self) -> None:
+        class SafeGlobalsContext:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                return False
+
+        def original_load(*args, **kwargs):
+            return None
+
+        torch_module = SimpleNamespace(
+            load=original_load,
+            serialization=SimpleNamespace(
+                safe_globals=lambda values: SafeGlobalsContext()
+            ),
+        )
+        numpy_module = SimpleNamespace(
+            dtype=lambda value: value,
+            float64=object(),
+            core=SimpleNamespace(
+                multiarray=SimpleNamespace(scalar=object()),
+            ),
+        )
+
+        def failing_init(model_name):
+            raise RuntimeError("CAVP load failed")
+
+        with self.assertRaisesRegex(RuntimeError, "CAVP load failed"):
+            init_cavp_with_restricted_checkpoint(
+                failing_init,
+                torch_module,
+                numpy_module,
+            )
+        self.assertIs(torch_module.load, original_load)
+
     def test_korean_and_english_translation_tables_have_matching_keys(self) -> None:
         self.assertEqual(set(TRANSLATIONS["ko"]), set(TRANSLATIONS["en"]))
 
@@ -234,6 +357,10 @@ class MusicPartitionTests(unittest.TestCase):
             TRANSLATIONS["en"]["legal_title"],
             "App Information, Licenses & Sources",
         )
+
+    def test_non_music_labels_do_not_claim_unverified_voice_preservation(self) -> None:
+        self.assertEqual(TRANSLATIONS["ko"]["event_non_music"], "음악 아님")
+        self.assertEqual(TRANSLATIONS["en"]["event_non_music"], "Non-Music")
 
     def test_video_opened_status_uses_generic_music_separation_wording(self) -> None:
         self.assertEqual(
@@ -333,6 +460,7 @@ class MusicPartitionTests(unittest.TestCase):
         )
         self.assertEqual([event.event_id for event in events], ["music", "non-music"])
         self.assertEqual([event.query for event in events], ["music", "non-music"])
+        self.assertEqual([event.label for event in events], ["음악 (BGM)", "음악 아님"])
         self.assertTrue(all(event.extraction_quality == "ok" for event in events))
         self.assertTrue(all(event.extracted_duration == 5.25 for event in events))
 

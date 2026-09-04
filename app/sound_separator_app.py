@@ -181,7 +181,7 @@ TRANSLATIONS = {
         "mute": "뮤트",
         "unmute": "뮤트 해제",
         "event_music": "음악 (BGM)",
-        "event_non_music": "음악 아님 (목소리·효과음)",
+        "event_non_music": "음악 아님",
         "no_separated_track": "분리본이 없습니다.",
         "confirm_mute_review": "{label}\n\n{note}\n\n그래도 이 소리를 뮤트할까요?",
         "preview_open_failed": "영상 미리보기를 열 수 없습니다: {path}",
@@ -190,7 +190,7 @@ TRANSLATIONS = {
         "save_cleanup_warning": "영상은 저장했지만 작업 폴더를 삭제하지 못했습니다.\n\n저장 파일: {target}\n작업 폴더: {work_dir}\n\n{error}",
         "save_complete_dialog": "저장했습니다.\n{path}\n\n임시 작업 폴더도 삭제했습니다.",
         "quality_reconstruction": "두 분리본을 합쳐도 원본과 충분히 일치하지 않습니다. 다시 분리해 주세요.",
-        "quality_source_like": "음악 트랙이 원본 전체와 사실상 같고 음악 아님 트랙은 거의 무음입니다. 원본에 목소리나 효과음이 있다면 분리가 실패한 결과입니다.",
+        "quality_source_like": "음악 트랙이 원본 전체와 사실상 같고 음악 아님 트랙은 거의 무음입니다. 원본에 음악 외 소리가 있다면 분리가 실패한 결과입니다.",
         "quality_unreadable": "분리 품질 검증값을 읽지 못했습니다. 두 트랙을 직접 확인해 주세요.",
         "query_music": "기본 음악",
         "query_background": "배경음악",
@@ -303,7 +303,7 @@ TRANSLATIONS = {
         "mute": "Mute",
         "unmute": "Unmute",
         "event_music": "Music (BGM)",
-        "event_non_music": "Non-Music (Voice & Effects)",
+        "event_non_music": "Non-Music",
         "no_separated_track": "No separated track is available.",
         "confirm_mute_review": "{label}\n\n{note}\n\nMute this sound anyway?",
         "preview_open_failed": "Could not open the video preview: {path}",
@@ -312,7 +312,7 @@ TRANSLATIONS = {
         "save_cleanup_warning": "The video was saved, but the work folder could not be deleted.\n\nSaved file: {target}\nWork folder: {work_dir}\n\n{error}",
         "save_complete_dialog": "Saved.\n{path}\n\nThe temporary work folder was also deleted.",
         "quality_reconstruction": "The two separated tracks do not reconstruct the source closely enough. Run separation again.",
-        "quality_source_like": "The music track is nearly identical to the full source while the non-music track is almost silent. If the source contains voices or effects, separation likely failed.",
+        "quality_source_like": "The music track is nearly identical to the full source while the non-music track is almost silent. If the source contains non-music audio, separation likely failed.",
         "quality_unreadable": "The separation quality metrics could not be read. Check both tracks directly.",
         "query_music": "Music",
         "query_background": "Background Music",
@@ -738,7 +738,7 @@ def build_partition_events(
         ),
         SoundEvent(
             "non-music",
-            "음악 아님 (목소리·효과음)",
+            "음악 아님",
             0.0,
             duration,
             1.0,
@@ -763,7 +763,7 @@ def assess_partition_metrics(metrics: dict[str, float]) -> tuple[str, str]:
         return (
             "review",
             "음악 트랙이 원본 전체와 사실상 같고 음악 아님 트랙은 거의 무음입니다. "
-            "원본에 목소리나 효과음이 있다면 분리가 실패한 결과입니다.",
+            "원본에 음악 외 소리가 있다면 분리가 실패한 결과입니다.",
         )
     return "ok", ""
 

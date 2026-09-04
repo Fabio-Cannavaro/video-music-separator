@@ -30,6 +30,7 @@ models/
 *.bin
 
 # Personal media and generated results
+/media/
 *.mp4
 *.mov
 *.mkv

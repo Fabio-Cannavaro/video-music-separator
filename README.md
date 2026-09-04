@@ -4,7 +4,7 @@
 
 ## 한국어
 
-영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님(목소리·효과음)` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
+영상에 섞인 배경음악을 줄이거나 제거하기 위한 Windows GUI다. AV-CASS가 원본 오디오를 `음악`과 `음악 아님` 두 트랙으로 나누며, 결과를 번갈아 듣고 음악을 뮤트한 사본을 원본 옆에 저장할 수 있다. 원본 영상은 바꾸지 않으며 처리 속도보다 분리 품질을 우선한다.
 
 - 현재 앱 버전: `0.2.1`
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
@@ -51,7 +51,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 현재 실행 파일은 유료 코드 서명 인증서를 적용하지 않은 **미서명 빌드**일 수 있다. Windows SmartScreen에 `알 수 없는 게시자` 경고가 나오면 저장소·배포 주소와 SHA-256을 먼저 확인하고, 두 정보가 맞을 때에만 `추가 정보`에서 실행한다. 체크섬이 다르거나 출처가 불명확한 파일은 실행하지 않는다.
 
-> **현재 배포 상태:** 이 저장소는 비공개 배포 준비 단계다. 공개 Release 전에는 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사를 완료해야 한다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **현재 배포 상태:** 이 프로젝트는 공개 Release 준비 단계이며 아직 공개 설치 파일을 배포하지 않았다. 공개 Release 전에는 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사를 완료해야 한다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
@@ -66,6 +66,8 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 설치 화면에는 다운로드 출처, 적용되는 이용조건, 외부 통신 정보와 사용자 책임이 표시된다. 사용자가 이를 확인하고 동의해야 설치를 시작할 수 있다. Video Music Separator는 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며 제휴하거나 보증받지 않았다.
 
 설치 파일은 모델이나 FFmpeg를 이 저장소 또는 별도 서버에서 재배포하지 않는다. AI 실행환경·모델의 파일 내용이 고정 체크섬과 다르거나, FFmpeg가 Gyan의 공식 버전·체크섬·최종 다운로드 URL 및 GPL Essentials 빌드 조건과 다르면 설치를 중단한다. 다운로드, GitHub 인증, 분할 파일 결합, 무결성 확인, 압축 해제, 파일 배치, 최종 검증은 단계별 퍼센트로 표시한다. 설치 결과와 실제 버전·출처·체크섬은 앱 폴더의 `docs/runtime-assets.json`에 기록한다.
+
+앱은 검증된 체크포인트를 읽을 때도 PyTorch의 제한된 `weights_only` 모드를 사용하며, 각 공식 체크포인트에 필요한 최소 메타데이터 형식만 허용한다. 따라서 일반 Python 객체를 제한 없이 역직렬화하지 않는다.
 
 공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
 
@@ -99,7 +101,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 2. `영상에서 음악 분리`를 누른다.
 3. 각 행의 `듣기`를 누르면 앱 맨 위의 작은 화면에서 영상과 해당 트랙이 함께 재생된다. 같은 버튼을 다시 누르면 정지한다. 미리보기 아래 슬라이더를 움직이면 원하는 재생 위치로 바로 이동한다. 미리보기 영상은 처음 한 번 420×236·24fps의 가벼운 프록시로 준비하고 이후 재사용한다.
 4. `음악 (BGM)` 행의 `뮤트`를 누른다.
-5. `전체 영상 재생`으로 음악이 빠진 영상과 목소리·효과음을 확인한다. 소리를 기준 시계로 삼고, 영상 디코딩은 화면 처리와 분리하며 늦은 영상 프레임은 건너뛰어 소리 싱크와 UI 반응성을 우선한다.
+5. `전체 영상 재생`으로 음악을 뮤트한 결과와 남은 `음악 아님` 오디오를 직접 확인한다. 소리를 기준 시계로 삼고, 영상 디코딩은 화면 처리와 분리하며 늦은 영상 프레임은 건너뛰어 소리 싱크와 UI 반응성을 우선한다.
 6. 창 아래의 `사본 저장`을 누르면 `<원본이름>_음악제거.mp4`를 만든다. 같은 이름의 파일이 있으면 `_2`, `_3`처럼 번호를 붙여 기존 사본을 보존한다. 재생용 프록시는 저장본에 쓰지 않으며, 저장본의 영상 스트림은 원본 그대로 복사한다.
 
 영상 미리보기 오른쪽의 `한국어 / English`를 선택하면 창 제목, 버튼, 상태 안내, 결과 표, 경고창과 앱 정보·라이선스·출처 창의 안내 표기가 즉시 해당 언어로 바뀐다.
@@ -188,7 +190,7 @@ py -m venv --system-site-packages .venv
 
 ### 입력 파일과 결과물 책임
 
-이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 완벽한 대사·효과음 보존이나 음악 제거를 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
+이 앱은 사용자가 선택한 파일을 로컬 PC에서 처리한다. 사용자는 입력 영상·음악·음성에 필요한 권리를 확보하고, 생성된 결과물을 이용하거나 배포할 권한이 있는지 직접 확인해야 한다. AI 분리는 음악의 완전한 제거 또는 음악 외 소리의 보존을 보장하지 않으므로 저장 전에 결과를 직접 검토해야 한다.
 
 앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face, GitHub와 Gyan에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
 
@@ -210,7 +212,7 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 ## English
 
-A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music (Voice & Effects)` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
+A Windows GUI for reducing or removing background music mixed into video audio. AV-CASS separates the original audio into `Music` and `Non-Music` tracks so users can compare the results and save a copy with the music muted beside the source video. The source video remains unchanged, and separation quality is prioritized over processing speed.
 
 - Current application version: `0.2.1`
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
@@ -257,7 +259,7 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 
 The executables may be **unsigned builds** without a paid code-signing certificate. If Windows SmartScreen displays an `Unknown publisher` warning, first verify the repository, distribution URL, and SHA-256 value. Use `More info` to continue only when those details match. Do not run a file with a mismatched checksum or unclear origin.
 
-> **Current distribution status:** This repository is in the private distribution-preparation stage. Before a public Release, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account must be completed. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Current distribution status:** This project is preparing for a public Release and has not yet published a public installer. Before a public Release, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account must be completed. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
@@ -272,6 +274,8 @@ The executables may be **unsigned builds** without a paid code-signing certifica
 The installer displays the download sources, applicable terms, network-access information, and user responsibilities. Installation begins only after the user reviews and accepts them. Video Music Separator is not an official application of, affiliated with, or endorsed by the AV-CASS researchers or their institutions.
 
 The installer does not redistribute the model files or FFmpeg from this repository or a separate project server. Installation stops if the AI runtime or models no longer match their pinned checksums, or if FFmpeg does not match Gyan's official version, checksum, final download URL, and GPL Essentials build requirements. Downloads, GitHub authentication, split-file combining, integrity checks, extraction, file placement, and final verification display a percentage for each stage. Actual versions, sources, and checksums are recorded in `docs/runtime-assets.json` inside the application folder.
+
+Even after checksum verification, the application reads checkpoints through PyTorch's restricted `weights_only` mode and allowlists only the minimal metadata types required by each official checkpoint. It does not deserialize arbitrary Python objects without restriction.
 
 The public application ZIP and separate AI runtime assets exclude the former AudioSep/BandIt code and weights and their GPL dependency, `pedalboard`. The exact installed Python package list is available in `docs/PYTHON_PACKAGES_NOTICES.md` inside the application ZIP, the machine-readable inventory in `docs/PYTHON_PACKAGES_INVENTORY.json`, and full license texts in `docs/licenses/python/`.
 
@@ -305,7 +309,7 @@ To move the application itself, move the entire installed folder rather than eit
 2. Select `Separate Music from Video`.
 3. Select `Listen` on either row to play the video with that separated track in the preview at the top of the application. Select the same button again to stop. Move the slider below the preview to seek directly to the desired position. On first use, the app prepares a lightweight 420×236, 24 fps preview proxy and reuses it afterward.
 4. Select `Mute` on the `Music (BGM)` row.
-5. Use `Play Full Video` to review the video with the music removed and the voice and effects preserved. Audio is the master clock; video decoding runs separately from UI work, and late video frames are skipped to prioritize audio sync and responsiveness.
+5. Use `Play Full Video` to review the music-muted result and the remaining `Non-Music` audio directly. Audio is the master clock; video decoding runs separately from UI work, and late video frames are skipped to prioritize audio sync and responsiveness.
 6. Select `Save Copy` at the bottom of the window to create `<source name>_music-removed.mp4`. If that name already exists, the app adds `_2`, `_3`, and so on to preserve earlier copies. Preview proxies are never used for the saved copy; its encoded video stream is copied unchanged from the source.
 
 Selecting `한국어 / English` to the right of the video preview immediately changes the window title, buttons, status messages, result table, warnings, and license/source window to the selected language.
@@ -394,7 +398,7 @@ Run the portable smoke test as follows:
 
 ### Input and Output Responsibility
 
-The application processes user-selected files locally on the PC. Users must obtain the necessary rights to the input video, music, and speech and independently confirm their right to use or distribute generated results. AI separation does not guarantee perfect preservation of dialogue and effects or complete music removal, so review results before saving.
+The application processes user-selected files locally on the PC. Users must obtain the necessary rights to the input video, music, and speech and independently confirm their right to use or distribute generated results. AI separation does not guarantee complete music removal or preservation of non-music audio, so review results before saving.
 
 The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, GitHub, and Gyan during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
 
