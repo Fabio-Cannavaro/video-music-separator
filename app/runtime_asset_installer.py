@@ -128,6 +128,16 @@ MAX_COMPRESSION_RATIO = 1_000
 ProgressCallback = Callable[[str, int, int], None]
 
 
+def _filesystem_path(path: Path) -> str:
+    """Return a Windows extended path for long-path-safe filesystem I/O."""
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved[2:]
+    return "\\\\?\\" + resolved
+
+
 INSTALLATION_DISCLOSURE = f"""Video Music Separator {APP_VERSION}
 
 이 앱은 AV-CASS 연구진 또는 관련 기관의 공식 앱이 아니며, 해당 연구진과 제휴하거나 보증받지 않았습니다.
@@ -492,8 +502,9 @@ def _extract_zip_with_progress(
         progress(label, 0, total)
         update_step = max(total // 500, 1)
         next_update = update_step
+        extraction_root = _filesystem_path(destination)
         for item in items:
-            package.extract(item, destination)
+            package.extract(item, extraction_root)
             current += item.file_size
             if current >= next_update or current >= total:
                 progress(label, current, total)
@@ -536,7 +547,7 @@ def install_ffmpeg(root: Path, progress: ProgressCallback) -> DownloadAsset | No
     download_asset(ffmpeg_archive, archive, progress)
     downloads = archive.parent
     downloads.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="ffmpeg-extract-", dir=downloads) as temp_name:
+    with tempfile.TemporaryDirectory(prefix=".vms-f-", dir=root) as temp_name:
         extraction = Path(temp_name)
         _extract_zip_with_progress(
             archive,
@@ -627,7 +638,7 @@ def install_base_runtime(root: Path, progress: ProgressCallback) -> None:
         raise RuntimeError("AI Python 실행환경 결합 파일의 SHA-256이 일치하지 않습니다.")
     os.replace(pending_archive, archive)
 
-    with tempfile.TemporaryDirectory(prefix="runtime-extract-", dir=downloads) as temp_name:
+    with tempfile.TemporaryDirectory(prefix=".vms-r-", dir=root) as temp_name:
         extraction = Path(temp_name)
         _safe_extract_zip(archive, extraction, progress)
         extracted_runtime = extraction / "audiosep"
@@ -999,22 +1010,42 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _write_console(message: str, stream: object | None) -> None:
+    if stream is None:
+        return
+    try:
+        stream.write(message + "\n")
+        stream.flush()
+    except (AttributeError, OSError, ValueError):
+        return
+
+
 def main() -> int:
     args = parse_args()
     root = args.install_dir.resolve()
     if args.verify_only:
         problems = verify_installation(root)
-        print(json.dumps({"ok": not problems, "problems": problems}, ensure_ascii=False))
+        _write_console(
+            json.dumps({"ok": not problems, "problems": problems}, ensure_ascii=False),
+            sys.stdout,
+        )
         return 0 if not problems else 1
     if args.headless:
         if not args.accept_terms:
-            print(
+            _write_console(
                 "비대화형 설치에는 --accept-terms가 필요합니다. 먼저 설치 안내와 "
                 "동봉된 라이선스·개인정보 문서를 확인해 주세요.",
-                file=sys.stderr,
+                sys.stderr,
             )
             return 2
-        install_all(root, lambda label, current, total: print(label, flush=True))
+        try:
+            install_all(
+                root,
+                lambda label, current, total: _write_console(label, sys.stdout),
+            )
+        except Exception as error:
+            _write_console(f"설치 실패: {error}", sys.stderr)
+            return 1
         return 0
     InstallerWindow(root).run()
     return 0

@@ -45,6 +45,14 @@ class FakeResponse(io.BytesIO):
         self.close()
 
 
+class BrokenConsoleStream:
+    def write(self, _value: str) -> None:
+        raise OSError(22, "Invalid argument")
+
+    def flush(self) -> None:
+        raise OSError(22, "Invalid argument")
+
+
 def fake_asset(payload: bytes) -> installer.DownloadAsset:
     return installer.DownloadAsset(
         asset_id="test",
@@ -69,6 +77,73 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
             with patch.object(installer, "install_all") as install_all:
                 self.assertEqual(installer.main(), 2)
         install_all.assert_not_called()
+
+    def test_headless_install_handles_missing_windowed_console(self) -> None:
+        args = argparse.Namespace(
+            install_dir=Path("."),
+            verify_only=False,
+            headless=True,
+            accept_terms=True,
+        )
+
+        def install_with_progress(_root: Path, progress) -> None:
+            progress("설치 진행", 1, 1)
+
+        with (
+            patch.object(installer, "parse_args", return_value=args),
+            patch.object(installer, "install_all", side_effect=install_with_progress),
+            patch.object(installer.sys, "stdout", BrokenConsoleStream()),
+        ):
+            self.assertEqual(installer.main(), 0)
+
+    def test_headless_install_failure_returns_nonzero_without_console(self) -> None:
+        args = argparse.Namespace(
+            install_dir=Path("."),
+            verify_only=False,
+            headless=True,
+            accept_terms=True,
+        )
+        with (
+            patch.object(installer, "parse_args", return_value=args),
+            patch.object(installer, "install_all", side_effect=RuntimeError("failed")),
+            patch.object(installer.sys, "stderr", BrokenConsoleStream()),
+        ):
+            self.assertEqual(installer.main(), 1)
+
+    def test_verify_only_handles_missing_windowed_console(self) -> None:
+        args = argparse.Namespace(
+            install_dir=Path("."),
+            verify_only=True,
+            headless=False,
+            accept_terms=False,
+        )
+        with (
+            patch.object(installer, "parse_args", return_value=args),
+            patch.object(installer, "verify_installation", return_value=[]),
+            patch.object(installer.sys, "stdout", BrokenConsoleStream()),
+        ):
+            self.assertEqual(installer.main(), 0)
+
+    @unittest.skipUnless(os.name == "nt", "Windows extended paths are Windows-only")
+    def test_extracts_zip_member_past_legacy_windows_path_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            archive = root / "long-path.zip"
+            destination = root / ("d" * 120)
+            destination.mkdir()
+            member = ("f" * 120) + ".bin"
+            target = destination / member
+            self.assertGreater(len(str(target)), 260)
+            with zipfile.ZipFile(archive, "w") as package:
+                package.writestr(member, b"long path payload")
+
+            installer._extract_zip_with_progress(
+                archive, destination, "extract", lambda *_: None
+            )
+
+            extended_target = Path(installer._filesystem_path(target))
+            self.assertEqual(extended_target.read_bytes(), b"long path payload")
+            extended_target.unlink()
 
     def test_disclosure_lists_downloads_network_data_and_user_responsibility(self) -> None:
         disclosure = installer.installation_disclosure_text()
@@ -287,8 +362,22 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
 
     def test_installs_combined_base_runtime_archive(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
-            root = Path(temp_name)
+            temporary_root = Path(temp_name)
+            component_length = 95 - len(str(temporary_root)) - 1
+            self.assertGreater(component_length, 8)
+            root = temporary_root / ("install-" + "x" * (component_length - 8))
+            root.mkdir()
             archive = root / "source.zip"
+            long_member = (
+                "audiosep/env/Lib/site-packages/transformers/models/"
+                "audio_spectrogram_transformer/__pycache__/"
+                "configuration_audio_spectrogram_transformer.cpython-310.pyc"
+            )
+            self.assertLess(len(str(root / long_member)), 260)
+            legacy_staging_target = (
+                root / ".downloads" / "runtime-extract-abcdefgh" / long_member
+            )
+            self.assertGreater(len(str(legacy_staging_target)), 260)
             with zipfile.ZipFile(archive, "w") as package:
                 package.writestr("audiosep/env/python.exe", b"python")
                 package.writestr(
@@ -297,6 +386,7 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                 package.writestr(
                     "audiosep/avcass/deps/diffusers/__init__.py", b"diffusers"
                 )
+                package.writestr(long_member, b"generated cache")
             payload = archive.read_bytes()
             split_at = len(payload) // 2
             chunks = (payload[:split_at], payload[split_at:])
@@ -330,15 +420,23 @@ class RuntimeAssetInstallerTests(unittest.TestCase):
                 patch.object(installer, "runtime_integrity_is_valid", return_value=True),
             ):
                 updates: list[tuple[str, int, int]] = []
+                observed_staging: list[Path] = []
+
+                def record_progress(label: str, current: int, total: int) -> None:
+                    updates.append((label, current, total))
+                    if "압축을 푸는 중" in label and current == 0:
+                        observed_staging.extend(root.glob(".vms-r-*"))
+
                 installer.install_base_runtime(
                     root,
-                    lambda label, current, total: updates.append(
-                        (label, current, total)
-                    ),
+                    record_progress,
                 )
                 self.assertTrue(installer.base_runtime_is_current(root))
                 record_integrity.assert_called_once()
             self.assertEqual(installer.validate_base_runtime(root), [])
+            self.assertEqual((root / long_member).read_bytes(), b"generated cache")
+            self.assertEqual(len(observed_staging), 1)
+            self.assertEqual(observed_staging[0].parent, root)
             self.assertFalse((root / ".downloads" / "runtime.zip").exists())
             labels = [label for label, _, _ in updates]
             self.assertTrue(any("분할 파일을 결합하는 중" in label for label in labels))

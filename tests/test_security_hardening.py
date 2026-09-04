@@ -84,6 +84,27 @@ class ResourcePolicyTests(unittest.TestCase):
 
 
 class RuntimeIntegrityTests(unittest.TestCase):
+    def test_yapf_generated_cache_is_ignored_but_adjacent_code_is_protected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = Path(temporary) / "audiosep"
+            executable = runtime / "env" / "python.exe"
+            executable.parent.mkdir(parents=True)
+            executable.write_bytes(b"trusted")
+            yapf_cache = runtime / "avcass" / "cache" / "yapf"
+            yapf_cache.mkdir(parents=True)
+            grammar = yapf_cache / "Grammar-generated.pickle"
+            grammar.write_bytes(b"first generated value")
+
+            before = runtime_integrity.runtime_tree_fingerprint(runtime)
+            grammar.write_bytes(b"different generated value")
+            after_cache_change = runtime_integrity.runtime_tree_fingerprint(runtime)
+            self.assertEqual(after_cache_change, before)
+
+            adjacent_code = yapf_cache / "loader.py"
+            adjacent_code.write_bytes(b"raise RuntimeError")
+            after_code_change = runtime_integrity.runtime_tree_fingerprint(runtime)
+            self.assertNotEqual(after_code_change, before)
+
     def test_same_size_runtime_tampering_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

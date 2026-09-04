@@ -5,7 +5,8 @@
 - [x] 로컬 `media/` 폴더와 생성된 진단 파일을 Git 추적 대상에서 제외했다.
 - [x] AV-CASS와 CAVP 체크포인트를 제한된 `weights_only` 방식으로 읽고 실제 모델 파일로 검증했다.
 - [x] 이전 미서명 `0.2.3` Windows 설치 테스트본은 Draft로 보존한다.
-- [x] `0.2.5` 미서명 공개 테스트 프리릴리스에는 미서명 상태, Windows SmartScreen 가능성, ZIP·EXE SHA-256 검증 방법을 한국어·영어로 표시한다.
+- [x] `0.2.6` 미서명 공개 테스트 프리릴리스에는 미서명 상태, Windows SmartScreen 가능성, ZIP·EXE SHA-256 검증 방법을 한국어·영어로 표시한다.
+- [x] 깨끗한 설치 검증에 실패한 `0.2.5` Windows 자산은 GitHub Draft로 전환해 일반 다운로드에서 제외한다.
 - [ ] AV-CASS 권리자에게 공개 앱의 체크포인트 자동 다운로드와 이용 범위를 서면으로 확인한다.
 - [x] 실제 `audiosep/env/`에 포함된 Python 패키지 전체의 이름·버전·라이선스·NOTICE를 자동 목록화한다.
 - [x] 공개 런타임에서 GPL `pedalboard`와 예전 AudioSep/BandIt 런타임을 제거한다.

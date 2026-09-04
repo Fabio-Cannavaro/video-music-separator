@@ -42,12 +42,18 @@ def _protected_files(runtime_root: Path) -> list[Path]:
     for path in runtime_root.rglob("*"):
         relative = path.relative_to(runtime_root)
         lowered_parts = tuple(part.lower() for part in relative.parts)
+        if path.is_symlink() or _is_reparse_point(path):
+            raise RuntimeError(f"AI 실행환경에 링크 또는 재분석 지점이 있습니다: {path}")
         if any(part in _IGNORED_DIRECTORY_NAMES for part in lowered_parts[:-1]):
             continue
         if any(lowered_parts[: len(prefix)] == prefix for prefix in _IGNORED_PATH_PREFIXES):
             continue
-        if path.is_symlink() or _is_reparse_point(path):
-            raise RuntimeError(f"AI 실행환경에 링크 또는 재분석 지점이 있습니다: {path}")
+        if (
+            lowered_parts[:-1] == ("avcass", "cache", "yapf")
+            and lowered_parts[-1].endswith(".pickle")
+            and lowered_parts[-1].startswith(("grammar-", "patterngrammar-"))
+        ):
+            continue
         if path.is_file() and path.name.lower() not in _IGNORED_FILE_NAMES:
             files.append(path)
     return sorted(files, key=lambda item: item.relative_to(runtime_root).as_posix().lower())
