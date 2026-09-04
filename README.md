@@ -166,10 +166,23 @@ py -m venv --system-site-packages .venv
 .\scripts\prepare_ffmpeg_gpl.ps1
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
-.\scripts\build_portable.ps1
+.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
 ```
 
-`build_executables.ps1`는 루트에 단일 파일형 앱 EXE와 설치 EXE를 만든다. `build_runtime_installer.ps1`는 설치 EXE와 대응하는 `.sha256` 파일만 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 내부용 오프라인 묶음이 필요하면 `build_portable.ps1 -BundleRuntimeAssets`를 사용한다. 인증서 지문을 `-CodeSigningCertificateThumbprint`로 제공한 경우에만 Authenticode 서명을 적용하며, 인증서가 없으면 미서명 상태로 빌드한다.
+`build_executables.ps1`는 루트에 단일 파일형 앱 EXE와 설치 EXE를 만든다. `build_runtime_installer.ps1`는 설치 EXE와 대응하는 `.sha256` 파일만 만든다. 기본 `build_portable.ps1` 결과에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않고 설치 파일을 포함한다. 이 스크립트는 기존 출력 폴더를 재사용하지 않고 새 스테이징 폴더에 Git으로 추적되는 문서와 명시된 파일만 조립한 뒤, 압축 전과 압축 후의 파일 목록이 정확히 같은지 검증한다. 따라서 로컬 `docs/runtime-assets.json`이나 예전 빌드의 잔여 파일은 새 ZIP에 포함되지 않는다. 인증서 지문을 `-CodeSigningCertificateThumbprint`로 제공한 경우에만 Authenticode 서명을 적용하며, 인증서가 없으면 미서명 상태로 빌드한다.
+
+AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토한 정확한 파일 허용 목록이 필요하다. 목록은 UTF-8 텍스트로 작성하고 `audiosep` 아래의 파일 상대 경로를 슬래시(`/`) 형식으로 한 줄에 하나씩 적는다. 빈 줄과 `#`으로 시작하는 주석은 허용한다. 빌드 스크립트는 목록에 없는 파일을 복사하지 않고, 절대 경로·상위 폴더 이동·중복 경로·링크와 필수 런타임 파일 누락을 거부한다. 현재 설치 폴더를 자동 승인하지 말고 캐시, 모델 가중치, 로그와 개인 파일이 없는 정리된 런타임을 기준으로 목록을 검토해야 한다.
+
+```powershell
+.\scripts\build_ai_runtime_archive.ps1 `
+  -AIRuntimeDirectory .\clean-runtime\audiosep `
+  -AllowlistPath .\runtime-release-allowlist.txt
+
+.\scripts\build_portable.ps1 `
+  -AIRuntimeDirectory .\clean-runtime\audiosep `
+  -BundleRuntimeAssets `
+  -RuntimeAllowlistPath .\runtime-release-allowlist.txt
+```
 
 `prepare_ffmpeg_gpl.ps1`는 개발·오프라인 빌드용 Gyan 공식 최신 FFmpeg GPL Essentials 정적 빌드를 찾고, 공식 `.ver`·`.sha256`, 실제 다운로드 URL과 빌드 옵션을 검증한다. 설치된 정확한 버전과 체크섬은 `docs/runtime-assets.json`에 기록하며, 검증 방식과 출처는 [FFMPEG_BUILD.md](docs/FFMPEG_BUILD.md)에 설명한다.
 
@@ -374,10 +387,23 @@ If `py` cannot find the installed Python interpreter, use the full path to the i
 .\scripts\prepare_ffmpeg_gpl.ps1
 .\scripts\build_executables.ps1
 .\scripts\build_runtime_installer.ps1
-.\scripts\build_portable.ps1
+.\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
 ```
 
-`build_executables.ps1` creates the single-file application EXE and installer EXE in the repository root. `build_runtime_installer.ps1` creates only the installer EXE and its matching `.sha256` file. The default `build_portable.ps1` result excludes AV-CASS/CAVP weights and FFmpeg and includes the installer. Use `build_portable.ps1 -BundleRuntimeAssets` for an internal offline bundle. Authenticode signing is applied only when a certificate thumbprint is supplied with `-CodeSigningCertificateThumbprint`; otherwise the build remains unsigned.
+`build_executables.ps1` creates the single-file application EXE and installer EXE in the repository root. `build_runtime_installer.ps1` creates only the installer EXE and its matching `.sha256` file. The default `build_portable.ps1` result excludes AV-CASS/CAVP weights and FFmpeg and includes the installer. It assembles only Git-tracked documentation and explicitly selected files in a fresh staging directory, then verifies that the file sets before and after ZIP creation match exactly. Local `docs/runtime-assets.json` files and leftovers from an older build therefore cannot enter a new ZIP. Authenticode signing is applied only when a certificate thumbprint is supplied with `-CodeSigningCertificateThumbprint`; otherwise the build remains unsigned.
+
+Building the base AI runtime or an internal offline bundle requires a reviewed exact-file allowlist. Save it as UTF-8 text with one slash-separated file path relative to `audiosep` per line; blank lines and comments beginning with `#` are allowed. Files not listed are not copied, and the scripts reject absolute paths, parent traversal, duplicates, links, and missing required runtime files. Do not automatically approve the current installed folder. Review the list against a clean runtime that contains no caches, model weights, logs, or personal files.
+
+```powershell
+.\scripts\build_ai_runtime_archive.ps1 `
+  -AIRuntimeDirectory .\clean-runtime\audiosep `
+  -AllowlistPath .\runtime-release-allowlist.txt
+
+.\scripts\build_portable.ps1 `
+  -AIRuntimeDirectory .\clean-runtime\audiosep `
+  -BundleRuntimeAssets `
+  -RuntimeAllowlistPath .\runtime-release-allowlist.txt
+```
 
 `prepare_ffmpeg_gpl.ps1` resolves Gyan's current official FFmpeg GPL Essentials static build for development and offline builds, then verifies the official `.ver` and `.sha256` metadata, final download URL, and build options. The installed version and checksum are recorded in `docs/runtime-assets.json`; the source and verification method are described in [FFMPEG_BUILD.en.md](docs/FFMPEG_BUILD.en.md).
 

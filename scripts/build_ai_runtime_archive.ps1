@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$AIRuntimeDirectory,
+    [Parameter(Mandatory = $true)]
+    [string]$AllowlistPath,
     [string]$OutputDirectory = "",
     [int]$PartSizeMiB = 1900
 )
@@ -9,13 +11,18 @@ $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectDir = Split-Path -Parent $scriptDir
+Import-Module (Join-Path $scriptDir "release_packaging.psm1") -Force
 $runtimeDir = [System.IO.Path]::GetFullPath($AIRuntimeDirectory)
 $outputDir = if ($OutputDirectory) {
     [System.IO.Path]::GetFullPath($OutputDirectory)
 } else {
     Join-Path $projectDir "dist\runtime-release"
 }
+$allowlist = (Resolve-Path -LiteralPath $AllowlistPath -ErrorAction Stop).Path
 
+if ((Split-Path -Leaf $runtimeDir.TrimEnd("\")) -ne "audiosep") {
+    throw "AI 런타임 원본 폴더 이름은 audiosep이어야 합니다: $runtimeDir"
+}
 if (-not (Test-Path -LiteralPath (Join-Path $runtimeDir "env\python.exe") -PathType Leaf)) {
     throw "AI Python 실행환경을 찾을 수 없습니다: $runtimeDir"
 }
@@ -24,6 +31,11 @@ if (-not (Test-Path -LiteralPath (Join-Path $runtimeDir "avcass\repo\models_avdn
 }
 if ($PartSizeMiB -le 0 -or $PartSizeMiB -ge 2048) {
     throw "GitHub Release 제한을 위해 PartSizeMiB는 1 이상 2048 미만이어야 합니다."
+}
+$runtimePrefix = $runtimeDir.TrimEnd("\") + "\"
+$resolvedOutput = [System.IO.Path]::GetFullPath($outputDir)
+if ($resolvedOutput -eq $runtimeDir -or $resolvedOutput.StartsWith($runtimePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "AI 런타임 배포 출력은 원본 런타임 폴더 밖에 있어야 합니다: $resolvedOutput"
 }
 
 $forbidden = @(
@@ -43,13 +55,56 @@ if ($found.Count -gt 0) {
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $archiveName = "video-music-separator-ai-runtime-0.2.0.zip"
 $archivePath = Join-Path $outputDir $archiveName
-if (Test-Path -LiteralPath $archivePath) {
-    Remove-Item -LiteralPath $archivePath -Force
-}
+$stagingDir = Join-Path $outputDir ".runtime-stage.$([System.Guid]::NewGuid().ToString('N'))"
+$pendingArchive = Join-Path $outputDir ".$archiveName.pending.$([System.Guid]::NewGuid().ToString('N'))"
+New-Item -ItemType Directory -Path $stagingDir -ErrorAction Stop | Out-Null
+try {
+    $stagingRuntime = Join-Path $stagingDir "audiosep"
+    $requiredRuntimeFiles = @(
+        "env/python.exe",
+        "avcass/repo/models_avdnr_zero_conv_2vid.py",
+        "avcass/deps/diffusers/__init__.py"
+    )
+    $copiedRuntimeFiles = @(Copy-AllowlistedTree `
+        -SourceRoot $runtimeDir `
+        -DestinationRoot $stagingRuntime `
+        -AllowlistPath $allowlist `
+        -RequiredPaths $requiredRuntimeFiles)
+    $inventoryPath = Join-Path $stagingRuntime "runtime-file-inventory.json"
+    $inventory = @(
+        foreach ($relativePath in $copiedRuntimeFiles) {
+            $copiedFile = Join-Path $stagingRuntime $relativePath.Replace("/", "\")
+            [ordered]@{
+                path = $relativePath
+                size = (Get-Item -LiteralPath $copiedFile).Length
+            }
+        }
+    )
+    [ordered]@{
+        schema = 1
+        files = $inventory
+    } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $inventoryPath -Encoding UTF8
 
-& tar.exe -a -c -f $archivePath -C (Split-Path -Parent $runtimeDir) (Split-Path -Leaf $runtimeDir)
-if ($LASTEXITCODE -ne 0) {
-    throw "AI 실행환경 ZIP64 압축 생성에 실패했습니다."
+    $expectedArchiveFiles = @(
+        $copiedRuntimeFiles | ForEach-Object { "audiosep/$_" }
+        "audiosep/runtime-file-inventory.json"
+    )
+    Assert-ReleaseTreeMatchesExpected -Root $stagingDir -ExpectedFiles $expectedArchiveFiles
+    New-ReleaseZipFromDirectory `
+        -SourceRoot $stagingDir `
+        -ArchivePath $pendingArchive `
+        -ExpectedFiles $expectedArchiveFiles
+    if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
+        Remove-Item -LiteralPath $archivePath -Force
+    }
+    Move-Item -LiteralPath $pendingArchive -Destination $archivePath -ErrorAction Stop
+} finally {
+    if (Test-Path -LiteralPath $pendingArchive -PathType Leaf) {
+        Remove-Item -LiteralPath $pendingArchive -Force
+    }
+    if (Test-Path -LiteralPath $stagingDir -PathType Container) {
+        Remove-Item -LiteralPath $stagingDir -Recurse -Force
+    }
 }
 
 Get-ChildItem $outputDir -Filter "$archiveName.*" -File |
@@ -78,7 +133,7 @@ try {
         } finally {
             $output.Dispose()
         }
-        $partHash = (Get-FileHash -LiteralPath $partPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $partHash = Get-ReleaseFileSha256 $partPath
         "$partHash  $partName" | Set-Content -LiteralPath "$partPath.sha256" -Encoding ascii
         $parts += [ordered]@{ name = $partName; size = (Get-Item $partPath).Length; sha256 = $partHash }
         $partNumber += 1
@@ -87,7 +142,7 @@ try {
     $input.Dispose()
 }
 
-$archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$archiveHash = Get-ReleaseFileSha256 $archivePath
 $manifest = [ordered]@{
     archive = $archiveName
     archive_size = (Get-Item $archivePath).Length

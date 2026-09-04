@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 from dataclasses import asdict, dataclass
@@ -69,15 +70,84 @@ def review_category(declared: str, classifiers: list[str]) -> str:
     return "declared permissive or public-domain"
 
 
-def find_license_files(dist_info: Path, metadata) -> list[Path]:
+def is_link_or_junction(path: Path) -> bool:
+    return path.is_symlink() or bool(
+        getattr(os.path, "isjunction", lambda _path: False)(path)
+    )
+
+
+def assert_secure_path(
+    trusted_root: Path,
+    path: Path,
+    *,
+    require_file: bool = False,
+    require_directory: bool = False,
+) -> Path:
+    root = trusted_root.absolute()
+    candidate = path.absolute()
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"신뢰된 런타임 루트 밖의 경로입니다: {path}") from exc
+
+    current = root
+    for part in relative.parts:
+        current = current / part
+        if is_link_or_junction(current):
+            raise ValueError(f"라이선스 검사 입력에는 링크 또는 junction을 사용할 수 없습니다: {current}")
+    if is_link_or_junction(root):
+        raise ValueError(f"신뢰된 런타임 루트는 링크 또는 junction일 수 없습니다: {root}")
+
+    resolved_root = root.resolve(strict=True)
+    resolved_candidate = candidate.resolve(strict=True)
+    try:
+        resolved_candidate.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError(f"해석된 경로가 신뢰된 런타임 루트 밖을 가리킵니다: {path}") from exc
+    if require_file and not candidate.is_file():
+        raise ValueError(f"일반 파일이 아닙니다: {candidate}")
+    if require_directory and not candidate.is_dir():
+        raise ValueError(f"일반 폴더가 아닙니다: {candidate}")
+    return candidate
+
+
+def find_license_files(dist_info: Path, metadata, trusted_root: Path) -> list[Path]:
     candidates: set[Path] = set()
     for relative in metadata.get_all("License-File", []):
-        path = dist_info / relative
-        if path.is_file():
-            candidates.add(path)
-    for path in dist_info.rglob("*"):
-        if path.is_file() and LICENSE_FILE_PATTERN.match(path.name):
-            candidates.add(path)
+        normalized_relative = relative.replace("\\", "/").strip()
+        parts = normalized_relative.split("/")
+        if (
+            not normalized_relative
+            or Path(normalized_relative).is_absolute()
+            or ":" in normalized_relative
+            or any(part in {"", ".", ".."} for part in parts)
+        ):
+            raise ValueError(f"License-File에 안전하지 않은 상대 경로가 있습니다: {relative}")
+        path = (dist_info / Path(*parts)).absolute()
+        try:
+            path.relative_to(dist_info.absolute())
+        except ValueError as exc:
+            raise ValueError(f"License-File이 dist-info 밖을 가리킵니다: {relative}") from exc
+        if path.exists() or is_link_or_junction(path):
+            candidates.add(assert_secure_path(trusted_root, path, require_file=True))
+
+    for directory, directory_names, file_names in os.walk(dist_info, followlinks=False):
+        current = assert_secure_path(
+            trusted_root, Path(directory), require_directory=True
+        )
+        for directory_name in directory_names:
+            child = current / directory_name
+            if is_link_or_junction(child):
+                raise ValueError(
+                    f"dist-info 안에는 링크 또는 junction을 사용할 수 없습니다: {child}"
+                )
+        for file_name in file_names:
+            if LICENSE_FILE_PATTERN.match(file_name):
+                candidates.add(
+                    assert_secure_path(
+                        trusted_root, current / file_name, require_file=True
+                    )
+                )
     return sorted(candidates, key=lambda item: str(item).lower())
 
 
@@ -107,20 +177,35 @@ def copy_license_material(
     return copied
 
 
-def audit(site_packages: Path, license_output: Path) -> list[PackageLicense]:
-    if not site_packages.is_dir():
-        raise FileNotFoundError(f"site-packages 폴더를 찾을 수 없습니다: {site_packages}")
+def audit(
+    site_packages: Path,
+    license_output: Path,
+    trusted_root: Path | None = None,
+) -> list[PackageLicense]:
+    trusted = (trusted_root or site_packages).absolute()
+    assert_secure_path(trusted, trusted, require_directory=True)
+    site_packages = assert_secure_path(
+        trusted, site_packages, require_directory=True
+    )
     if license_output.exists():
         shutil.rmtree(license_output)
     license_output.mkdir(parents=True)
 
     packages: list[PackageLicense] = []
-    for metadata_path in sorted(site_packages.glob("*.dist-info/METADATA"), key=lambda item: str(item).lower()):
+    metadata_paths: list[Path] = []
+    for dist_info in site_packages.glob("*.dist-info"):
+        dist_info = assert_secure_path(trusted, dist_info, require_directory=True)
+        metadata_path = dist_info / "METADATA"
+        if metadata_path.exists() or is_link_or_junction(metadata_path):
+            metadata_paths.append(
+                assert_secure_path(trusted, metadata_path, require_file=True)
+            )
+    for metadata_path in sorted(metadata_paths, key=lambda item: str(item).lower()):
         metadata = Parser().parsestr(metadata_path.read_text(encoding="utf-8", errors="replace"))
         name = metadata.get("Name") or metadata_path.parent.name
         version = metadata.get("Version") or "unknown"
         declared, classifiers = declared_license(metadata)
-        files = find_license_files(metadata_path.parent, metadata)
+        files = find_license_files(metadata_path.parent, metadata, trusted)
         copied = copy_license_material(
             name,
             version,
@@ -192,6 +277,7 @@ def markdown_report(packages: list[PackageLicense], display_site_packages: str) 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="휴대용 Python 환경 라이선스 목록 생성")
     parser.add_argument("--site-packages", type=Path, required=True)
+    parser.add_argument("--trusted-root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--license-output", type=Path, required=True)
     parser.add_argument("--json-output", type=Path, required=True)
@@ -205,7 +291,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    packages = audit(args.site_packages.resolve(), args.license_output.resolve())
+    packages = audit(
+        args.site_packages.absolute(),
+        args.license_output.absolute(),
+        args.trusted_root.absolute() if args.trusted_root else None,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         markdown_report(packages, args.display_site_packages), encoding="utf-8"
