@@ -109,17 +109,14 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 입력은 로컬 고정 디스크의 지원 미디어 형식만 허용하며 UNC·네트워크 드라이브·재분석 지점·재생목록 형식을 거부한다. 한 번의 입력은 최대 10분, 영상은 최대 7680×4320, 오디오는 최대 8채널·192kHz다. FFmpeg 메모리 할당과 분석량, 외부 도구 로그 크기, 작업자 로그 한 줄·대기 큐에도 상한을 적용한다.
 
-### 처리 구조
+### 앱 처리 흐름
 
-1. FFmpeg가 영상 오디오를 44.1kHz 스테레오 WAV로 추출한다.
-2. CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석해 음악과 비음악을 분리한다.
-3. AI 분리 결과에서 부드러운 음악 마스크를 만든 뒤 원본 44.1kHz 스테레오에 적용한다.
-4. `music`은 음악 행으로, `dialog + effects`는 음악 아님 행으로 저장한다.
-5. AV-CASS 결과는 전용 캐시 폴더에 보관한다.
-6. 음악과 음악 아님을 합치면 원본과 정확히 같아지도록 만들어 채널 수, 공간감, 원본 위상을 유지한다.
-7. 음악이 원본 전체와 사실상 같고 음악 아님이 거의 무음인 붕괴 결과는 `검토 필요`로 표시한다.
-8. 음악 뮤트 저장은 `음악 아님` 트랙을 영상에 직접 결합한다.
-9. 음악과 음악 아님을 모두 유지한 전체 재생은 원본 오디오를 사용한다.
+1. 사용자가 로컬 영상이나 오디오를 선택하면 FFmpeg가 처리용 오디오를 추출한다.
+2. CAVP와 AV-CASS가 영상 장면과 오디오를 함께 분석해 음악과 음악 아님 트랙을 만든다.
+3. 분리 결과는 전용 캐시 폴더에 보관하고 앱의 음악·음악 아님 행에 표시한다.
+4. 사용자는 각 트랙을 따로 듣거나 음악을 끈 전체 영상을 재생해 결과를 확인한다.
+5. 음악이 원본 전체와 사실상 같고 음악 아님이 거의 무음인 붕괴 결과는 `검토 필요`로 표시한다.
+6. 음악을 끈 사본을 저장하면 앱이 음악 아님 트랙을 영상과 결합한다. 두 트랙을 모두 유지한 재생에는 원본 오디오를 사용한다.
 
 처리 시간은 영상 길이와 GPU 상태에 따라 달라진다.
 
@@ -367,17 +364,14 @@ During processing, a random `<video name>_sound_work_<nonce>` folder is created 
 
 Inputs are restricted to supported media formats on fixed local disks. UNC paths, network drives, reparse points, and playlist formats are rejected. Each input is limited to 10 minutes, video to 7680×4320, and audio to 8 channels at 192 kHz. FFmpeg allocation and probing, external-tool output, worker log-line length, and the pending log queue are also bounded.
 
-### Processing Pipeline
+### Application Workflow
 
-1. FFmpeg extracts the video audio as a 44.1 kHz stereo WAV file.
-2. CAVP extracts visual features from the video frames, and AV-CASS analyzes those features together with the audio to separate music from non-music.
-3. A smooth music mask is derived from the AI result and applied to the original 44.1 kHz stereo signal.
-4. `music` is saved as the Music row, and `dialog + effects` as the Non-Music row.
-5. AV-CASS results are retained in a dedicated cache folder.
-6. Music and non-music are constructed to sum exactly to the source, preserving channel count, spatial image, and source phase.
-7. A collapsed result in which music is effectively identical to the full source and non-music is nearly silent is marked `Review Needed`.
-8. Music-muted export directly combines the non-music track with the video.
-9. Full playback with both tracks enabled uses the original audio.
+1. When the user selects a local video or audio file, FFmpeg extracts the audio used for processing.
+2. CAVP and AV-CASS analyze the video scene and audio together to create Music and Non-Music tracks.
+3. The separated results are retained in a dedicated cache folder and shown in the application's Music and Non-Music rows.
+4. The user can audition each track separately or review the full video with music muted.
+5. A collapsed result in which music is effectively identical to the full source and non-music is nearly silent is marked `Review Needed`.
+6. Saving a music-muted copy combines the Non-Music track with the video. Playback with both tracks retained uses the original audio.
 
 Processing time depends on video duration and GPU performance.
 
