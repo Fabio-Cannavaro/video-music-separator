@@ -51,7 +51,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 현재 실행 파일은 유료 코드 서명 인증서를 적용하지 않은 **미서명 빌드**일 수 있다. Windows SmartScreen에 `알 수 없는 게시자` 경고가 나오면 저장소·배포 주소와 SHA-256을 먼저 확인하고, 두 정보가 맞을 때에만 `추가 정보`에서 실행한다. 체크섬이 다르거나 출처가 불명확한 파일은 실행하지 않는다.
 
-> **현재 배포 상태:** 이 프로젝트는 공개 Release 준비 단계이며 아직 공개 설치 파일을 배포하지 않았다. 공개 Release 전에는 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사를 완료해야 한다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **현재 배포 상태:** 소스 저장소와 `0.2.2` 설치 테스트용 프리릴리스는 공개되어 있다. 다만 AV-CASS 체크포인트 자동 다운로드에 대한 서면 허가와 공개 다운로드·새 Windows 계정 설치 검사가 아직 완료되지 않았으므로, 일반 공개 배포가 아닌 검증용 프리릴리스다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
@@ -259,7 +259,7 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 
 The executables may be **unsigned builds** without a paid code-signing certificate. If Windows SmartScreen displays an `Unknown publisher` warning, first verify the repository, distribution URL, and SHA-256 value. Use `More info` to continue only when those details match. Do not run a file with a mismatched checksum or unclear origin.
 
-> **Current distribution status:** This project is preparing for a public Release and has not yet published a public installer. Before a public Release, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account must be completed. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Current distribution status:** The source repository and the `0.2.2` installation-testing prerelease are public. However, written permission for automatic AV-CASS checkpoint downloads and clean installation tests with a new Windows account are not yet complete, so this remains a validation prerelease rather than a general public release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
