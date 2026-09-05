@@ -5,6 +5,7 @@
 ![Video Music Separator — 영상 오디오에서 배경음악 분리 / Separate background music from video audio.](docs/assets/overview-4b315110.png)
 
 [![Windows](https://img.shields.io/badge/platform-Windows_64--bit-2563eb)](#한국어)
+[![CUDA 지원 NVIDIA GPU 필수 / NVIDIA GPU with CUDA required](https://img.shields.io/badge/GPU-NVIDIA_CUDA_required-4d7c0f)](#ko-installation)
 [![AV-CASS](https://img.shields.io/badge/model-AV--CASS-0891b2)](https://github.com/pantheon5100/AVCASS)
 [![CAVP](https://img.shields.io/badge/visual_encoder-CAVP-0f766e)](https://github.com/luosiallen/Diff-Foley)
 [![Source license](https://img.shields.io/badge/source_license-GPL--3.0--only-64748b)](LICENSE)
