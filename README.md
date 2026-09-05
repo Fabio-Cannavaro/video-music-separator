@@ -4,9 +4,11 @@
 
 ## 한국어
 
+> **설치 파일 공개 보류:** AV-CASS 연구진의 서면 허가 범위가 확인될 때까지 설치본과 AI 런타임 릴리스를 Draft로 보관한다. 소스 코드는 공개 상태로 유지하며 로컬 개발과 개인 사용을 계속한다. 이미 설치된 앱은 계속 작동하지만, 기존 설치기를 통한 신규 설치·런타임 재다운로드는 현재 사용할 수 없다.
+
 Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하는 Windows용 GUI 앱이다. 영상 장면과 오디오를 함께 분석해 소리를 `음악`과 `음악 아님`으로 나누고, 두 결과를 직접 비교해 들은 뒤 음악을 끈 영상 사본을 저장할 수 있다. 원본 영상은 수정하지 않으며 처리 속도보다 분리 품질을 우선한다.
 
-- 현재 앱·설치본 버전: `0.2.9` (미서명 공개 테스트 프리릴리스)
+- 현재 앱·설치본 버전: `0.2.9` (미서명, 설치 릴리스 Draft)
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### 핵심 기능
@@ -19,6 +21,8 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 
 ### 설치 안내
 
+현재 공개 설치 파일을 제공하지 않는다. 아래 내용은 기존 설치본의 구조와 공개 재개 후 설치 절차를 위한 참고 문서이며, 현재 다운로드 가능하다는 의미가 아니다.
+
 설치 ZIP을 모두 풀면 앱 실행 파일과 필수 구성요소 설치 파일이 함께 나온다. 두 파일을 같은 폴더에 둔 상태에서 **설치 파일을 먼저 실행**한다.
 
 #### 1. 설치 전 확인
@@ -29,22 +33,22 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 | GPU | CUDA를 사용할 수 있는 NVIDIA GPU가 필요하다. CPU 전용 실행은 지원하지 않는다. 최소 VRAM은 아직 검증된 지원 기준을 정하지 않았다. |
 | 저장 공간 | 첫 설치 때 약 5.9GB를 내려받으며, 압축 해제와 설치 중에는 약 15GB의 여유 공간을 권장한다. |
 | 인터넷 | 첫 설치, 재설치 또는 런타임 업데이트 때 필요하다. 설치가 끝난 뒤 일반적인 영상 분리·저장에는 필요하지 않다. |
-| GitHub 계정·CLI | 필요하지 않다. 설치 프로그램은 공개 Release 자산을 인증 없이 내려받는다. |
+| GitHub 계정·CLI | 기존 설치기는 GitHub 인증을 지원하지 않는다. 런타임이 Draft인 동안 새 다운로드는 사용할 수 없다. |
 | Python·FFmpeg | 최종 사용자가 별도로 설치할 필요가 없다. 설치 프로그램이 고정된 AI Python 실행환경과 Gyan FFmpeg 9.0.1 GPL Essentials 정적 빌드를 내려받는다. |
 | 설치 위치 | ZIP 안에서 직접 실행하지 말고, 문서 폴더처럼 사용자가 쓸 수 있는 일반 폴더에 전체 압축을 푼다. |
 
 #### 2. Windows 설치 파일 다운로드
 
-현재 Windows 설치본은 [`installer-v0.2.9`](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.9)에서 미서명 공개 테스트 프리릴리스로 제공한다. `Assets`에서 다음 두 파일을 받는다.
+`installer-v0.2.9`와 이전 `installer-v0.2.7`, `runtime-v0.2.0`을 GitHub Draft로 전환했다. 일반 사용자를 위한 다운로드 링크는 제공하지 않는다. 기존 0.2.9 Draft에 보관된 파일명은 다음과 같다.
 
 - `video-music-separator-0.2.9-windows-x64.zip`
 - 같은 이름의 `.sha256` 파일
 
 이전 `0.2.3`, `0.2.5`, `0.2.6` 자산은 설치용으로 제공하지 않는다. `0.2.5`는 깨끗한 설치 검증에 실패했고, `0.2.6`은 원본 영상보다 오디오가 짧을 때 끝 프레임을 자르는 문제가 있어 GitHub Draft로 전환했다.
 
-이 `0.2.9` 프리릴리스는 코드 서명 없이 배포하므로 Windows가 게시자를 확인할 수 없고 SmartScreen 경고가 나타날 수 있다. 이 프로젝트는 Windows 배포본에 코드 서명 인증서를 적용할 계획이 없다. 다음 순서로 출처와 파일을 먼저 확인한 뒤 실행한다.
+보관 중인 `0.2.9` 설치본에는 코드 서명이 없으므로 Windows가 게시자를 확인할 수 없고 SmartScreen 경고가 나타날 수 있다. 이 프로젝트는 Windows 배포본에 코드 서명 인증서를 적용할 계획이 없다. 다음 순서로 출처와 파일을 먼저 확인한 뒤 실행한다.
 
-1. 위의 공식 GitHub Release에서 받은 ZIP인지 확인하고 `.sha256` 파일로 ZIP 무결성을 검증한다.
+1. 기존에 공식 GitHub Release에서 받은 ZIP인지 확인하고 `.sha256` 파일로 ZIP 무결성을 검증한다.
 2. `video-music-separator-setup.exe`를 실행했을 때 `Windows의 PC 보호` 창이 나타나면 `추가 정보`를 누른다.
 3. 앱 이름이 `video-music-separator-setup.exe`이고 게시자가 `알 수 없는 게시자`로 표시되는지 확인한 뒤 `실행`을 누른다.
 4. 설치가 끝난 뒤 `video-music-separator.exe`에도 같은 경고가 나타나면 앱 이름을 확인하고 같은 방법으로 실행한다.
@@ -65,12 +69,12 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 6. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다.
 7. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
 
-> **현재 배포 상태:** `0.2.9` Windows 설치 자산은 기능 확인을 위한 미서명 공개 프리릴리스다. AV-CASS 체크포인트 자동 다운로드에 대한 연구진의 서면 허가와 깨끗한 새 Windows 사용자 계정 검사가 아직 끝나지 않았으므로, 일반 사용이 승인된 최종 배포판으로 표현하지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **설치 파일 공개 보류:** AV-CASS 연구진의 서면 허가 범위가 확인될 때까지 설치본과 AI 런타임 릴리스를 Draft로 보관한다. 소스 코드는 공개 상태로 유지하며 로컬 개발과 개인 사용을 계속한다. 이미 설치된 앱은 계속 작동하지만, 기존 설치기를 통한 신규 설치·런타임 재다운로드는 현재 사용할 수 없다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
 1. 다음 항목을 지정 배포처에서 내려받는다.
-   - AI Python 실행환경: 이 프로젝트의 공개 Release에 고정된 두 분할 파일. GitHub 인증 없이 내려받는다.
+   - AI Python 실행환경: `runtime-v0.2.0`의 고정된 두 분할 파일. 현재 Draft로 보관되어 기존 설치기에서 새로 받을 수 없다.
    - AV-CASS `av_cass_checkpoint.pt`: AV-CASS 공식 Google Drive
    - CAVP `cavp_epoch66.ckpt`: Diff-Foley 공식 Hugging Face의 고정 커밋
    - FFmpeg: Gyan FFmpeg 9.0.1 release essentials GPLv3 정적 빌드의 고정 URL
@@ -83,11 +87,11 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 앱은 검증된 체크포인트를 읽을 때도 PyTorch의 제한된 `weights_only` 모드를 사용하며, 각 공식 체크포인트에 필요한 최소 메타데이터 형식만 허용한다. 따라서 일반 Python 객체를 제한 없이 역직렬화하지 않는다.
 
-공개 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
+보관된 앱 ZIP과 별도 AI 실행환경 자산은 예전 AudioSep/BandIt 코드·가중치와 해당 GPL 의존성인 `pedalboard`를 포함하지 않는다. 실제 설치되는 Python 패키지 목록은 앱 ZIP 안의 `docs/PYTHON_PACKAGES_NOTICES.md`, 기계 판독 목록은 `docs/PYTHON_PACKAGES_INVENTORY.json`, 각 라이선스 전문은 `docs/licenses/python/`에서 확인할 수 있다.
 
 #### 5. 설치 문제 해결
 
-- AI 실행환경 파일에 접근할 수 없다는 오류가 나오면 저장소와 `runtime-v0.2.0` Release가 공개 상태인지, 배포 주소와 파일명이 바뀌지 않았는지 확인한다. 설치 프로그램은 비공개 Release와 GitHub 로그인을 지원하지 않는다.
+- 현재 `runtime-v0.2.0`은 허가 대기로 Draft 상태다. AI 실행환경 접근 오류는 공개 보류에 따른 제한일 수 있으며, 기존 설치기는 Draft 다운로드나 GitHub 로그인을 지원하지 않는다. 이 오류를 해결하기 위해 임의로 릴리스를 공개하지 않는다.
 - 설치 파일을 ZIP 안에서 직접 실행했거나 `Program Files`처럼 쓰기가 제한된 위치에 두었다면, 폴더 전체를 문서 폴더 같은 사용자 쓰기 가능 위치로 옮긴 뒤 다시 실행한다.
 - 다운로드가 중단되면 같은 설치 파일을 다시 실행한다. 검증된 파일은 재사용하고 완료되지 않은 `.part` 다운로드는 이어받는다.
 - 체크섬 불일치는 파일을 임의로 사용하지 않기 위한 정상적인 중단이다. 검증을 우회하지 말고 배포 안내의 주소·버전이 최신인지 확인한다.
@@ -202,7 +206,7 @@ py -m venv .venv
 .\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
 ```
 
-이 프로젝트의 공개 배포 절차에서는 코드 서명 인증서를 지정하지 않고 `build_executables.ps1`와 `build_runtime_installer.ps1`로 미서명 EXE를 만든다. 공개 ZIP 경계인 `build_portable.ps1`는 CPython이 빌드 시스템용으로 제공하는 공식 Python 3.13.7 NuGet CI 패키지와 Python.org Tcl/Tk MSI를 고정 크기·SHA-256으로 확인하고 핵심 실행 파일과 Tcl/Tk MSI의 PSF Authenticode 서명을 검증한 뒤 새 격리 환경을 만든다. Tcl/Tk MSI는 관리 추출(`/a`)만 하므로 시스템에 설치된 Python은 변경하지 않으며, NuGet 패키지에 포함된 pip 25.2와 해시 잠금된 wheel만 사용한다. 공개 패키지를 만들 때는 두 앱 EXE가 `NotSigned` 상태인지 확인한 뒤 미서명 상태와 SHA-256을 기록한다. 기본 ZIP에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않으며, 새 스테이징 폴더에서 Git 추적 문서와 명시된 파일만 조립한 뒤 압축 전후 파일 목록을 대조한다.
+허가 확인과 공개 재개 결정 후 적용할 공개 배포 절차에서는 코드 서명 인증서를 지정하지 않고 `build_executables.ps1`와 `build_runtime_installer.ps1`로 미서명 EXE를 만든다. 공개 ZIP 경계인 `build_portable.ps1`는 CPython이 빌드 시스템용으로 제공하는 공식 Python 3.13.7 NuGet CI 패키지와 Python.org Tcl/Tk MSI를 고정 크기·SHA-256으로 확인하고 핵심 실행 파일과 Tcl/Tk MSI의 PSF Authenticode 서명을 검증한 뒤 새 격리 환경을 만든다. Tcl/Tk MSI는 관리 추출(`/a`)만 하므로 시스템에 설치된 Python은 변경하지 않으며, NuGet 패키지에 포함된 pip 25.2와 해시 잠금된 wheel만 사용한다. 공개 패키지를 만들 때는 두 앱 EXE가 `NotSigned` 상태인지 확인한 뒤 미서명 상태와 SHA-256을 기록한다. 기본 ZIP에는 AV-CASS·CAVP 가중치와 FFmpeg를 넣지 않으며, 새 스테이징 폴더에서 Git 추적 문서와 명시된 파일만 조립한 뒤 압축 전후 파일 목록을 대조한다.
 
 AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토한 정확한 파일 허용 목록이 필요하다. 목록은 UTF-8 텍스트로 작성하고 `audiosep` 아래의 파일 상대 경로를 슬래시(`/`) 형식으로 한 줄에 하나씩 적는다. 빈 줄과 `#`으로 시작하는 주석은 허용한다. 빌드 스크립트는 목록에 없는 파일을 복사하지 않고, 절대 경로·상위 폴더 이동·중복 경로·링크와 필수 런타임 파일 누락을 거부한다. 현재 설치 폴더를 자동 승인하지 말고 캐시, 모델 가중치, 로그와 개인 파일이 없는 정리된 런타임을 기준으로 목록을 검토해야 한다.
 
@@ -259,9 +263,11 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 ## English
 
+> **Public installer distribution paused:** Installer and AI runtime releases are held as Drafts until the scope of written permission from the AV-CASS researchers is confirmed. Source code remains public, and local development and personal use continue. Existing complete installations keep working, but new installations and runtime re-downloads through the existing installer are currently unavailable.
+
 Video Music Separator is a Windows GUI application for reducing or removing background music from video. It analyzes the scene and audio together, separates the soundtrack into `Music` and `Non-Music`, and lets users compare both results before saving a music-muted copy beside the source. The original video is never modified, and separation quality takes priority over processing speed.
 
-- Current application and installer version: `0.2.9` (unsigned public testing prerelease)
+- Current application and installer version: `0.2.9` (unsigned; installer release held as Draft)
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### Key Features
@@ -274,6 +280,8 @@ Video Music Separator is a Windows GUI application for reducing or removing back
 
 ### Installation Guide
 
+Public installer downloads are currently paused. The instructions below document existing packages and the installation procedure for a future resumption; they do not indicate current download availability.
+
 After extracting the installation ZIP, keep the application and required-components installer in the same folder and **run the installer first**.
 
 #### 1. Before Installation
@@ -284,22 +292,22 @@ After extracting the installation ZIP, keep the application and required-compone
 | GPU | An NVIDIA GPU with CUDA support is required. CPU-only execution is not supported. A verified minimum VRAM requirement has not yet been established. |
 | Disk space | The first installation downloads approximately 5.9 GB. Approximately 15 GB of free space is recommended while downloading, extracting, and installing. |
 | Internet | Required for the first installation, reinstallation, or runtime updates. Normal separation and saving do not require an internet connection after installation. |
-| GitHub account and CLI | Not required. The installer downloads public Release assets without authentication. |
+| GitHub account and CLI | The existing installer does not support GitHub authentication. New runtime downloads are unavailable while the runtime is Draft. |
 | Python and FFmpeg | End users do not need to install them separately. The installer downloads the pinned AI Python runtime and the pinned Gyan FFmpeg 9.0.1 GPL Essentials static build. |
 | Installation location | Do not run the application from inside the ZIP. Extract the entire ZIP into a normal user-writable folder such as Documents. |
 
 #### 2. Download the Windows Installer
 
-The Windows installer is available as an unsigned public testing prerelease at [`installer-v0.2.9`](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.9). Download these two files from `Assets`:
+`installer-v0.2.9`, the earlier `installer-v0.2.7`, and `runtime-v0.2.0` have been moved to GitHub Drafts. No public download links are offered. The retained 0.2.9 Draft contains these filenames:
 
 - `video-music-separator-0.2.9-windows-x64.zip`
 - The matching `.sha256` file
 
 The older `0.2.3`, `0.2.5`, and `0.2.6` assets are not offered for installation. Version `0.2.5` failed clean-install validation, while `0.2.6` could trim trailing video frames when the source audio was shorter than the video; those assets were moved to GitHub Drafts.
 
-This `0.2.9` prerelease is distributed without a code signature, so Windows cannot verify its publisher and SmartScreen may display a warning. This project does not plan to apply a code-signing certificate to its Windows releases. Verify the source and files before proceeding:
+The retained `0.2.9` package has no code signature, so Windows cannot verify its publisher and SmartScreen may display a warning. This project does not plan to apply a code-signing certificate to its Windows releases. Verify the source and files before proceeding:
 
-1. Confirm that the ZIP came from the official GitHub Release above and verify it with the matching `.sha256` file.
+1. Confirm that the ZIP came from the original official GitHub Release and verify it with the matching `.sha256` file.
 2. If `Windows protected your PC` appears when you run `video-music-separator-setup.exe`, select `More info`.
 3. Confirm that the app name is `video-music-separator-setup.exe` and the publisher is shown as `Unknown publisher`, then select `Run anyway`.
 4. If the same warning appears for `video-music-separator.exe` after installation, verify the app name and follow the same steps.
@@ -320,12 +328,12 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 6. Wait for all downloads and SHA-256 verification to finish.
 7. After the completion message appears, run `video-music-separator.exe`.
 
-> **Current distribution status:** The `0.2.9` Windows installer assets are an unsigned public prerelease for functional testing. Written permission from the AV-CASS researchers for automatic checkpoint downloads and clean installation testing with a new Windows user account are still pending. This is not represented as an approved final general-use release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Public installer distribution paused:** Installer and AI runtime releases are held as Drafts until the scope of written permission from the AV-CASS researchers is confirmed. Source code remains public, and local development and personal use continue. Existing complete installations keep working, but new installations and runtime re-downloads through the existing installer are currently unavailable. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
 1. The installer downloads the following items from their specified distributors.
-   - AI Python runtime: two pinned split files from this project's public Release, downloaded without GitHub authentication.
+   - AI Python runtime: two pinned split files in `runtime-v0.2.0`, currently held as Draft and unavailable for new downloads through the existing installer.
    - AV-CASS `av_cass_checkpoint.pt`: the official AV-CASS Google Drive location
    - CAVP `cavp_epoch66.ckpt`: the pinned commit in the official Diff-Foley Hugging Face repository
    - FFmpeg: Gyan FFmpeg 9.0.1 release essentials GPLv3 static build at an immutable URL
@@ -338,11 +346,11 @@ The installer does not redistribute the model files or FFmpeg from this reposito
 
 Even after checksum verification, the application reads checkpoints through PyTorch's restricted `weights_only` mode and allowlists only the minimal metadata types required by each official checkpoint. It does not deserialize arbitrary Python objects without restriction.
 
-The public application ZIP and separate AI runtime assets exclude the former AudioSep/BandIt code and weights and their GPL dependency, `pedalboard`. The exact installed Python package list is available in `docs/PYTHON_PACKAGES_NOTICES.md` inside the application ZIP, the machine-readable inventory in `docs/PYTHON_PACKAGES_INVENTORY.json`, and full license texts in `docs/licenses/python/`.
+The retained application ZIP and separate AI runtime assets exclude the former AudioSep/BandIt code and weights and their GPL dependency, `pedalboard`. The exact installed Python package list is available in `docs/PYTHON_PACKAGES_NOTICES.md` inside the application ZIP, the machine-readable inventory in `docs/PYTHON_PACKAGES_INVENTORY.json`, and full license texts in `docs/licenses/python/`.
 
 #### 5. Installation Troubleshooting
 
-- If the installer reports that an AI runtime file cannot be accessed, confirm that the repository and the `runtime-v0.2.0` Release are public and that the distribution URL and asset names have not changed. Private Releases and GitHub login are not supported.
+- `runtime-v0.2.0` is currently Draft pending permission. An AI runtime access error may therefore reflect the distribution hold. The existing installer supports neither Draft downloads nor GitHub login. Do not publish a release merely to work around this error.
 - If the installer was run from inside the ZIP or from a write-restricted location such as `Program Files`, move the entire folder to a user-writable location such as Documents and try again.
 - If a download is interrupted, rerun the same installer. Verified files are reused, and incomplete `.part` downloads resume where supported.
 - A checksum mismatch is an intentional safety stop. Do not bypass verification; confirm that the distribution URL and pinned version are current.
@@ -457,7 +465,7 @@ If `py` cannot find the installed Python interpreter, use the full path to the i
 .\scripts\build_portable.ps1 -AIRuntimeDirectory .\audiosep
 ```
 
-For public releases, this project does not supply a code-signing certificate to `build_executables.ps1` or `build_runtime_installer.ps1`, so they create unsigned EXEs. The public boundary, `build_portable.ps1`, verifies the official Python 3.13.7 NuGet CI package provided by CPython for build systems and the Python.org Tcl/Tk MSI against pinned size and SHA-256 values, then verifies PSF Authenticode signatures on the critical executables and the Tcl/Tk MSI before creating a fresh isolated environment. The Tcl/Tk MSI is administratively extracted (`/a`), so the build does not modify a system Python installation. It uses only the NuGet package's pip 25.2 and hash-locked wheels. For a public package, both application EXEs must report `NotSigned`; the build records that status and their SHA-256 values in the package. The package is assembled in a fresh staging directory from tracked documentation and explicitly selected files, with exact pre- and post-ZIP file-set checks.
+For public releases after permission review and an explicit resumption decision, this project does not supply a code-signing certificate to `build_executables.ps1` or `build_runtime_installer.ps1`, so they create unsigned EXEs. The public boundary, `build_portable.ps1`, verifies the official Python 3.13.7 NuGet CI package provided by CPython for build systems and the Python.org Tcl/Tk MSI against pinned size and SHA-256 values, then verifies PSF Authenticode signatures on the critical executables and the Tcl/Tk MSI before creating a fresh isolated environment. The Tcl/Tk MSI is administratively extracted (`/a`), so the build does not modify a system Python installation. It uses only the NuGet package's pip 25.2 and hash-locked wheels. For a public package, both application EXEs must report `NotSigned`; the build records that status and their SHA-256 values in the package. The package is assembled in a fresh staging directory from tracked documentation and explicitly selected files, with exact pre- and post-ZIP file-set checks.
 
 Building the base AI runtime or an internal offline bundle requires a reviewed exact-file allowlist. Save it as UTF-8 text with one slash-separated file path relative to `audiosep` per line; blank lines and comments beginning with `#` are allowed. Files not listed are not copied, and the scripts reject absolute paths, parent traversal, duplicates, links, and missing required runtime files. Do not automatically approve the current installed folder. Review the list against a clean runtime that contains no caches, model weights, logs, or personal files.
 

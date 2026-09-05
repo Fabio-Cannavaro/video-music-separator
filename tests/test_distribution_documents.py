@@ -157,7 +157,10 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("video-music-separator-setup.exe", readme)
         self.assertIn("GitHub Draft로 전환", readme)
         self.assertIn(f"installer-v{APP_VERSION}", readme)
-        self.assertIn("미서명 공개 테스트 프리릴리스", readme)
+        self.assertIn("설치 파일 공개 보류", readme)
+        self.assertIn("Public installer distribution paused", readme)
+        self.assertIn("기존 설치기를 통한 신규 설치·런타임 재다운로드는 현재 사용할 수 없다", readme)
+        self.assertIn("new installations and runtime re-downloads through the existing installer are currently unavailable", readme)
         for section in (readme.split("## English")[0], readme.split("## English")[1]):
             self.assertIn("SmartScreen", section)
             self.assertIn("SHA-256", section)
@@ -186,7 +189,8 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertNotIn("releases/tag/installer-v0.2.3", readme)
         self.assertNotIn("releases/tag/installer-v0.2.5", readme)
         self.assertNotIn("releases/tag/installer-v0.2.6", readme)
-        self.assertIn(f"releases/tag/installer-v{APP_VERSION}", readme)
+        self.assertNotIn("releases/tag/installer-v", readme)
+        self.assertNotIn("releases/download/", readme)
         self.assertIn("Source code (zip)", readme)
         for section in readme.split("## English"):
             self.assertIn("`.sha256`", section)
