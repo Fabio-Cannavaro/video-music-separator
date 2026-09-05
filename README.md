@@ -68,7 +68,50 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 
 ### 음악·비음악 분리 원리
 
-쉽게 말해, AI가 원본 소리에 <strong>음악을 골라내는 선택 영역(마스크)</strong>을 만드는 방식이다. 아래 그림에서 파란색은 AI의 분석, 초록색은 최종 소리에 사용할 원본, 주황색은 분리 결과를 뜻한다.
+AV-CASS와 CAVP가 영상·소리를 분석해 음악 마스크를 만들고, 앱은 이를 보관한 원본 스테레오에 적용한다. 아래 이미지는 현재 설정이 추론, 구간 연결, 고음 처리와 스테레오 출력에 어떻게 쓰이는지 보여준다.
+
+#### 1. 청크당 250단계 — 한 구간의 분리 추정치를 갱신
+
+청크는 한 번에 분석하는 약 8.18초 길이의 구간이다. 각 청크에서 초기 잡음 상태를 출발점으로 삼아, 원본 소리와 장면 특징을 조건으로 대사·효과음·음악 추정치를 갱신한다. `250`은 이 추론 과정의 설정값이며, 영상을 250개로 나누거나 250프레임을 읽는다는 의미가 아니다.
+
+![약 8.18초 청크에서 250개 추론 시점 사이의 249회 갱신으로 분리 추정치를 만드는 개념도](docs/assets/inference-steps.ko.png)
+
+현재 구현은 250개 시점 사이에서 249회 Euler 갱신을 수행한다. 그림의 칸은 추론 시점을 나타내며 실제 중간 출력이나 품질 측정값이 아니다. 단계를 늘리면 연산량은 증가하지만 음악 제거와 효과음 보존이 반드시 좋아지는 것은 아니다.
+
+#### 2. 1초 겹침 — 같은 소리를 인접 청크 양쪽에서 분석
+
+일반적인 청크 길이는 8.176초이고 다음 청크는 7.176초 뒤에 시작한다. 따라서 경계의 1초는 두 청크에 함께 들어간다. 겹친 구간에는 두 분리 추정치가 생기며, 다음의 OLA 처리로 하나로 연결한다.
+
+![청크 1의 0~8.176초와 청크 2의 7.176~15.352초가 1초 겹치는 시간축](docs/assets/chunk-overlap.ko.png)
+
+그림은 일반적인 인접 청크의 예시다. 마지막 청크는 영상 끝에 맞춰 배치하므로 겹침이 1초보다 길어질 수 있다. 약 8.18초보다 짧은 입력은 분석 길이에 맞춰 무음을 채우고, 결과를 원래 길이로 되돌린다.
+
+#### 3. cosine-squared OLA — 앞뒤 추정치를 부드럽게 연결
+
+OLA는 겹친 추정치에 서로 다른 비중을 주어 더하는 방식이다. 겹침의 시작에서는 앞 청크를 많이 반영하고, 끝으로 갈수록 뒤 청크를 많이 반영한다. 일반적인 두 청크의 겹침에서는 앞쪽 `cos²`와 뒤쪽 `sin²` 곡선이 중간에서 각각 50%가 된다.
+
+![1초 겹침에서 앞 청크의 cos 제곱 비중은 100%에서 0%로, 뒤 청크의 sin 제곱 비중은 0%에서 100%로 변하는 곡선](docs/assets/cosine-ola.ko.png)
+
+청크 사이의 급격한 변화를 줄이기 위한 연결 처리다. 곡선의 합이 100%라는 것은 반영 비중의 합을 뜻하며, 결과 소리의 크기가 항상 일정하거나 음악 오분류가 해결된다는 뜻은 아니다. 연결된 대사·효과음·음악 추정치로 최종 음악 마스크를 만든다.
+
+#### 4. 고역 확장 0% — 모델이 판단하지 못하는 고음을 보존
+
+AI 분석용 소리는 16kHz 모노이므로 모델이 직접 판단할 수 있는 주파수는 8kHz까지다. 앱은 음악 마스크의 대역 가중치를 7~8kHz에서 점차 낮추고, 8kHz 위에서는 0으로 둔다. 이 영역의 원본 소리는 음악 아님 트랙에 남는다.
+
+![음악 마스크 대역 가중치는 7kHz까지 유지되고 7~8kHz에서 0으로 감소하며, 8kHz 초과 소리는 음악 아님에 보존되는 그래프](docs/assets/high-band.ko.png)
+
+여기서 0%는 고음의 음량을 0으로 만든다는 뜻이 아니라, 고음으로 음악 제거 판단을 추가 확장하지 않는다는 뜻이다. 그래프의 세로축도 실제 제거율이 아니라 음악 마스크에 곱하는 대역 가중치다. 높은 효과음과 함께 심벌 같은 음악 성분도 일부 남을 수 있다.
+
+#### 5. 스테레오 출력 — 보관한 원본의 좌우 채널을 사용
+
+AI 분석에 사용하는 16kHz 모노와 별도로, 최종 출력에 사용할 44.1kHz 스테레오 소리를 보관한다. 분리 후에는 하나의 음악 마스크를 원본 왼쪽(L)과 오른쪽(R)에 동일하게 적용한다. 두 채널의 입력 소리는 서로 다르므로 같은 마스크를 적용해도 좌우 출력이 같은 모노가 되지는 않는다.
+
+![모노 분석에서 만든 하나의 음악 마스크를 보관한 원본 L과 R에 각각 적용해 음악과 음악 아님 스테레오를 만드는 구조](docs/assets/stereo-output.ko.png)
+
+모노를 복제하거나 AI가 좌우 소리를 새로 생성하는 방식이 아니다. 원본의 좌우 차이와 위상 정보를 활용하고, 음악 아님은 각 채널에서 `원본 - 음악`으로 만든다. 두 트랙을 합치면 계산 오차 범위에서 보관한 스테레오로 돌아온다. 다만 음악으로 잘못 분류된 효과음은 함께 줄어들 수 있으므로, 이것이 모든 효과음과 공간감의 완전한 보존을 보장하지는 않는다.
+
+<details>
+<summary>전체 분리 구조 보기</summary>
 
 ```mermaid
 flowchart TB
@@ -90,15 +133,7 @@ flowchart TB
     class MUSIC,OTHER output
 ```
 
-| 핵심 | 의미 |
-| --- | --- |
-| 🎯 AI는 분리 기준을 만든다 | 대사·효과음·음악 추정치에서 음악 마스크를 계산한다. AI가 생성한 소리를 최종 트랙으로 그대로 쓰지 않는다. |
-| 🎧 최종 소리는 원본에서 가져온다 | 보관한 스테레오의 좌우 채널에 같은 마스크를 적용하고, 원본에서 음악을 뺀 나머지를 음악 아님으로 만든다. |
-| ⚖️ 재합성과 분리 품질은 다르다 | 두 트랙의 합은 계산 오차 범위에서 원본으로 돌아가지만, 음악과 효과음의 분류가 정확하다는 뜻은 아니다. |
-
-**현재 기본값:** 청크당 250단계 · 1초 겹침 · cosine-squared OLA 연결 · 고역 확장 0%.
-
-모델이 직접 판단하지 못하는 8kHz 초과 성분은 기본적으로 음악 아님 쪽에 남긴다. 음악을 효과음으로 잘못 판단하면 음악이 남고, 효과음을 음악으로 잘못 판단하면 필요한 소리가 줄어들 수 있다.
+</details>
 
 <details>
 <summary>분석 방식과 기본값 자세히 보기</summary>
@@ -403,7 +438,50 @@ Inputs are restricted to supported media formats on fixed local disks. UNC paths
 
 ### Music and Non-Music Separation
 
-The AI creates a **selection mask for music** in the source sound. In the diagram, blue represents AI analysis, green represents the source used for the final sound, and amber represents the separated outputs.
+AV-CASS and CAVP analyze the scene and audio to derive a music mask, which the application applies to the retained stereo source. These figures show how the current settings affect inference, chunk joining, high frequencies, and stereo output.
+
+#### 1. The 250-step setting — update the estimate within each chunk
+
+A chunk is an approximately 8.18-second segment analyzed at one time. Starting from noise, the model updates its speech, effects, and music estimates using source audio and scene features as conditions. `250` configures this inference schedule; it does not mean 250 video segments or 250 frames.
+
+![Conceptual diagram of 249 updates between 250 inference time points for one approximately 8.18-second chunk](docs/assets/inference-steps.en.png)
+
+The current implementation performs 249 Euler updates between 250 schedule points. The cells represent those points, not actual intermediate audio or measured quality. More steps increase computation but do not guarantee better music removal or effects preservation.
+
+#### 2. One-second overlap — analyze boundary audio in both chunks
+
+A regular chunk lasts 8.176 seconds, and the next starts 7.176 seconds later. Both chunks therefore include the same second at the boundary. Two estimates are available for this shared segment; OLA blends them into one result.
+
+![Timeline showing chunk 1 at 0 to 8.176 seconds and chunk 2 at 7.176 to 15.352 seconds, with one second shared](docs/assets/chunk-overlap.en.png)
+
+The figure shows regular adjacent chunks. The last chunk is aligned to the end of the video, so its overlap can exceed one second. Inputs shorter than approximately 8.18 seconds are silence-padded for analysis, then trimmed back to their original length.
+
+#### 3. Cosine-squared OLA — blend adjacent estimates smoothly
+
+Overlap-add (OLA) weights and adds overlapping estimates. The preceding chunk contributes most at the start of the overlap; the next contributes most at the end. For a regular two-chunk overlap, the preceding `cos²` and following `sin²` weights are each 50% at the midpoint.
+
+![Weight curves across a one-second overlap: the preceding chunk fades from 100 to 0 percent and the next rises from 0 to 100 percent](docs/assets/cosine-ola.en.png)
+
+This reduces abrupt changes at chunk boundaries. A 100% sum of weights does not imply constant output loudness or correct music classification. The joined speech, effects, and music estimates are then used to derive the final music mask.
+
+#### 4. Zero high-band extension — retain frequencies beyond model analysis
+
+AI analysis uses 16 kHz mono audio, limiting direct frequency assessment to 8 kHz. The application tapers the band weight on the music mask from 7 to 8 kHz and sets it to zero above 8 kHz. Source audio in that higher band stays in Non-Music.
+
+![Music mask band weight stays at one through 7 kHz, tapers to zero at 8 kHz, and leaves higher source frequencies in Non-Music](docs/assets/high-band.en.png)
+
+Here, 0% means no extra extension of the music-removal decision into higher frequencies; it does not mute the high frequencies. The vertical axis is a multiplier on the music mask, not the actual removal rate. High-frequency effects are retained, but some musical content such as cymbals may also remain.
+
+#### 5. Stereo output — use the retained original left and right channels
+
+The application retains 44.1 kHz stereo audio separately from the 16 kHz mono analysis input. After analysis, one music mask is applied identically to the source left (L) and right (R) channels. Their source signals differ, so using the same mask does not turn the output into duplicated mono.
+
+![One music mask from mono analysis is applied separately to retained source L and R to produce stereo Music and Non-Music](docs/assets/stereo-output.en.png)
+
+The application neither duplicates mono nor asks AI to generate new left and right channels. It uses the source channel differences and phase information, computing Non-Music as `source - music` per channel. Adding the two tracks reconstructs the retained stereo source within numerical precision. Effects misclassified as music may still be reduced; this does not guarantee perfect preservation of every effect or spatial detail.
+
+<details>
+<summary>View the overall separation structure</summary>
 
 ```mermaid
 flowchart TB
@@ -425,15 +503,7 @@ flowchart TB
     class MUSIC,OTHER output
 ```
 
-| Key idea | Meaning |
-| --- | --- |
-| 🎯 AI provides the separation decision | The speech, effects, and music estimates determine a music mask. The AI-generated waveforms are not used directly as final tracks. |
-| 🎧 Final sound comes from the source | The same mask is applied to both retained stereo channels. Subtracting Music from the source produces Non-Music. |
-| ⚖️ Reconstruction is not separation quality | Adding both tracks reconstructs the source within numerical precision; this does not prove that music and effects were classified correctly. |
-
-**Current defaults:** 250 steps per chunk · 1-second overlap · cosine-squared OLA · 0% high-band extension.
-
-Source content above 8 kHz, which the model cannot directly evaluate, stays in Non-Music by default. Music misclassified as effects may remain, while effects misclassified as music may be reduced.
+</details>
 
 <details>
 <summary>Expand analysis details and defaults</summary>

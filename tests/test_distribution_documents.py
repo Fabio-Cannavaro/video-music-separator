@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 from app.release_info import APP_VERSION
@@ -200,9 +201,11 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("빌드·배포 스크립트, 문서와 라이선스 전문", readme)
         self.assertIn("build and distribution scripts, documentation, and full license texts", readme)
         self.assertNotIn("## 이동용 폴더", readme)
-        explanation = readme.split("### 음악·비음악 분리 원리", 1)[1].split("###", 1)[0]
+        explanation = re.split(r"(?m)^### ", readme.split("### 음악·비음악 분리 원리", 1)[1], maxsplit=1)[0]
         for term in ("CAVP", "AV-CASS", "16kHz", "마스크"):
             self.assertIn(term, explanation)
+        for asset in re.findall(r"!\[[^\]]*\]\((docs/assets/[^)]+)\)", readme):
+            self.assertTrue((ROOT / asset).is_file(), asset)
         self.assertIn("Gyan", readme)
         self.assertIn("GPL Essentials", readme)
         self.assertNotIn("BtbN", readme)
