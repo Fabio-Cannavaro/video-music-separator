@@ -2,6 +2,22 @@
 
 # 영상 음악 분리·제거기 / Video Music Separator
 
+> **사용 모델과 연구진 — AV-CASS**
+>
+> 이 앱의 AI 음원 분리에는 **AV-CASS**를 사용한다. 원 연구는 **Kang Zhang, Suyeon Lee, Arda Senocak, Joon Son Chung**의 *Cinematic Audio Source Separation Using Visual Cues* (**CVPR 2026**)다.
+>
+> **[공식 프로젝트·연구진](https://cass-flowmatching.github.io/) · [논문](https://arxiv.org/pdf/2603.26113) · [공식 코드](https://github.com/pantheon5100/AVCASS)**
+>
+> Video Music Separator는 이 모델을 활용한 독립 앱이며, 연구진의 공식 앱이 아니고 제휴하거나 보증받지 않았다. CAVP를 포함한 외부 모델의 출처와 이용조건은 [모델 고지](docs/MODEL_LICENSES.md)에 정리되어 있다.
+
+> **Model and research credits — AV-CASS**
+>
+> This app uses **AV-CASS** for AI source separation, from *Cinematic Audio Source Separation Using Visual Cues* (**CVPR 2026**) by **Kang Zhang, Suyeon Lee, Arda Senocak, and Joon Son Chung**.
+>
+> **[Official project & researchers](https://cass-flowmatching.github.io/) · [Paper](https://arxiv.org/pdf/2603.26113) · [Official code](https://github.com/pantheon5100/AVCASS)**
+>
+> Video Music Separator is an independent application using this model. It is not an official research-team application and is not affiliated with or endorsed by the researchers. Sources and terms for external models, including CAVP, are listed in the [model notices](docs/MODEL_LICENSES.en.md).
+
 ![Video Music Separator — 영상 열기, 음악·비음악 비교, 별도 사본 저장 / Open, compare, save](docs/assets/overview.svg)
 
 [![Windows](https://img.shields.io/badge/platform-Windows_64--bit-2563eb)](#한국어)
@@ -101,8 +117,6 @@ OLA는 겹친 결과에 서로 다른 비중을 주어 더하는 방식이다. �
 ![하나의 음악 마스크를 보관한 원본 L과 R에 각각 적용해 음악과 음악 아님 스테레오를 만드는 앱의 출력 구조](docs/assets/stereo-output.ko.png)
 
 원본의 좌우 차이와 위상 정보를 활용하고, 음악 아님은 각 채널에서 `원본 - 음악`으로 만든다. 두 트랙을 합치면 계산 오차 범위에서 보관한 스테레오로 돌아온다. 다만 음악으로 잘못 분류된 효과음은 함께 줄어들 수 있으므로, 이것이 모든 효과음과 공간감의 완전한 보존을 보장하지는 않는다.
-
-모델 출처: [AV-CASS 프로젝트](https://cass-flowmatching.github.io/) · [논문](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf) · [공식 소스](https://github.com/pantheon5100/AVCASS). 이 앱은 연구진의 공식 앱이 아니며, 제휴하거나 보증받지 않았다.
 
 <a id="ko-limits"></a>
 
@@ -422,8 +436,6 @@ The application retains 44.1 kHz stereo audio separately for final output. It de
 ![The application applies one music mask separately to retained source L and R to produce stereo Music and Non-Music](docs/assets/stereo-output.en.png)
 
 The application uses source channel differences and phase information, computing Non-Music as `source - music` per channel. Adding the two tracks reconstructs the retained stereo source within numerical precision. Effects misclassified as music may still be reduced; this does not guarantee perfect preservation of every effect or spatial detail.
-
-Model sources: [AV-CASS project](https://cass-flowmatching.github.io/) · [paper](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf) · [official code](https://github.com/pantheon5100/AVCASS). This application is not an official research-team application and is not affiliated with or endorsed by the researchers.
 
 <a id="en-limits"></a>
 
