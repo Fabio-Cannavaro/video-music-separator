@@ -37,7 +37,6 @@ PREVIEW_VIDEO_FILTER = (
 MAX_COMMAND_OUTPUT_BYTES = 1024 * 1024
 COMMAND_POLL_SECONDS = 0.05
 _command_context = threading.local()
-MP4_COPY_CODECS = {"h264", "hevc", "mpeg4", "av1", "vp9"}
 
 
 class CommandCancelled(RuntimeError):
@@ -271,24 +270,6 @@ def _preview_video_args() -> list[str]:
     ]
 
 
-def video_requires_mp4_conversion(video_path: Path) -> bool:
-    completed = run_bounded_command(
-        [
-            *ffmpeg_command_prefix("ffprobe"), "-select_streams", "v:0",
-            "-show_entries", "stream=codec_name", "-of", "json",
-            *ffmpeg_file_input(video_path, "영상"),
-        ],
-        timeout=120,
-    )
-    if completed.returncode:
-        raise RuntimeError(completed.stderr.strip() or "영상 코덱을 확인하지 못했습니다.")
-    try:
-        codec = json.loads(completed.stdout)["streams"][0]["codec_name"]
-    except (ValueError, KeyError, IndexError, TypeError) as error:
-        raise RuntimeError("영상 코덱을 확인하지 못했습니다.") from error
-    return codec not in MP4_COPY_CODECS
-
-
 def create_preview_proxy(video_path: Path, output_path: Path) -> None:
     """Create a small A/V proxy used only by the in-app player."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -516,7 +497,6 @@ def _build_mixed_video_command(
     events: Sequence[SoundEvent],
     *,
     preview: bool,
-    transcode_video: bool = False,
 ) -> list[str]:
     muted = [event for event in events if event.muted]
     partition = is_music_partition(events)
@@ -543,17 +523,28 @@ def _build_mixed_video_command(
     )
     if preview:
         command.extend(_preview_video_args())
-    elif transcode_video:
-        command.extend([
-            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-            "-pix_fmt", "yuv420p", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-            "-fps_mode", "passthrough",
-        ])
     else:
         command.extend(["-c:v", "copy"])
-    command.extend(["-c:a", "aac", "-b:a", "192k" if preview else "320k"])
-    if not preview and output_path.suffix.lower() in {".mp4", ".m4v", ".mov"}:
-        command.extend(["-movflags", "+faststart"])
+    if preview:
+        command.extend(["-c:a", "aac", "-b:a", "192k"])
+    else:
+        suffix = output_path.suffix.lower()
+        containers = {
+            ".mp4": "mp4", ".m4v": "mp4", ".mov": "mov",
+            ".mkv": "matroska", ".webm": "webm", ".avi": "avi",
+        }
+        if suffix not in containers:
+            raise ValueError(f"지원하지 않는 저장 형식입니다: {suffix}")
+        if suffix == ".webm":
+            command.extend(["-c:a", "libopus", "-b:a", "192k"])
+        elif suffix == ".avi":
+            command.extend(["-c:a", "pcm_s16le"])
+        else:
+            command.extend(["-c:a", "aac", "-b:a", "320k"])
+        # M4V must use the MP4 container, not FFmpeg's raw MPEG-4 video muxer.
+        command.extend(["-f", containers[suffix]])
+        if suffix in {".mp4", ".m4v", ".mov"}:
+            command.extend(["-movflags", "+faststart"])
     command.extend(["-shortest", str(output_path)])
     return command
 
@@ -569,10 +560,9 @@ def create_muted_preview_video(
 
 
 def export_video(
-    video_path: Path, output_path: Path, events: Sequence[SoundEvent], *,
-    transcode_video: bool = False,
+    video_path: Path, output_path: Path, events: Sequence[SoundEvent],
 ) -> None:
-    """Save a copy; re-encode video only when explicitly selected by the caller."""
+    """Save a copy with unchanged video and container-compatible processed audio."""
     if output_path.exists():
         raise FileExistsError(f"기존 사본을 덮어쓸 수 없습니다: {output_path}")
     temporary_output = output_path.with_name(
@@ -581,7 +571,6 @@ def export_video(
     try:
         command = _build_mixed_video_command(
             video_path, temporary_output, events, preview=False,
-            transcode_video=transcode_video,
         )
         run_command(command, timeout=media_command_timeout(probe_duration(video_path)))
         check_command_cancelled()

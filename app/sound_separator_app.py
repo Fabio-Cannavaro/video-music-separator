@@ -37,7 +37,6 @@ from audio_core import (
     preview_proxy_is_current,
     require_program,
     save_manifest,
-    video_requires_mp4_conversion,
 )
 from release_info import APP_VERSION, RUNTIME_COMPONENTS
 from release_info import AVCASS_SHA256, AVCASS_SIZE, CAVP_SHA256, CAVP_SIZE
@@ -179,7 +178,6 @@ TRANSLATIONS = {
         "status_save_complete": "저장 완료 · 작업 폴더 삭제 완료: {path}",
         "status_saving": "뮤트한 소리를 제거하고 영상을 저장하는 중입니다…",
         "status_closing": "진행 중인 작업을 중단하고 종료하는 중입니다…",
-        "confirm_video_conversion": "이 영상 코덱은 이 앱의 MP4 원본 복사 저장 대상이 아닙니다. 사본을 저장할 때 H.264로 변환할까요?\n\n원본은 보존됩니다. 변환에는 시간이 더 걸리고 화질이 달라질 수 있습니다. 취소하면 이 영상을 열지 않습니다.",
         "progress_video_frames": "영상 장면을 준비하는 중…",
         "progress_model_loading": "분리 모델을 불러오는 중…",
         "progress_visual_model_loading": "영상 인식 모델을 불러오는 중…",
@@ -203,7 +201,7 @@ TRANSLATIONS = {
         "confirm_mute_review": "{label}\n\n{note}\n\n그래도 이 소리를 뮤트할까요?",
         "preview_open_failed": "영상 미리보기를 열 수 없습니다: {path}",
         "preview_unavailable": "분리본 영상 미리보기를 찾을 수 없습니다. 다시 분석해 주세요.",
-        "saved_file_invalid": "저장된 MP4를 확인할 수 없습니다: {path}",
+        "saved_file_invalid": "저장된 영상을 확인할 수 없습니다: {path}",
         "save_cleanup_warning": "영상은 저장했지만 작업 폴더를 삭제하지 못했습니다.\n\n저장 파일: {target}\n작업 폴더: {work_dir}\n\n{error}",
         "save_complete_dialog": "저장했습니다.\n{path}\n\n임시 작업 폴더도 삭제했습니다.",
         "quality_reconstruction": "두 분리본을 합쳐도 원본과 충분히 일치하지 않습니다. 다시 분리해 주세요.",
@@ -303,7 +301,6 @@ TRANSLATIONS = {
         "status_save_complete": "Saved · Deleted the work folder: {path}",
         "status_saving": "Removing muted sounds and saving the video…",
         "status_closing": "Stopping the active job and closing…",
-        "confirm_video_conversion": "This video's codec is not supported for direct MP4 copying by this app. Convert the video to H.264 when saving the copy?\n\nThe original is preserved. Conversion takes additional time and may change image quality. Cancel to leave this video unopened.",
         "progress_video_frames": "Preparing video frames…",
         "progress_model_loading": "Loading the separation model…",
         "progress_visual_model_loading": "Loading the visual recognition model…",
@@ -327,7 +324,7 @@ TRANSLATIONS = {
         "confirm_mute_review": "{label}\n\n{note}\n\nMute this sound anyway?",
         "preview_open_failed": "Could not open the video preview: {path}",
         "preview_unavailable": "The separated-track video preview was not found. Analyze the video again.",
-        "saved_file_invalid": "The saved MP4 could not be verified: {path}",
+        "saved_file_invalid": "The saved video could not be verified: {path}",
         "save_cleanup_warning": "The video was saved, but the work folder could not be deleted.\n\nSaved file: {target}\nWork folder: {work_dir}\n\n{error}",
         "save_complete_dialog": "Saved.\n{path}\n\nThe temporary work folder was also deleted.",
         "quality_reconstruction": "The two separated tracks do not reconstruct the source closely enough. Run separation again.",
@@ -989,7 +986,7 @@ def muted_copy_output_path(video_path: Path, events: list[SoundEvent]) -> Path:
         frozenset({"non-music"}): "음악만",
         frozenset({"music", "non-music"}): "전체소리제거",
     }.get(frozenset(muted_ids), "소리조정")
-    return video_path.with_name(f"{video_path.stem}_{suffix}.mp4")
+    return video_path.with_name(f"{video_path.stem}_{suffix}{video_path.suffix}")
 
 
 def available_output_path(preferred_path: Path) -> Path:
@@ -1047,7 +1044,6 @@ class SoundSeparatorApp(tk.Tk):
         self.closing = False
         self.cancel_event = threading.Event()
         self.background_thread: threading.Thread | None = None
-        self.export_transcode = False
 
         self.portable_runtime = application_root() / "audiosep"
         self.model_var = tk.StringVar(value=self.active_model_id)
@@ -1440,16 +1436,6 @@ class SoundSeparatorApp(tk.Tk):
         if path.suffix.lower() not in VIDEO_EXTENSIONS:
             messagebox.showerror(self._t("app_title"), self._t("unsupported_video"))
             return
-        try:
-            transcode = video_requires_mp4_conversion(path)
-        except (OSError, ValueError, RuntimeError) as error:
-            messagebox.showerror(self._t("app_title"), str(error))
-            return
-        if transcode and not messagebox.askyesno(
-            self._t("app_title"), self._t("confirm_video_conversion")
-        ):
-            return
-        self.export_transcode = transcode
         self.video_path = path
         self.work_handle = allocate_owned_work_directory(path)
         self.work_dir = self.work_handle.path
@@ -2442,12 +2428,11 @@ class SoundSeparatorApp(tk.Tk):
             messagebox.showerror(self._t("app_title"), "작업 폴더 소유 정보를 찾을 수 없습니다.")
             return
         events = list(self.events)
-        transcode_video = self.export_transcode
         target = available_output_path(muted_copy_output_path(video_path, events))
         self.stop_preview()
 
         def operation() -> None:
-            export_video(video_path, target, events, transcode_video=transcode_video)
+            export_video(video_path, target, events)
             if not target.is_file() or target.stat().st_size <= 0:
                 raise RuntimeError(self._t("saved_file_invalid", path=target))
 
@@ -2593,7 +2578,7 @@ def run_portable_smoke_test(video_path: Path, result_path: Path) -> None:
                     test_root / "previews" / f"{event.event_id}.mkv",
                 )
             events[0].muted = True
-            music_removed = test_root / "music-removed.mp4"
+            music_removed = test_root / f"music-removed{video_path.suffix}"
             export_video(video_path, music_removed, events)
             export_ok = music_removed.is_file() and music_removed.stat().st_size > 0
         result = {

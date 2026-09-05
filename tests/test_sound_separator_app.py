@@ -553,24 +553,30 @@ class MusicPartitionTests(unittest.TestCase):
         events[0].muted = True
         self.assertEqual(
             muted_copy_output_path(Path("folder") / "clip.mov", events),
-            Path("folder") / "clip_음악제거.mp4",
+            Path("folder") / "clip_음악제거.mov",
         )
         events[0].muted = False
         events[1].muted = True
         self.assertEqual(
             muted_copy_output_path(Path("folder") / "clip.mov", events),
-            Path("folder") / "clip_음악만.mp4",
+            Path("folder") / "clip_음악만.mov",
         )
+
+    def test_copy_names_preserve_each_supported_extension(self) -> None:
+        for extension in ("mp4", "mov", "mkv", "avi", "webm", "m4v", "WEBM"):
+            with self.subTest(extension=extension):
+                source = Path("folder") / f"clip.{extension}"
+                self.assertEqual(muted_copy_output_path(source, []).suffix, source.suffix)
 
     def test_preserves_existing_saved_copies_with_numbered_names(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            preferred = root / "clip_음악제거.mp4"
+            preferred = root / "clip_음악제거.mov"
             preferred.write_bytes(b"first")
-            (root / "clip_음악제거_2.mp4").write_bytes(b"second")
+            (root / "clip_음악제거_2.mov").write_bytes(b"second")
             self.assertEqual(
                 available_output_path(preferred),
-                root / "clip_음악제거_3.mp4",
+                root / "clip_음악제거_3.mov",
             )
 
     def test_keeps_each_model_result_in_a_separate_cache(self) -> None:

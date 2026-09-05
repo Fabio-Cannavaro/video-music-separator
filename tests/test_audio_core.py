@@ -29,7 +29,6 @@ from audio_core import (
     export_video,
     run_command,
     is_music_partition,
-    video_requires_mp4_conversion,
 )
 
 
@@ -267,28 +266,40 @@ class FfmpegIntegrationTests(unittest.TestCase):
                     self.assertEqual(int(stream["nb_read_frames"]), 96)
                     self.assertAlmostEqual(float(stream["duration"]), 4.0, places=2)
 
-    def test_vp8_input_can_be_saved_with_explicit_h264_conversion(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            source, output = root / "source.webm", root / "output.mp4"
-            subprocess.run([
-                "ffmpeg", "-y", "-f", "lavfi", "-i", "color=s=160x90:r=24:d=1",
-                "-f", "lavfi", "-i", "sine=duration=1", "-c:v", "libvpx",
-                "-c:a", "libopus", str(source),
-            ], check=True, capture_output=True)
-            original_bytes = source.read_bytes()
-            self.assertTrue(video_requires_mp4_conversion(source))
-            export_video(source, output, [], transcode_video=True)
-            self.assertFalse(video_requires_mp4_conversion(output))
-            result = subprocess.run([
-                "ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
-                "-show_entries", "stream=codec_name,nb_read_frames", "-of", "json", str(output),
-            ], check=True, capture_output=True, text=True)
-            stream = json.loads(result.stdout)["streams"][0]
-            self.assertEqual(stream["codec_name"], "h264")
-            self.assertEqual(int(stream["nb_read_frames"]), 24)
-            self.assertEqual(source.read_bytes(), original_bytes)
-            self.assertEqual(list(root.glob(".*.tmp.mp4")), [])
+    def test_exports_preserve_source_container_and_video(self) -> None:
+        formats = [
+            ("mp4", "libx264", "h264", "aac", "mp4"),
+            ("mov", "mpeg4", "mpeg4", "aac", "mov"),
+            ("mkv", "libx264", "h264", "aac", "matroska"),
+            ("avi", "mpeg4", "mpeg4", "pcm_s16le", "avi"),
+            ("webm", "libvpx", "vp8", "libopus", "webm"),
+            ("m4v", "libx264", "h264", "aac", "mp4"),
+        ]
+        for suffix, encoder, codec, audio_encoder, container in formats:
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                source, output = root / f"source.{suffix}", root / f"output.{suffix}"
+                subprocess.run([
+                    "ffmpeg", "-y", "-f", "lavfi", "-i", "color=s=160x90:r=24:d=2",
+                    "-f", "lavfi", "-i", "sine=duration=1", "-c:v", encoder,
+                    "-c:a", audio_encoder, "-f", container, str(source),
+                ], check=True, capture_output=True)
+                original_bytes = source.read_bytes()
+                export_video(source, output, [])
+                result = subprocess.run([
+                    "ffprobe", "-v", "error", "-count_frames",
+                    "-show_streams", "-show_format", "-of", "json", str(output),
+                ], check=True, capture_output=True, text=True)
+                info = json.loads(result.stdout)
+                video = next(s for s in info["streams"] if s["codec_type"] == "video")
+                audio = next(s for s in info["streams"] if s["codec_type"] == "audio")
+                self.assertEqual(video["codec_name"], codec)
+                self.assertEqual(int(video["nb_read_frames"]), 48)
+                self.assertEqual(audio["codec_name"], "opus" if suffix == "webm" else audio_encoder)
+                self.assertIn(container, info["format"]["format_name"])
+                self.assertLess(abs(float(info["format"]["duration"]) - 2.0), 0.15)
+                self.assertEqual(source.read_bytes(), original_bytes)
+                self.assertEqual(list(root.glob(".*.tmp.*")), [])
 
     def test_local_playlist_cannot_open_remote_segment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
