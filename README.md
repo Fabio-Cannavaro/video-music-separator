@@ -86,9 +86,11 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 
 이 앱은 모델의 모노 분석에서 얻은 분리 추정치를 받아 구간별로 연결하고, 이를 음악 마스크로 변환해 보관한 원본 스테레오에 적용한다. 아래는 앱에 적용한 연결·고역·출력 처리 방식이다.
 
-#### 1. 1초 겹침 — 경계 구간을 공유
+#### 1. 청크 나누기와 1초 겹침 — 앱이 처리 구간을 배치
 
-앱은 인접 처리 구간(청크)에 같은 1초가 포함되도록 배치한다. 겹친 부분에는 앞뒤 두 구간의 분리 결과가 생기며, 이를 OLA로 연결한다.
+청크는 한 번에 모델에 전달하는 짧은 처리 구간이다. 앱은 현재 모델 입력에 맞춰 소리를 약 **8.18초(정확히 8.176초)** 단위로 자르고, 같은 시간대의 영상 프레임과 함께 모델에 전달한다. 청크의 시작 위치는 앱이 시간 기준으로 계산하며, 모델이 장면을 보고 경계를 선택하는 방식은 아니다.
+
+기본 설정에서는 다음 청크를 **7.176초 뒤**에 시작해 앞뒤 구간이 **1초 겹치게** 배치한다. 모델은 각 청크를 분리하고, 앱은 겹친 부분에 생긴 두 분리 결과를 OLA로 연결한다.
 
 ![앞 구간의 끝과 뒤 구간의 시작이 같은 1초를 공유하는 경계 확대도](docs/assets/chunk-overlap.ko.png)
 
@@ -405,9 +407,11 @@ Inputs are restricted to supported media formats on fixed local disks. UNC paths
 
 The application receives separation estimates from the model’s mono analysis, joins them across chunks, and converts them into a music mask applied to the retained stereo source. The following figures describe the application's joining, high-band, and output processing.
 
-#### 1. One-second overlap — share audio at the boundary
+#### 1. Chunking and one-second overlap — the app places processing segments
 
-The application places adjacent processing segments (chunks) so that they share one second. The preceding and following chunks each provide a separation result for the shared segment, which OLA blends together.
+A chunk is a short processing segment sent to the model in one pass. The application slices audio into approximately **8.18-second segments (exactly 8.176 seconds)** to match the current model input and supplies video frames from the same time range. The app calculates chunk start positions by time; the model does not select boundaries by detecting scenes.
+
+With the default setting, the next chunk starts **7.176 seconds later**, producing a **one-second overlap**. The model separates each chunk, and the app uses OLA to join the two separation results in the shared region.
 
 ![Close-up of adjacent chunk boundaries sharing one second](docs/assets/chunk-overlap.en.png)
 
