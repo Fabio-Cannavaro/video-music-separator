@@ -6,6 +6,7 @@
 
 [![Windows](https://img.shields.io/badge/platform-Windows_64--bit-2563eb)](#한국어)
 [![AV-CASS](https://img.shields.io/badge/model-AV--CASS-0891b2)](https://github.com/pantheon5100/AVCASS)
+[![CAVP](https://img.shields.io/badge/visual_encoder-CAVP-0f766e)](https://github.com/luosiallen/Diff-Foley)
 [![Source license](https://img.shields.io/badge/source_license-GPL--3.0--only-64748b)](LICENSE)
 [![Distribution](https://img.shields.io/badge/installers-Draft_%C2%B7_on_hold-b45309)](docs/DISTRIBUTION_CHECKLIST.md)
 
