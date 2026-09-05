@@ -162,6 +162,14 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="진단 시 지정 간격마다 현재 Python 스택을 출력합니다.",
     )
+    parser.add_argument(
+        "--comparison-output-dir",
+        default="",
+        help=(
+            "후처리 A/B/C 진단 파일(raw/current/hybrid)을 저장할 폴더. "
+            "비워 두면 기존 제품 출력만 생성합니다."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -264,6 +272,42 @@ def centered_correlation(first, second) -> float:
     if float(denominator) <= 1e-12:
         return 0.0
     return float(torch.dot(left, right) / denominator)
+
+
+def comparison_waveform_metrics(waveform, reference, sample_rate: int) -> dict:
+    import torch
+
+    waveform_rms = float(waveform.square().mean().sqrt())
+    reference_rms = float(reference.square().mean().sqrt())
+    metrics = {
+        "rms_ratio_to_source": waveform_rms / reference_rms if reference_rms else 0.0,
+        "source_correlation": centered_correlation(reference, waveform),
+        "peak": float(waveform.abs().max()),
+    }
+    if waveform.shape[0] >= 2:
+        left = waveform[0]
+        right = waveform[1]
+        mid_rms = float(((left + right) * 0.5).square().mean().sqrt())
+        side_rms = float(((left - right) * 0.5).square().mean().sqrt())
+        metrics["stereo_side_to_mid_ratio"] = (
+            side_rms / mid_rms if mid_rms else 0.0
+        )
+        metrics["left_right_correlation"] = centered_correlation(left, right)
+    else:
+        metrics["stereo_side_to_mid_ratio"] = 0.0
+        metrics["left_right_correlation"] = 1.0
+
+    spectrum = torch.fft.rfft(waveform, dim=-1)
+    frequencies = torch.fft.rfftfreq(
+        waveform.shape[-1], d=1.0 / sample_rate, device=waveform.device
+    )
+    power = spectrum.abs().square()
+    total_power = float(power.sum())
+    high_power = float(power[:, frequencies > MODEL_BAND_LIMIT].sum())
+    metrics["energy_above_8khz_fraction"] = (
+        high_power / total_power if total_power else 0.0
+    )
+    return metrics
 
 
 def configure_yapf_cache() -> Path:
@@ -381,7 +425,10 @@ def main() -> int:
     import torchaudio
 
     from models_avdnr_zero_conv_2vid import SiT_models
-    from separation_quality import apply_stereo_consistent_mask
+    from separation_quality import (
+        apply_raw_anchored_hybrid,
+        apply_stereo_consistent_mask,
+    )
     from spec_utils import audio2spec, spec2audio
     from transport.RFM import ReFlow
     from visual_backbones import forward_video, init_visual_encoder
@@ -531,8 +578,13 @@ def main() -> int:
 
     prediction /= overlap_count.clamp_min(1).unsqueeze(0)
     prediction = prediction[:, :original_16k_length].float().cpu()
+    # AV-CASS output order is speech / sfx / music.  Preserve the exact
+    # post-OLA 16 kHz mono tensors before any resampling or post-processing so
+    # the comparison folder contains an official-model baseline.
     estimated_music = prediction[2:3]
     estimated_non_music = prediction[0:1] + prediction[1:2]
+    raw_music = estimated_music
+    raw_non_music = estimated_non_music
     estimated_music = torchaudio.functional.resample(
         estimated_music, orig_freq=AVCASS_SAMPLE_RATE, new_freq=sample_rate
     )
@@ -558,6 +610,21 @@ def main() -> int:
         high_band_extension=args.high_band_extension,
     )
     reconstruction = music + non_music
+
+    comparison_dir = None
+    hybrid_music = None
+    hybrid_non_music = None
+    if args.comparison_output_dir:
+        comparison_dir = Path(args.comparison_output_dir).resolve()
+        comparison_dir.mkdir(parents=True, exist_ok=True)
+        print("[compare] raw/current/hybrid 후처리 비교 생성 중", flush=True)
+        hybrid_music, hybrid_non_music = apply_raw_anchored_hybrid(
+            reference,
+            estimated_music,
+            estimated_non_music,
+            sample_rate,
+            model_band_limit=MODEL_BAND_LIMIT,
+        )
 
     source_rms = float(reference.square().mean().sqrt())
     metrics = {
@@ -594,6 +661,87 @@ def main() -> int:
     }
     torchaudio.save(str(music_output), music, **save_kwargs)
     torchaudio.save(str(non_music_output), non_music, **save_kwargs)
+    if comparison_dir is not None:
+        raw_save_kwargs = {
+            "sample_rate": AVCASS_SAMPLE_RATE,
+            "encoding": "PCM_S",
+            "bits_per_sample": 24,
+        }
+        torchaudio.save(
+            str(comparison_dir / "raw_music.wav"), raw_music, **raw_save_kwargs
+        )
+        torchaudio.save(
+            str(comparison_dir / "raw_non_music.wav"),
+            raw_non_music,
+            **raw_save_kwargs,
+        )
+        torchaudio.save(
+            str(comparison_dir / "current_music.wav"), music, **save_kwargs
+        )
+        torchaudio.save(
+            str(comparison_dir / "current_non_music.wav"),
+            non_music,
+            **save_kwargs,
+        )
+        torchaudio.save(
+            str(comparison_dir / "hybrid_music.wav"),
+            hybrid_music,
+            **save_kwargs,
+        )
+        torchaudio.save(
+            str(comparison_dir / "hybrid_non_music.wav"),
+            hybrid_non_music,
+            **save_kwargs,
+        )
+        comparison_metrics = {
+            "input": str(video),
+            "stem_order": ["speech", "sfx", "music"],
+            "raw": {
+                "description": "prediction[2], post-OLA only, 16 kHz mono",
+                "music": comparison_waveform_metrics(
+                    raw_music,
+                    mono_16k[:original_16k_length].unsqueeze(0),
+                    AVCASS_SAMPLE_RATE,
+                ),
+            },
+            "current": {
+                "description": "existing stereo-consistent power mask",
+                "music": comparison_waveform_metrics(music, reference, sample_rate),
+                "reconstruction_error_ratio": float(
+                    (reference - (music + non_music)).square().mean().sqrt()
+                )
+                / source_rms
+                if source_rms
+                else 0.0,
+            },
+            "hybrid": {
+                "description": (
+                    "raw Music anchor + smoothed stereo transfer + "
+                    "conservative activity-gated high band"
+                ),
+                "high_band_strength": 0.35,
+                "music": comparison_waveform_metrics(
+                    hybrid_music, reference, sample_rate
+                ),
+                "reconstruction_error_ratio": float(
+                    (
+                        reference - (hybrid_music + hybrid_non_music)
+                    ).square().mean().sqrt()
+                )
+                / source_rms
+                if source_rms
+                else 0.0,
+            },
+            "limitations": (
+                "Speech/SFX leakage and musical naturalness require direct listening; "
+                "these signal metrics are not source-separation scores."
+            ),
+        }
+        (comparison_dir / "comparison_metrics.json").write_text(
+            json.dumps(comparison_metrics, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"[compare] 비교 폴더: {comparison_dir}", flush=True)
     (music_output.parent / "partition_metrics.json").write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
     )
