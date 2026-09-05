@@ -2,34 +2,6 @@
 
 # 영상 음악 분리·제거기 / Video Music Separator
 
-> **사용 모델과 연구진 — AV-CASS · CAVP**
->
-> 이 앱의 AI 음원 분리에는 **AV-CASS**를 사용한다. 원 연구는 **Kang Zhang, Suyeon Lee, Arda Senocak, Joon Son Chung**의 *Cinematic Audio Source Separation Using Visual Cues* (**CVPR 2026**)다.
->
-> **[공식 프로젝트·연구진](https://cass-flowmatching.github.io/) · [논문](https://arxiv.org/pdf/2603.26113) · [공식 코드](https://github.com/pantheon5100/AVCASS)**
->
-> **CAVP — 영상 특징 추출:** Diff-Foley 연구의 Contrastive Audio-Visual Pretraining 모델을 사용해 영상 프레임의 특징을 추출하고 AV-CASS에 전달한다. 이 앱에서 CAVP가 맡는 역할은 분리에 사용할 시각 정보를 제공하는 것이다.
->
-> 원 연구는 **Simian Luo, Chuanhao Yan, Chenxu Hu, Hang Zhao**의 *Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models* (**NeurIPS 2023**)다.
->
-> **[Diff-Foley 공식 프로젝트·연구진](https://diff-foley.github.io/) · [논문](https://arxiv.org/abs/2306.17203) · [공식 코드](https://github.com/luosiallen/Diff-Foley)**
->
-> Video Music Separator는 이 모델들을 활용한 독립 앱이며, 각 연구진의 공식 앱이 아니고 제휴하거나 보증받지 않았다. 외부 모델의 출처와 이용조건은 [모델 고지](docs/MODEL_LICENSES.md)에 정리되어 있다.
-
-> **Model and research credits — AV-CASS · CAVP**
->
-> This app uses **AV-CASS** for AI source separation, from *Cinematic Audio Source Separation Using Visual Cues* (**CVPR 2026**) by **Kang Zhang, Suyeon Lee, Arda Senocak, and Joon Son Chung**.
->
-> **[Official project & researchers](https://cass-flowmatching.github.io/) · [Paper](https://arxiv.org/pdf/2603.26113) · [Official code](https://github.com/pantheon5100/AVCASS)**
->
-> **CAVP — visual feature extraction:** The app uses the Contrastive Audio-Visual Pretraining model from Diff-Foley to extract video-frame features and pass them to AV-CASS. CAVP supplies the visual information used for separation in this app.
->
-> The original research is *Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models* (**NeurIPS 2023**) by **Simian Luo, Chuanhao Yan, Chenxu Hu, and Hang Zhao**.
->
-> **[Official Diff-Foley project & researchers](https://diff-foley.github.io/) · [Paper](https://arxiv.org/abs/2306.17203) · [Official code](https://github.com/luosiallen/Diff-Foley)**
->
-> Video Music Separator is an independent application using these models. It is not an official application of either research team and is not affiliated with or endorsed by the researchers. Sources and terms for external models are listed in the [model notices](docs/MODEL_LICENSES.en.md).
-
 ![Video Music Separator — 영상 열기, 음악·비음악 비교, 별도 사본 저장 / Open, compare, save](docs/assets/overview.svg)
 
 [![Windows](https://img.shields.io/badge/platform-Windows_64--bit-2563eb)](#한국어)
@@ -341,6 +313,20 @@ AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토�
 앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face, GitHub와 Gyan에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
 
 영상 미리보기 왼쪽의 `앱 정보·라이선스` 버튼을 누르면 `앱 정보·라이선스·출처` 창에서 AV-CASS와 CAVP의 출처·논문, FFmpeg GPL 빌드 정보와 제3자 고지를 한국어로 확인할 수 있다. 그 아래에는 GPL·LGPL·MIT·Apache의 변경되지 않은 공식 영문 원문이 이어진다.
+
+> **사용 모델과 연구진 — AV-CASS · CAVP**
+>
+> 이 앱의 AI 음원 분리에는 **AV-CASS**를 사용한다. 원 연구는 **Kang Zhang, Suyeon Lee, Arda Senocak, Joon Son Chung**의 *Cinematic Audio Source Separation Using Visual Cues* (**CVPR 2026**)다.
+>
+> **[공식 프로젝트·연구진](https://cass-flowmatching.github.io/) · [논문](https://arxiv.org/pdf/2603.26113) · [공식 코드](https://github.com/pantheon5100/AVCASS)**
+>
+> **CAVP — 영상 특징 추출:** Diff-Foley 연구의 Contrastive Audio-Visual Pretraining 모델을 사용해 영상 프레임의 특징을 추출하고 AV-CASS에 전달한다. 이 앱에서 CAVP가 맡는 역할은 분리에 사용할 시각 정보를 제공하는 것이다.
+>
+> 원 연구는 **Simian Luo, Chuanhao Yan, Chenxu Hu, Hang Zhao**의 *Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models* (**NeurIPS 2023**)다.
+>
+> **[Diff-Foley 공식 프로젝트·연구진](https://diff-foley.github.io/) · [논문](https://arxiv.org/abs/2306.17203) · [공식 코드](https://github.com/luosiallen/Diff-Foley)**
+>
+> Video Music Separator는 이 모델들을 활용한 독립 앱이며, 각 연구진의 공식 앱이 아니고 제휴하거나 보증받지 않았다. 외부 모델의 출처와 이용조건은 [모델 고지](docs/MODEL_LICENSES.md)에 정리되어 있다.
 
 <a id="ko-license"></a>
 
@@ -662,6 +648,20 @@ The application processes user-selected files locally on the PC. Users must obta
 The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, GitHub, and Gyan during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
 
 The `App Info & Licenses` button to the left of the video preview opens the `App Information, Licenses & Sources` page. In Korean mode, Korean notices and sources appear first, followed by the unmodified official GPL, LGPL, MIT, and Apache license texts.
+
+> **Model and research credits — AV-CASS · CAVP**
+>
+> This app uses **AV-CASS** for AI source separation, from *Cinematic Audio Source Separation Using Visual Cues* (**CVPR 2026**) by **Kang Zhang, Suyeon Lee, Arda Senocak, and Joon Son Chung**.
+>
+> **[Official project & researchers](https://cass-flowmatching.github.io/) · [Paper](https://arxiv.org/pdf/2603.26113) · [Official code](https://github.com/pantheon5100/AVCASS)**
+>
+> **CAVP — visual feature extraction:** The app uses the Contrastive Audio-Visual Pretraining model from Diff-Foley to extract video-frame features and pass them to AV-CASS. CAVP supplies the visual information used for separation in this app.
+>
+> The original research is *Diff-Foley: Synchronized Video-to-Audio Synthesis with Latent Diffusion Models* (**NeurIPS 2023**) by **Simian Luo, Chuanhao Yan, Chenxu Hu, and Hang Zhao**.
+>
+> **[Official Diff-Foley project & researchers](https://diff-foley.github.io/) · [Paper](https://arxiv.org/abs/2306.17203) · [Official code](https://github.com/luosiallen/Diff-Foley)**
+>
+> Video Music Separator is an independent application using these models. It is not an official application of either research team and is not affiliated with or endorsed by the researchers. Sources and terms for external models are listed in the [model notices](docs/MODEL_LICENSES.en.md).
 
 <a id="en-license"></a>
 
