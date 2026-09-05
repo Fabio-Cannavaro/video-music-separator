@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from app.release_info import APP_VERSION
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -155,16 +156,19 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("약 15GB", readme)
         self.assertIn("video-music-separator-setup.exe", readme)
         self.assertIn("GitHub Draft로 전환", readme)
-        self.assertIn("installer-v0.2.7", readme)
+        self.assertIn(f"installer-v{APP_VERSION}", readme)
         self.assertIn("미서명 공개 테스트 프리릴리스", readme)
-        self.assertIn("Windows SmartScreen", readme)
+        for section in (readme.split("## English")[0], readme.split("## English")[1]):
+            self.assertIn("SmartScreen", section)
+            self.assertIn("SHA-256", section)
+            self.assertIn("https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation", section)
         self.assertIn("https://www.youtube.com/@ms-0606", readme)
 
         korean = lines.index("## 한국어")
         english = lines.index("## English")
         install = lines.index("### 설치 안내")
         usage = lines.index("### 사용 방법")
-        processing = lines.index("### 처리 구조")
+        processing = lines.index("### 앱 처리 흐름")
         exclusions = lines.index("### 저장소에 포함되지 않는 파일")
         english_install = lines.index("### Installation Guide")
         english_license = lines.index("### License")
@@ -182,17 +186,16 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertNotIn("releases/tag/installer-v0.2.3", readme)
         self.assertNotIn("releases/tag/installer-v0.2.5", readme)
         self.assertNotIn("releases/tag/installer-v0.2.6", readme)
-        self.assertIn("releases/tag/installer-v0.2.7", readme)
+        self.assertIn(f"releases/tag/installer-v{APP_VERSION}", readme)
         self.assertIn("Source code (zip)", readme)
-        self.assertIn("같은 Release의 `.sha256` 파일", readme)
-        self.assertIn("Download the matching `.sha256` file", readme)
+        for section in readme.split("## English"):
+            self.assertIn("`.sha256`", section)
         self.assertIn("빌드·배포 스크립트, 문서와 라이선스 전문", readme)
         self.assertIn("build and distribution scripts, documentation, and full license texts", readme)
         self.assertNotIn("## 이동용 폴더", readme)
-        self.assertIn(
-            "CAVP가 영상 장면의 시각 특징을 추출하고, AV-CASS가 이 특징과 오디오를 함께 분석",
-            readme,
-        )
+        explanation = readme.split("### 음악·비음악 분리 원리", 1)[1].split("###", 1)[0]
+        for term in ("CAVP", "AV-CASS", "16kHz", "마스크"):
+            self.assertIn(term, explanation)
         self.assertIn("Gyan", readme)
         self.assertIn("GPL Essentials", readme)
         self.assertNotIn("BtbN", readme)

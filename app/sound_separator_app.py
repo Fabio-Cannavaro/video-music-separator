@@ -22,9 +22,12 @@ import cv2
 from PIL import Image, ImageTk
 
 from audio_core import (
+    CommandCancelled,
     VIDEO_EXTENSIONS,
     SoundEvent,
     application_root,
+    check_command_cancelled,
+    command_cancellation,
     create_muted_preview_video,
     create_preview_proxy,
     create_preview_video,
@@ -34,6 +37,7 @@ from audio_core import (
     preview_proxy_is_current,
     require_program,
     save_manifest,
+    video_requires_mp4_conversion,
 )
 from release_info import APP_VERSION, RUNTIME_COMPONENTS
 from release_info import AVCASS_SHA256, AVCASS_SIZE, CAVP_SHA256, CAVP_SIZE
@@ -174,6 +178,8 @@ TRANSLATIONS = {
         "status_save_cleanup_failed": "저장 완료 · 작업 폴더 정리 실패: {path}",
         "status_save_complete": "저장 완료 · 작업 폴더 삭제 완료: {path}",
         "status_saving": "뮤트한 소리를 제거하고 영상을 저장하는 중입니다…",
+        "status_closing": "진행 중인 작업을 중단하고 종료하는 중입니다…",
+        "confirm_video_conversion": "이 영상 코덱은 이 앱의 MP4 원본 복사 저장 대상이 아닙니다. 사본을 저장할 때 H.264로 변환할까요?\n\n원본은 보존됩니다. 변환에는 시간이 더 걸리고 화질이 달라질 수 있습니다. 취소하면 이 영상을 열지 않습니다.",
         "progress_video_frames": "영상 장면을 준비하는 중…",
         "progress_model_loading": "분리 모델을 불러오는 중…",
         "progress_visual_model_loading": "영상 인식 모델을 불러오는 중…",
@@ -296,6 +302,8 @@ TRANSLATIONS = {
         "status_save_cleanup_failed": "Saved · Could not clean the work folder: {path}",
         "status_save_complete": "Saved · Deleted the work folder: {path}",
         "status_saving": "Removing muted sounds and saving the video…",
+        "status_closing": "Stopping the active job and closing…",
+        "confirm_video_conversion": "This video's codec is not supported for direct MP4 copying by this app. Convert the video to H.264 when saving the copy?\n\nThe original is preserved. Conversion takes additional time and may change image quality. Cancel to leave this video unopened.",
         "progress_video_frames": "Preparing video frames…",
         "progress_model_loading": "Loading the separation model…",
         "progress_visual_model_loading": "Loading the visual recognition model…",
@@ -685,7 +693,9 @@ def run_worker_command(
     *,
     timeout: float = 24 * 60 * 60,
     idle_timeout: float = 30 * 60,
+    cancel_event: threading.Event | None = None,
 ) -> None:
+    check_command_cancelled(cancel_event)
     max_line_characters = 16 * 1024
     output_limit = object()
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -696,6 +706,8 @@ def run_worker_command(
     environment["PYTHONPYCACHEPREFIX"] = pycache.name
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     process: subprocess.Popen[str] | None = None
+    reader_stop = threading.Event()
+    reader: threading.Thread | None = None
 
     def stop_process() -> None:
         if process is None or process.poll() is not None:
@@ -742,10 +754,18 @@ def run_worker_command(
         output: list[str] = []
         lines: queue.Queue[object] = queue.Queue(maxsize=128)
 
+        def enqueue(value: object) -> None:
+            while not reader_stop.is_set():
+                try:
+                    lines.put(value, timeout=0.1)
+                    return
+                except queue.Full:
+                    continue
+
         def read_output() -> None:
             assert process is not None
             if process.stdout is None:
-                lines.put(None)
+                enqueue(None)
                 return
             try:
                 while True:
@@ -753,24 +773,26 @@ def run_worker_command(
                     if raw_line == "":
                         break
                     if len(raw_line) > max_line_characters:
-                        lines.put(output_limit)
+                        enqueue(output_limit)
                         return
-                    lines.put(raw_line)
+                    enqueue(raw_line)
             finally:
                 process.stdout.close()
-                lines.put(None)
+                enqueue(None)
 
-        threading.Thread(target=read_output, daemon=True).start()
+        reader = threading.Thread(target=read_output, daemon=True)
+        reader.start()
         started = time.monotonic()
         last_output = started
         stream_closed = False
         while not stream_closed:
+            check_command_cancelled(cancel_event)
             now = time.monotonic()
             if now - started > timeout or now - last_output > idle_timeout:
                 stop_process()
                 raise RuntimeError("분리 작업이 시간 제한을 초과해 안전하게 중단됐습니다.")
             try:
-                raw_line = lines.get(timeout=1.0)
+                raw_line = lines.get(timeout=0.1)
             except queue.Empty:
                 if process.poll() is not None:
                     stream_closed = True
@@ -788,12 +810,21 @@ def run_worker_command(
             output.append(line)
             del output[:-40]
             on_output(line)
-        return_code = process.wait(timeout=30)
+        exit_deadline = time.monotonic() + 30
+        while process.poll() is None:
+            check_command_cancelled(cancel_event)
+            if time.monotonic() >= exit_deadline:
+                raise RuntimeError("분리 작업이 출력 종료 후 응답하지 않습니다.")
+            time.sleep(0.05)
+        return_code = process.wait(timeout=1)
         if return_code:
             detail = "\n".join(output[-40:])
             raise RuntimeError(detail or f"분리 작업 실행 실패: {' '.join(command)}")
     finally:
+        reader_stop.set()
         stop_process()
+        if reader is not None:
+            reader.join(timeout=2)
         pycache.cleanup()
 
 
@@ -932,7 +963,9 @@ def avcass_runtime_paths(
 
 def verify_avcass_runtime(install_root: Path, checkpoint: Path, cavp_checkpoint: Path) -> None:
     if getattr(sys, "frozen", False):
-        verify_runtime_integrity_once(install_root)
+        verify_runtime_integrity_once(
+            install_root, lambda *_: check_command_cancelled()
+        )
     for path, expected_size, expected_hash, label in (
         (checkpoint, AVCASS_SIZE, AVCASS_SHA256, "AV-CASS"),
         (cavp_checkpoint, CAVP_SIZE, CAVP_SHA256, "CAVP"),
@@ -943,6 +976,7 @@ def verify_avcass_runtime(install_root: Path, checkpoint: Path, cavp_checkpoint:
         digest = hashlib.sha256()
         with path.open("rb") as stream:
             while chunk := stream.read(4 * 1024 * 1024):
+                check_command_cancelled()
                 digest.update(chunk)
         if digest.hexdigest().lower() != expected_hash.lower():
             raise RuntimeError(f"{label} 모델 무결성 검증에 실패했습니다.")
@@ -1010,6 +1044,10 @@ class SoundSeparatorApp(tk.Tk):
         self.updating_seek_slider = False
         self.auto_extracting = False
         self.busy = False
+        self.closing = False
+        self.cancel_event = threading.Event()
+        self.background_thread: threading.Thread | None = None
+        self.export_transcode = False
 
         self.portable_runtime = application_root() / "audiosep"
         self.model_var = tk.StringVar(value=self.active_model_id)
@@ -1044,6 +1082,8 @@ class SoundSeparatorApp(tk.Tk):
         return self._t(key) if key else event.extraction_note
 
     def _set_status(self, key: str, **values: object) -> None:
+        if getattr(self, "closing", False) and key != "status_closing":
+            return
         self.status_key = key
         self.status_values = values
         self.status_var.set(self._t(key, **values))
@@ -1378,6 +1418,8 @@ class SoundSeparatorApp(tk.Tk):
         self.legal_close_button = None
 
     def choose_video(self) -> None:
+        if self.closing:
+            return
         if self.busy:
             messagebox.showinfo(self._t("app_title"), self._t("busy_wait"))
             return
@@ -1398,6 +1440,16 @@ class SoundSeparatorApp(tk.Tk):
         if path.suffix.lower() not in VIDEO_EXTENSIONS:
             messagebox.showerror(self._t("app_title"), self._t("unsupported_video"))
             return
+        try:
+            transcode = video_requires_mp4_conversion(path)
+        except (OSError, ValueError, RuntimeError) as error:
+            messagebox.showerror(self._t("app_title"), str(error))
+            return
+        if transcode and not messagebox.askyesno(
+            self._t("app_title"), self._t("confirm_video_conversion")
+        ):
+            return
+        self.export_transcode = transcode
         self.video_path = path
         self.work_handle = allocate_owned_work_directory(path)
         self.work_dir = self.work_handle.path
@@ -1558,28 +1610,37 @@ class SoundSeparatorApp(tk.Tk):
     def _run_background(
         self, label_key: str, operation, **label_values: object
     ) -> None:
+        if self.closing:
+            return
         if self.busy:
             messagebox.showinfo(self._t("app_title"), self._t("busy_wait"))
             return
         self.busy = True
+        self.cancel_event.clear()
         self._set_status(label_key, **label_values)
 
         def runner() -> None:
             try:
-                operation()
+                with command_cancellation(self.cancel_event):
+                    operation()
+            except CommandCancelled:
+                pass
             except Exception as exc:
                 message = str(exc)
-                self.after(
-                    0,
-                    lambda: messagebox.showerror(self._t("app_title"), message),
-                )
-                self.after(0, lambda: self._set_status("status_task_failed"))
+                if not self.closing:
+                    self.after(
+                        0,
+                        lambda: messagebox.showerror(self._t("app_title"), message),
+                    )
+                    self.after(0, lambda: self._set_status("status_task_failed"))
             finally:
-                self.busy = False
+                self.after(0, lambda: setattr(self, "busy", False))
 
-        threading.Thread(target=runner, daemon=True).start()
+        self.background_thread = threading.Thread(target=runner, daemon=False)
+        self.background_thread.start()
 
     def _show_progress(self, key: str, **values: object) -> None:
+        check_command_cancelled(self.cancel_event)
         self.after(0, lambda: self._set_status(key, **values))
 
     def analyze(self) -> None:
@@ -1877,6 +1938,8 @@ class SoundSeparatorApp(tk.Tk):
         event_id: str | None = None,
         offset: float = 0.0,
     ) -> None:
+        if self.closing:
+            return
         self.stop_preview(refresh=False)
         creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         duration = probe_duration(source)
@@ -2379,11 +2442,12 @@ class SoundSeparatorApp(tk.Tk):
             messagebox.showerror(self._t("app_title"), "작업 폴더 소유 정보를 찾을 수 없습니다.")
             return
         events = list(self.events)
+        transcode_video = self.export_transcode
         target = available_output_path(muted_copy_output_path(video_path, events))
         self.stop_preview()
 
         def operation() -> None:
-            export_video(video_path, target, events)
+            export_video(video_path, target, events, transcode_video=transcode_video)
             if not target.is_file() or target.stat().st_size <= 0:
                 raise RuntimeError(self._t("saved_file_invalid", path=target))
 
@@ -2433,10 +2497,21 @@ class SoundSeparatorApp(tk.Tk):
         self._run_background("status_saving", operation)
 
     def destroy(self) -> None:
+        if self.closing:
+            return
+        self.closing = True
+        self.cancel_event.set()
+        self._set_status("status_closing")
         if self.volume_restart_after_id:
             self.after_cancel(self.volume_restart_after_id)
             self.volume_restart_after_id = None
         self.stop_preview()
+        self._finish_close()
+
+    def _finish_close(self) -> None:
+        if self.background_thread is not None and self.background_thread.is_alive():
+            self.after(50, self._finish_close)
+            return
         super().destroy()
 
 

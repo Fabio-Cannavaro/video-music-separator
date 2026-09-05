@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "app"))
 
 from audiosep_worker import load_jobs
+from release_info import APP_VERSION
 from avcass_worker import (
     DEFAULT_BLEND_MODE,
     DEFAULT_OVERLAP_SAMPLES,
@@ -739,7 +740,7 @@ class MusicPartitionTests(unittest.TestCase):
         self.assertIn("Apache", license_texts)
         self.assertIn("LGPL", license_texts)
         self.assertIn("GPL", license_texts)
-        self.assertIn("Video Music Separator: 0.2.7", information)
+        self.assertIn(f"Video Music Separator: {APP_VERSION}", information)
         self.assertIn("66a8a3b9de317d2c508edae6bbd2d727", information)
         self.assertIn("ffmpeg version 9.0.1-test", information)
         self.assertIn("f" * 64, information)

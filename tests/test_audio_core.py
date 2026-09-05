@@ -29,6 +29,7 @@ from audio_core import (
     export_video,
     run_command,
     is_music_partition,
+    video_requires_mp4_conversion,
 )
 
 
@@ -243,6 +244,52 @@ class MuteFilterTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg 필요")
 class FfmpegIntegrationTests(unittest.TestCase):
+    def test_original_and_stem_previews_preserve_video_tail(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source, audio = root / "source.mp4", root / "audio.wav"
+            subprocess.run([
+                "ffmpeg", "-y", "-f", "lavfi", "-i", "color=s=160x90:r=24:d=4",
+                "-f", "lavfi", "-i", "sine=duration=2", "-c:v", "libx264",
+                "-c:a", "aac", str(source),
+            ], check=True, capture_output=True)
+            extract_audio(source, audio)
+            original, stem = root / "original.mp4", root / "stem.mp4"
+            create_preview_proxy(source, original)
+            create_preview_video(source, audio, stem)
+            for preview in (original, stem):
+                with self.subTest(preview=preview.name):
+                    result = subprocess.run([
+                        "ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
+                        "-show_entries", "stream=duration,nb_read_frames", "-of", "json", str(preview),
+                    ], check=True, capture_output=True, text=True)
+                    stream = json.loads(result.stdout)["streams"][0]
+                    self.assertEqual(int(stream["nb_read_frames"]), 96)
+                    self.assertAlmostEqual(float(stream["duration"]), 4.0, places=2)
+
+    def test_vp8_input_can_be_saved_with_explicit_h264_conversion(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source, output = root / "source.webm", root / "output.mp4"
+            subprocess.run([
+                "ffmpeg", "-y", "-f", "lavfi", "-i", "color=s=160x90:r=24:d=1",
+                "-f", "lavfi", "-i", "sine=duration=1", "-c:v", "libvpx",
+                "-c:a", "libopus", str(source),
+            ], check=True, capture_output=True)
+            original_bytes = source.read_bytes()
+            self.assertTrue(video_requires_mp4_conversion(source))
+            export_video(source, output, [], transcode_video=True)
+            self.assertFalse(video_requires_mp4_conversion(output))
+            result = subprocess.run([
+                "ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
+                "-show_entries", "stream=codec_name,nb_read_frames", "-of", "json", str(output),
+            ], check=True, capture_output=True, text=True)
+            stream = json.loads(result.stdout)["streams"][0]
+            self.assertEqual(stream["codec_name"], "h264")
+            self.assertEqual(int(stream["nb_read_frames"]), 24)
+            self.assertEqual(source.read_bytes(), original_bytes)
+            self.assertEqual(list(root.glob(".*.tmp.mp4")), [])
+
     def test_local_playlist_cannot_open_remote_segment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             playlist = Path(temporary) / "remote.m3u8"

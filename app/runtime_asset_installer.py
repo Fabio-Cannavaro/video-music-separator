@@ -840,6 +840,7 @@ class InstallerWindow:
         self.last_progress_label: str | None = None
         self.last_progress_percent: int | None = None
         self.install_finished = False
+        self.install_running = False
         frame = ttk.Frame(self.window, padding=22)
         frame.pack(fill="both", expand=True)
 
@@ -943,7 +944,8 @@ class InstallerWindow:
         )
 
     def _update_button_state(self) -> None:
-        self.button.configure(state="normal" if self.accepted.get() else "disabled")
+        enabled = self.install_finished or (self.accepted.get() and not self.install_running)
+        self.button.configure(state="normal" if enabled else "disabled")
 
     def update_progress(self, label: str, current: int, total: int) -> None:
         percent = 100 if total <= 0 else max(0, min(100, round(current * 100 / total)))
@@ -958,10 +960,14 @@ class InstallerWindow:
         self.progress.configure(value=percent)
 
     def start(self) -> None:
+        if self.install_running or self.install_finished:
+            return
         if not self.accepted.get():
             self.messagebox.showwarning(APP_TITLES[self.language.get()], self._ui("warning"))
             return
-        self.button.configure(state="disabled")
+        self.install_running = True
+        self._update_button_state()
+        self.accept_check.configure(state="disabled")
         self.progress.configure(value=0)
         self._set_status("checking")
         threading.Thread(target=self._run, daemon=True).start()
@@ -975,14 +981,17 @@ class InstallerWindow:
         self.window.after(0, self._completed)
 
     def _failed(self, message: str) -> None:
+        self.install_running = False
         self._set_status("failed")
-        self.button.configure(state="normal")
+        self.accept_check.configure(state="normal")
+        self._update_button_state()
         self.messagebox.showerror(
             APP_TITLES[self.language.get()],
             translate_error_message(message, self.language.get()),
         )
 
     def _completed(self) -> None:
+        self.install_running = False
         self.install_finished = True
         self._set_status("completed")
         self.progress.configure(value=100)

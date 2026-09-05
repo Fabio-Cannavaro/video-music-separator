@@ -10,6 +10,8 @@ import sys
 import tempfile
 import time
 import uuid
+import threading
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -34,6 +36,29 @@ PREVIEW_VIDEO_FILTER = (
 )
 MAX_COMMAND_OUTPUT_BYTES = 1024 * 1024
 COMMAND_POLL_SECONDS = 0.05
+_command_context = threading.local()
+MP4_COPY_CODECS = {"h264", "hevc", "mpeg4", "av1", "vp9"}
+
+
+class CommandCancelled(RuntimeError):
+    """The owner requested that its active media job stop."""
+
+
+def check_command_cancelled(cancel_event: threading.Event | None = None) -> None:
+    event = cancel_event if cancel_event is not None else getattr(_command_context, "event", None)
+    if event is not None and event.is_set():
+        raise CommandCancelled("작업이 취소됐습니다.")
+
+
+@contextmanager
+def command_cancellation(cancel_event: threading.Event):
+    previous = getattr(_command_context, "event", None)
+    _command_context.event = cancel_event
+    try:
+        check_command_cancelled()
+        yield
+    finally:
+        _command_context.event = previous
 
 
 def application_root() -> Path:
@@ -90,13 +115,16 @@ def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
     if os.name == "nt":
         system_root = Path(os.environ.get("SystemRoot", r"C:\Windows"))
         taskkill = system_root / "System32" / "taskkill.exe"
-        subprocess.run(
-            [str(taskkill), "/PID", str(process.pid), "/T", "/F"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=10,
-            check=False,
-        )
+        try:
+            subprocess.run(
+                [str(taskkill), "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
     if process.poll() is None:
         try:
             process.kill()
@@ -120,6 +148,7 @@ def run_bounded_command(
     *,
     timeout: float,
 ) -> subprocess.CompletedProcess[str]:
+    check_command_cancelled()
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
@@ -132,6 +161,11 @@ def run_bounded_command(
         )
         deadline = time.monotonic() + timeout
         while process.poll() is None:
+            try:
+                check_command_cancelled()
+            except CommandCancelled:
+                _terminate_process_tree(process)
+                raise
             stdout_size = os.fstat(stdout_file.fileno()).st_size
             stderr_size = os.fstat(stderr_file.fileno()).st_size
             if stdout_size > MAX_COMMAND_OUTPUT_BYTES or stderr_size > MAX_COMMAND_OUTPUT_BYTES:
@@ -237,6 +271,24 @@ def _preview_video_args() -> list[str]:
     ]
 
 
+def video_requires_mp4_conversion(video_path: Path) -> bool:
+    completed = run_bounded_command(
+        [
+            *ffmpeg_command_prefix("ffprobe"), "-select_streams", "v:0",
+            "-show_entries", "stream=codec_name", "-of", "json",
+            *ffmpeg_file_input(video_path, "영상"),
+        ],
+        timeout=120,
+    )
+    if completed.returncode:
+        raise RuntimeError(completed.stderr.strip() or "영상 코덱을 확인하지 못했습니다.")
+    try:
+        codec = json.loads(completed.stdout)["streams"][0]["codec_name"]
+    except (ValueError, KeyError, IndexError, TypeError) as error:
+        raise RuntimeError("영상 코덱을 확인하지 못했습니다.") from error
+    return codec not in MP4_COPY_CODECS
+
+
 def create_preview_proxy(video_path: Path, output_path: Path) -> None:
     """Create a small A/V proxy used only by the in-app player."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -252,7 +304,7 @@ def create_preview_proxy(video_path: Path, output_path: Path) -> None:
     ]
     command.extend(_preview_video_args())
     command.extend(
-        ["-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
+        ["-af", "apad", "-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
     )
     run_command(command, timeout=media_command_timeout(duration))
 
@@ -286,7 +338,7 @@ def create_preview_video(video_path: Path, audio_path: Path, output_path: Path) 
     ]
     command.extend(_preview_video_args())
     command.extend(
-        ["-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
+        ["-af", "apad", "-c:a", "aac", "-b:a", "192k", "-shortest", str(output_path)]
     )
     run_command(command, timeout=media_command_timeout(duration))
 
@@ -464,6 +516,7 @@ def _build_mixed_video_command(
     events: Sequence[SoundEvent],
     *,
     preview: bool,
+    transcode_video: bool = False,
 ) -> list[str]:
     muted = [event for event in events if event.muted]
     partition = is_music_partition(events)
@@ -490,6 +543,12 @@ def _build_mixed_video_command(
     )
     if preview:
         command.extend(_preview_video_args())
+    elif transcode_video:
+        command.extend([
+            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+            "-pix_fmt", "yuv420p", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+            "-fps_mode", "passthrough",
+        ])
     else:
         command.extend(["-c:v", "copy"])
     command.extend(["-c:a", "aac", "-b:a", "192k" if preview else "320k"])
@@ -509,8 +568,11 @@ def create_muted_preview_video(
     )
 
 
-def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEvent]) -> None:
-    """Save a final copy while preserving the original encoded video stream."""
+def export_video(
+    video_path: Path, output_path: Path, events: Sequence[SoundEvent], *,
+    transcode_video: bool = False,
+) -> None:
+    """Save a copy; re-encode video only when explicitly selected by the caller."""
     if output_path.exists():
         raise FileExistsError(f"기존 사본을 덮어쓸 수 없습니다: {output_path}")
     temporary_output = output_path.with_name(
@@ -518,9 +580,11 @@ def export_video(video_path: Path, output_path: Path, events: Sequence[SoundEven
     )
     try:
         command = _build_mixed_video_command(
-            video_path, temporary_output, events, preview=False
+            video_path, temporary_output, events, preview=False,
+            transcode_video=transcode_video,
         )
         run_command(command, timeout=media_command_timeout(probe_duration(video_path)))
+        check_command_cancelled()
         temporary_output.rename(output_path)
     finally:
         temporary_output.unlink(missing_ok=True)

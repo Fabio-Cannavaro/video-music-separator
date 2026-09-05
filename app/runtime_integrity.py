@@ -35,11 +35,15 @@ def _is_reparse_point(path: Path) -> bool:
         return path.is_symlink()
 
 
-def _protected_files(runtime_root: Path) -> list[Path]:
+def _protected_files(
+    runtime_root: Path, progress: ProgressCallback | None = None,
+) -> list[Path]:
     if not runtime_root.is_dir() or _is_reparse_point(runtime_root):
         raise RuntimeError(f"AI Python 실행환경이 안전한 폴더가 아닙니다: {runtime_root}")
     files: list[Path] = []
-    for path in runtime_root.rglob("*"):
+    for index, path in enumerate(runtime_root.rglob("*")):
+        if progress is not None and index % 128 == 0:
+            progress("AI Python 실행환경 · 무결성 확인 중", 0, 1)
         relative = path.relative_to(runtime_root)
         lowered_parts = tuple(part.lower() for part in relative.parts)
         if path.is_symlink() or _is_reparse_point(path):
@@ -64,7 +68,7 @@ def runtime_tree_fingerprint(
     progress: ProgressCallback | None = None,
 ) -> dict[str, int | str]:
     runtime_root = runtime_root.resolve()
-    files = _protected_files(runtime_root)
+    files = _protected_files(runtime_root, progress)
     total = sum(path.stat().st_size for path in files)
     done = 0
     tree_digest = hashlib.sha256()
