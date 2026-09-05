@@ -6,7 +6,10 @@
 
 Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하는 Windows용 GUI 앱이다. 영상 장면과 오디오를 함께 분석해 소리를 `음악`과 `음악 아님`으로 나누고, 두 결과를 직접 비교해 들은 뒤 음악을 끈 영상 사본을 저장할 수 있다. 원본 영상은 수정하지 않으며 처리 속도보다 분리 품질을 우선한다.
 
-- 현재 앱·설치본 버전: `0.2.9` (미서명 공개 테스트 프리릴리스)
+- 현재 공개 설치본: `0.2.7` (미서명 테스트 프리릴리스)
+- 소스·로컬 설치 후보: `0.2.9` (`installer-v0.2.9` Draft, 청취 확인 대기)
+
+아래 기능 설명은 0.2.9 소스 기준이다. 원본 확장자 저장, 작업 종료 처리, 설치 중복 실행 방지와 미리보기 보완은 현재 공개 0.2.7 ZIP에 포함되지 않는다. 0.2.9 후보는 새 폴더 설치·전체 기본 추론·사본 저장의 기술 검증을 통과했지만 직접 청취 확인 전이므로 아직 공개하지 않았다. [공개 예정 태그](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.9)는 공개 전 일반 사용자에게 열리지 않을 수 있다.
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### 핵심 기능
@@ -35,14 +38,14 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 
 #### 2. Windows 설치 파일 다운로드
 
-현재 Windows 설치본은 [`installer-v0.2.9`](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.9)에서 미서명 공개 테스트 프리릴리스로 제공한다. `Assets`에서 다음 두 파일을 받는다.
+현재 Windows 설치본은 [`installer-v0.2.7`](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.7)에서 미서명 공개 테스트 프리릴리스로 제공한다. `Assets`에서 다음 두 파일을 받는다.
 
-- `video-music-separator-0.2.9-windows-x64.zip`
+- `video-music-separator-0.2.7-windows-x64.zip`
 - 같은 이름의 `.sha256` 파일
 
 이전 `0.2.3`, `0.2.5`, `0.2.6` 자산은 설치용으로 제공하지 않는다. `0.2.5`는 깨끗한 설치 검증에 실패했고, `0.2.6`은 원본 영상보다 오디오가 짧을 때 끝 프레임을 자르는 문제가 있어 GitHub Draft로 전환했다.
 
-이 `0.2.9` 프리릴리스는 코드 서명 없이 배포하므로 Windows가 게시자를 확인할 수 없고 SmartScreen 경고가 나타날 수 있다. 이 프로젝트는 Windows 배포본에 코드 서명 인증서를 적용할 계획이 없다. 다음 순서로 출처와 파일을 먼저 확인한 뒤 실행한다.
+이 `0.2.7` 프리릴리스는 코드 서명 없이 배포하므로 Windows가 게시자를 확인할 수 없고 SmartScreen 경고가 나타날 수 있다. 이 프로젝트는 Windows 배포본에 코드 서명 인증서를 적용할 계획이 없다. 다음 순서로 출처와 파일을 먼저 확인한 뒤 실행한다.
 
 1. 위의 공식 GitHub Release에서 받은 ZIP인지 확인하고 `.sha256` 파일로 ZIP 무결성을 검증한다.
 2. `video-music-separator-setup.exe`를 실행했을 때 `Windows의 PC 보호` 창이 나타나면 `추가 정보`를 누른다.
@@ -65,7 +68,7 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 6. 모든 항목의 다운로드와 SHA-256 검증이 완료될 때까지 기다린다.
 7. 설치 완료 안내가 나오면 `video-music-separator.exe`를 실행한다.
 
-> **현재 배포 상태:** `0.2.9` Windows 설치 자산은 기능 확인을 위한 미서명 공개 프리릴리스다. AV-CASS 체크포인트 자동 다운로드에 대한 연구진의 서면 허가와 깨끗한 새 Windows 사용자 계정 검사가 아직 끝나지 않았으므로, 일반 사용이 승인된 최종 배포판으로 표현하지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
+> **현재 배포 상태:** `0.2.7` Windows 설치 자산은 기능 확인을 위한 미서명 공개 프리릴리스다. AV-CASS 체크포인트 자동 다운로드에 대한 연구진의 서면 허가와 깨끗한 새 Windows 사용자 계정 검사가 아직 끝나지 않았으므로, 일반 사용이 승인된 최종 배포판으로 표현하지 않는다. 진행 상태는 [배포 체크리스트](docs/DISTRIBUTION_CHECKLIST.md)에서 관리한다.
 
 #### 4. 설치 프로그램이 내려받는 항목
 
@@ -261,7 +264,10 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 Video Music Separator is a Windows GUI application for reducing or removing background music from video. It analyzes the scene and audio together, separates the soundtrack into `Music` and `Non-Music`, and lets users compare both results before saving a music-muted copy beside the source. The original video is never modified, and separation quality takes priority over processing speed.
 
-- Current application and installer version: `0.2.9` (unsigned public testing prerelease)
+- Current public installer: `0.2.7` (unsigned testing prerelease)
+- Source and local installer candidate: `0.2.9` (`installer-v0.2.9` Draft, awaiting listening confirmation)
+
+The feature descriptions below refer to the 0.2.9 source. Original-extension exports, job shutdown, duplicate-install prevention, and preview fixes are not included in the current public 0.2.7 ZIP. The 0.2.9 candidate passed fresh-folder installation, full default inference, and export checks, but remains unpublished pending direct listening confirmation. Its [planned release tag](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.9) may be inaccessible to general users before publication.
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
 ### Key Features
@@ -290,14 +296,14 @@ After extracting the installation ZIP, keep the application and required-compone
 
 #### 2. Download the Windows Installer
 
-The Windows installer is available as an unsigned public testing prerelease at [`installer-v0.2.9`](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.9). Download these two files from `Assets`:
+The Windows installer is available as an unsigned public testing prerelease at [`installer-v0.2.7`](https://github.com/Fabio-Cannavaro/video-music-separator/releases/tag/installer-v0.2.7). Download these two files from `Assets`:
 
-- `video-music-separator-0.2.9-windows-x64.zip`
+- `video-music-separator-0.2.7-windows-x64.zip`
 - The matching `.sha256` file
 
 The older `0.2.3`, `0.2.5`, and `0.2.6` assets are not offered for installation. Version `0.2.5` failed clean-install validation, while `0.2.6` could trim trailing video frames when the source audio was shorter than the video; those assets were moved to GitHub Drafts.
 
-This `0.2.9` prerelease is distributed without a code signature, so Windows cannot verify its publisher and SmartScreen may display a warning. This project does not plan to apply a code-signing certificate to its Windows releases. Verify the source and files before proceeding:
+This `0.2.7` prerelease is distributed without a code signature, so Windows cannot verify its publisher and SmartScreen may display a warning. This project does not plan to apply a code-signing certificate to its Windows releases. Verify the source and files before proceeding:
 
 1. Confirm that the ZIP came from the official GitHub Release above and verify it with the matching `.sha256` file.
 2. If `Windows protected your PC` appears when you run `video-music-separator-setup.exe`, select `More info`.
@@ -320,7 +326,7 @@ The installation ZIP contains both `video-music-separator-setup.exe` and `video-
 6. Wait for all downloads and SHA-256 verification to finish.
 7. After the completion message appears, run `video-music-separator.exe`.
 
-> **Current distribution status:** The `0.2.9` Windows installer assets are an unsigned public prerelease for functional testing. Written permission from the AV-CASS researchers for automatic checkpoint downloads and clean installation testing with a new Windows user account are still pending. This is not represented as an approved final general-use release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
+> **Current distribution status:** The `0.2.7` Windows installer assets are an unsigned public prerelease for functional testing. Written permission from the AV-CASS researchers for automatic checkpoint downloads and clean installation testing with a new Windows user account are still pending. This is not represented as an approved final general-use release. Progress is tracked in the [distribution checklist](docs/DISTRIBUTION_CHECKLIST.md).
 
 #### 4. Components Downloaded by the Installer
 
@@ -372,7 +378,7 @@ To move the application itself, move the entire installed folder rather than eit
 3. Use `Listen` on the Music or Non-Music row to review each result. Select the same button again to stop, or use the slider below the preview to seek.
 4. Select `Mute` on the `Music (BGM)` row.
 5. Select `Play Full Video` to review the video together with the remaining Non-Music audio.
-6. When satisfied with the result, select `Save Copy`. The application creates `<source name>_music-removed.<source extension>` beside the source and adds `_2`, `_3`, and so on if that name already exists.
+6. When satisfied with the result, select `Save Copy`. The application creates `<source name>_음악제거.<source extension>` beside the source and adds `_2`, `_3`, and so on if that name already exists.
 
 The application creates a lightweight 420×236, 24 fps proxy for the first preview and reuses it afterward. The proxy is used only for playback and is never included in the saved copy. Saved copies retain the source extension (MP4, MOV, MKV, AVI, WebM, or M4V) and copy the original video stream without re-encoding. Processed audio uses Opus for WebM, PCM for AVI, and AAC for the other formats. The original audio codec and all container metadata are not guaranteed to be preserved. Previews silence-pad shorter audio to retain the entire video.
 
