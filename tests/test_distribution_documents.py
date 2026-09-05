@@ -156,7 +156,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("약 15GB", readme)
         self.assertIn("video-music-separator-setup.exe", readme)
         self.assertIn("GitHub Draft로 전환", readme)
-        self.assertIn(f"installer-v{APP_VERSION}", readme)
+        self.assertIn(f"`{APP_VERSION}`", readme)
         self.assertIn("설치 파일 공개 보류", readme)
         self.assertIn("Public installer distribution paused", readme)
         self.assertIn("기존 설치기를 통한 신규 설치·런타임 재다운로드는 현재 사용할 수 없다", readme)
