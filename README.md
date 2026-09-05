@@ -21,7 +21,7 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 - 현재 앱·설치본 버전: `0.2.9` (미서명, 설치 릴리스 Draft)
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
-[기능](#ko-features) · [사용 방법](#ko-usage) · [처리 흐름](#ko-workflow) · [한계](#ko-limits) · [설치 참고](#ko-installation) · [개발·빌드](#ko-layout) · [라이선스](#ko-license)
+[기능](#ko-features) · [사용 방법](#ko-usage) · [분리 원리](#ko-separation) · [한계](#ko-limits) · [설치 참고](#ko-installation) · [개발·빌드](#ko-layout) · [라이선스](#ko-license)
 
 <a id="ko-features"></a>
 
@@ -64,26 +64,59 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 
 입력은 로컬 고정 디스크의 지원 미디어 형식만 허용하며 UNC·네트워크 드라이브·재분석 지점·재생목록 형식을 거부한다. 한 번의 입력은 최대 10분, 영상은 최대 7680×4320, 오디오는 최대 8채널·192kHz다. FFmpeg 메모리 할당과 분석량, 외부 도구 로그 크기, 작업자 로그 한 줄·대기 큐에도 상한을 적용한다.
 
-<a id="ko-workflow"></a>
+<a id="ko-separation"></a>
 
-### 앱 처리 흐름
+### 음악·비음악 분리 원리
+
+쉽게 말해, AI가 원본 소리에 **음악을 골라내는 선택 영역(마스크)**을 만드는 방식이다. 아래 그림에서 파란색은 AI의 분석, 초록색은 최종 소리에 사용할 원본, 주황색은 분리 결과를 뜻한다.
 
 ```mermaid
-flowchart LR
-    A["영상 열기"] --> B["음악 분리"]
-    B --> C["음악 · 음악 아님 비교"]
-    C --> D["음악 뮤트 · 영상 확인"]
-    D --> E["별도 사본 저장"]
+flowchart TB
+    V["입력 영상"] --> A["장면 특징 · 분석용 소리<br/>CAVP · 16kHz 모노"]
+    V --> O["보관한 원본 소리<br/>44.1kHz 스테레오"]
+    A --> AI["AV-CASS 추정<br/>대사 · 효과음 · 음악"]
+    AI --> M["음악 마스크 생성<br/>시간·주파수별 음악 비율"]
+    M --> S["원본 양쪽 채널에<br/>같은 마스크 적용"]
+    O --> S
+    S --> MUSIC["음악 트랙"]
+    O --> N["원본 − 음악"]
+    MUSIC --> N
+    N --> OTHER["음악 아님 트랙"]
+    classDef analysis fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef source fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef output fill:#fef3c7,stroke:#d97706,color:#78350f
+    class A,AI,M analysis
+    class O,S,N source
+    class MUSIC,OTHER output
 ```
 
-1. FFmpeg가 선택한 미디어에서 처리용 오디오를 추출한다.
-2. CAVP와 AV-CASS가 영상 장면과 오디오를 함께 분석해 음악과 음악 아님 트랙을 만든다.
-3. 앱은 분리 결과를 전용 캐시 폴더에 보관하고 두 결과 행에 표시한다.
-4. 사용자는 각 트랙을 따로 듣거나 음악을 끈 전체 영상을 재생해 결과를 확인한다.
-5. 음악 트랙이 사실상 원본 전체와 같고 음악 아님 트랙이 거의 무음인 비정상 결과에는 `검토 필요`를 표시한다.
-6. 사본을 저장하면 음악 아님 트랙을 영상과 결합한다. 두 트랙을 모두 켠 재생에는 원본 오디오를 사용한다.
+| 핵심 | 의미 |
+| --- | --- |
+| 🎯 AI는 분리 기준을 만든다 | 대사·효과음·음악 추정치에서 음악 마스크를 계산한다. AI가 생성한 소리를 최종 트랙으로 그대로 쓰지 않는다. |
+| 🎧 최종 소리는 원본에서 가져온다 | 보관한 스테레오의 좌우 채널에 같은 마스크를 적용하고, 원본에서 음악을 뺀 나머지를 음악 아님으로 만든다. |
+| ⚖️ 재합성과 분리 품질은 다르다 | 두 트랙의 합은 계산 오차 범위에서 원본으로 돌아가지만, 음악과 효과음의 분류가 정확하다는 뜻은 아니다. |
 
-처리 시간은 영상 길이와 GPU 상태에 따라 달라진다.
+**현재 기본값:** 청크당 250단계 · 1초 겹침 · cosine-squared OLA 연결 · 고역 확장 0%.
+
+모델이 직접 판단하지 못하는 8kHz 초과 성분은 기본적으로 음악 아님 쪽에 남긴다. 음악을 효과음으로 잘못 판단하면 음악이 남고, 효과음을 음악으로 잘못 판단하면 필요한 소리가 줄어들 수 있다.
+
+<details>
+<summary>분석 방식과 기본값 자세히 보기</summary>
+
+이 앱은 공식 AV-CASS 시청각 체크포인트와 CAVP 체크포인트를 사용한다. AI가 생성한 `speech`·`sfx`·`music` 세 가지 추정 결과를 최종 오디오로 그대로 쓰는 대신, 이를 음악 마스크로 변환해 원본 스테레오에 적용한다. 이 방식은 음악 제거 성능과 원본 음질 보존 사이의 균형을 위한 것이다.
+
+1. 원본 오디오는 최종 출력에 사용할 44.1kHz 스테레오로 보관한다. AI 분석용 오디오는 좌우 채널을 모노로 합친 뒤 16kHz로 변환한다.
+2. 영상은 초당 4프레임으로 추출하고 각 프레임을 224×224로 중앙 크롭한다. 이 전체 장면 프레임을 CAVP scene encoder에 전달하며, 얼굴 검출이나 별도의 facial encoder는 사용하지 않는다.
+3. AV-CASS의 조건부 flow-matching 모델이 약 8.18초 길이의 청크마다 혼합음과 장면 특징을 분석해 `speech`, `sfx`, `music` 추정치를 동시에 생성한다. 각 청크는 기본 250단계로 추론하며, 청크 사이에는 1초의 겹침 구간을 두고 cosine-squared OLA로 자연스럽게 연결한다.
+4. `speech + sfx`를 비음악 추정치로 합친 뒤, 음악과 비음악 에너지의 비율로 부드러운 시간·주파수 음악 마스크를 만든다. AI가 생성한 파형은 최종 오디오로 직접 사용하지 않는다.
+5. 음악 마스크를 원본 44.1kHz 스테레오의 양쪽 채널에 동일하게 적용하고, 비음악은 `원본 - 음악`으로 만든다. 따라서 두 트랙을 합치면 계산 오차 범위에서 원본으로 돌아가며 채널 수·스테레오 공간감·위상·길이도 유지된다.
+6. 16kHz 모델이 직접 판단할 수 있는 대역은 8kHz까지다. 기본 고역 확장값 0%에서는 8kHz를 넘는 원본 성분을 비음악 트랙에 보존한다.
+
+이 방식은 대사·효과음·음악을 각각 독립된 트랙으로 추출하기보다 음악 제거와 원본 충실도를 우선한다. 대사와 효과음 사이의 오분류는 모두 비음악 트랙에 남지만, 비음악을 음악으로 잘못 판단하면 해당 소리가 함께 줄어들 수 있다. 또한 8kHz 초과 대역을 보존하면 원본의 선명함은 유지되지만 심벌처럼 높은 음악 성분이 비음악에 일부 남을 수 있다. AI 분리는 완벽하지 않으므로 저장하기 전에 두 트랙과 음악을 끈 전체 영상을 직접 확인해야 한다.
+
+기반 연구와 모델에 관한 자세한 내용은 [AV-CASS 프로젝트 페이지](https://cass-flowmatching.github.io/), [논문](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), [공개 소스 코드](https://github.com/pantheon5100/AVCASS)에서 확인할 수 있다. 이 프로젝트는 AV-CASS 연구진의 공식 앱이 아니며 연구진과 제휴 관계가 없고 보증도 받지 않았다.
+
+</details>
 
 <a id="ko-limits"></a>
 
@@ -194,28 +227,6 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 같은 PC에서는 이 앱 폴더를 영상 폴더마다 복사할 필요가 없다. 한곳에 그대로 두고 `video-music-separator.exe`의 바로가기만 바탕화면에 만든다. 앱에서 `영상 열기`를 누르면 어느 폴더의 영상이든 선택할 수 있으며, 작업 폴더와 결과 사본은 선택한 원본 영상 옆에 생긴다.
 
 앱 자체의 위치를 바꾸려면 EXE만 따로 옮기지 말고 설치된 앱 폴더 전체를 함께 옮긴다. 런타임 검증은 설치 경로가 아니라 고정 트리 지문을 기준으로 하므로, 모든 구성요소가 그대로 이동했다면 경로 갱신용 재설치는 필요하지 않다. `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다.
-
-</details>
-
-<a id="ko-separation"></a>
-
-### 음악·비음악 분리 원리
-
-<details>
-<summary>분석 방식과 기본값 자세히 보기</summary>
-
-이 앱은 공식 AV-CASS 시청각 체크포인트와 CAVP 체크포인트를 사용한다. AI가 생성한 `speech`·`sfx`·`music` 세 가지 추정 결과를 최종 오디오로 그대로 쓰는 대신, 이를 음악 마스크로 변환해 원본 스테레오에 적용한다. 이 방식은 음악 제거 성능과 원본 음질 보존 사이의 균형을 위한 것이다.
-
-1. 원본 오디오는 최종 출력에 사용할 44.1kHz 스테레오로 보관한다. AI 분석용 오디오는 좌우 채널을 모노로 합친 뒤 16kHz로 변환한다.
-2. 영상은 초당 4프레임으로 추출하고 각 프레임을 224×224로 중앙 크롭한다. 이 전체 장면 프레임을 CAVP scene encoder에 전달하며, 얼굴 검출이나 별도의 facial encoder는 사용하지 않는다.
-3. AV-CASS의 조건부 flow-matching 모델이 약 8.18초 길이의 청크마다 혼합음과 장면 특징을 분석해 `speech`, `sfx`, `music` 추정치를 동시에 생성한다. 각 청크는 기본 250단계로 추론하며, 청크 사이에는 1초의 겹침 구간을 두고 cosine-squared OLA로 자연스럽게 연결한다.
-4. `speech + sfx`를 비음악 추정치로 합친 뒤, 음악과 비음악 에너지의 비율로 부드러운 시간·주파수 음악 마스크를 만든다. AI가 생성한 파형은 최종 오디오로 직접 사용하지 않는다.
-5. 음악 마스크를 원본 44.1kHz 스테레오의 양쪽 채널에 동일하게 적용하고, 비음악은 `원본 - 음악`으로 만든다. 따라서 두 트랙을 합치면 원본과 정확히 같아지며 채널 수·스테레오 공간감·위상·길이도 유지된다.
-6. 16kHz 모델이 직접 판단할 수 있는 대역은 8kHz까지다. 기본 고역 확장값 0%에서는 8kHz를 넘는 원본 성분을 비음악 트랙에 보존한다.
-
-이 방식은 대사·효과음·음악을 각각 독립된 트랙으로 추출하기보다 음악 제거와 원본 충실도를 우선한다. 대사와 효과음 사이의 오분류는 모두 비음악 트랙에 남지만, 비음악을 음악으로 잘못 판단하면 해당 소리가 함께 줄어들 수 있다. 또한 8kHz 초과 대역을 보존하면 원본의 선명함은 유지되지만 심벌처럼 높은 음악 성분이 비음악에 일부 남을 수 있다. AI 분리는 완벽하지 않으므로 저장하기 전에 두 트랙과 음악을 끈 전체 영상을 직접 확인해야 한다.
-
-기반 연구와 모델에 관한 자세한 내용은 [AV-CASS 프로젝트 페이지](https://cass-flowmatching.github.io/), [논문](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), [공개 소스 코드](https://github.com/pantheon5100/AVCASS)에서 확인할 수 있다. 이 프로젝트는 AV-CASS 연구진의 공식 앱이 아니며 연구진과 제휴 관계가 없고 보증도 받지 않았다.
 
 </details>
 
@@ -345,7 +356,7 @@ Video Music Separator is a Windows GUI application for reducing or removing back
 - Current application and installer version: `0.2.9` (unsigned; installer release held as Draft)
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
-[Features](#en-features) · [Usage](#en-usage) · [Workflow](#en-workflow) · [Limitations](#en-limits) · [Installation reference](#en-installation) · [Development](#en-layout) · [License](#en-license)
+[Features](#en-features) · [Usage](#en-usage) · [How it works](#en-separation) · [Limitations](#en-limits) · [Installation reference](#en-installation) · [Development](#en-layout) · [License](#en-license)
 
 <a id="en-features"></a>
 
@@ -388,26 +399,59 @@ During processing, the application creates a random `<video name>_sound_work_<no
 
 Inputs are restricted to supported media formats on fixed local disks. UNC paths, network drives, reparse points, and playlist formats are rejected. Each input is limited to 10 minutes, video to 7680×4320, and audio to 8 channels at 192 kHz. FFmpeg allocation and probing, external-tool output, worker log-line length, and the pending log queue are also bounded.
 
-<a id="en-workflow"></a>
+<a id="en-separation"></a>
 
-### Application Workflow
+### Music and Non-Music Separation
+
+The AI creates a **selection mask for music** in the source sound. In the diagram, blue represents AI analysis, green represents the source used for the final sound, and amber represents the separated outputs.
 
 ```mermaid
-flowchart LR
-    A["Open video"] --> B["Separate music"]
-    B --> C["Compare both tracks"]
-    C --> D["Mute music · review video"]
-    D --> E["Save a separate copy"]
+flowchart TB
+    V["Input video"] --> A["Scene features · analysis audio<br/>CAVP · 16 kHz mono"]
+    V --> O["Retained source audio<br/>44.1 kHz stereo"]
+    A --> AI["AV-CASS estimates<br/>Speech · effects · music"]
+    AI --> M["Create music mask<br/>Music ratio across time and frequency"]
+    M --> S["Apply the same mask<br/>to both source channels"]
+    O --> S
+    S --> MUSIC["Music track"]
+    O --> N["Source − Music"]
+    MUSIC --> N
+    N --> OTHER["Non-Music track"]
+    classDef analysis fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef source fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef output fill:#fef3c7,stroke:#d97706,color:#78350f
+    class A,AI,M analysis
+    class O,S,N source
+    class MUSIC,OTHER output
 ```
 
-1. FFmpeg extracts the audio needed for processing from the selected media.
-2. CAVP and AV-CASS analyze the scene and audio together to create Music and Non-Music tracks.
-3. The application retains the separated results in a dedicated cache folder and displays them in the two result rows.
-4. The user can audition each track separately or review the full video with music muted.
-5. An abnormal result in which the Music track is effectively identical to the full source and Non-Music is nearly silent is marked `Review Needed`.
-6. Saving a copy combines the Non-Music track with the video. Playback with both tracks enabled uses the original audio.
+| Key idea | Meaning |
+| --- | --- |
+| 🎯 AI provides the separation decision | The speech, effects, and music estimates determine a music mask. The AI-generated waveforms are not used directly as final tracks. |
+| 🎧 Final sound comes from the source | The same mask is applied to both retained stereo channels. Subtracting Music from the source produces Non-Music. |
+| ⚖️ Reconstruction is not separation quality | Adding both tracks reconstructs the source within numerical precision; this does not prove that music and effects were classified correctly. |
 
-Processing time depends on video duration and GPU performance.
+**Current defaults:** 250 steps per chunk · 1-second overlap · cosine-squared OLA · 0% high-band extension.
+
+Source content above 8 kHz, which the model cannot directly evaluate, stays in Non-Music by default. Music misclassified as effects may remain, while effects misclassified as music may be reduced.
+
+<details>
+<summary>Expand analysis details and defaults</summary>
+
+The application uses the official audio-visual AV-CASS checkpoint and CAVP checkpoint. Instead of using the three AI-generated `speech`, `sfx`, and `music` estimates directly as final audio, it converts them into a music decision mask and applies that mask to the original stereo signal. This balances music removal with fidelity to the source.
+
+1. The source audio is retained as 44.1 kHz stereo for final output. For AI analysis, the left and right channels are mixed to mono and resampled to 16 kHz.
+2. The video is sampled at 4 fps, and each frame is center-cropped to 224×224. These full-scene frames are passed to the CAVP scene encoder; the application does not perform face detection or use a separate facial encoder.
+3. For each approximately 8.18-second chunk, the AV-CASS conditional flow-matching model analyzes the mixture and scene features and generates `speech`, `sfx`, and `music` estimates simultaneously. Each chunk uses 250 inference steps by default. Adjacent chunks overlap by one second and are joined with cosine-squared overlap-add.
+4. The application combines `speech + sfx` into the non-music estimate, then derives a smooth time-frequency music mask from the relative energy of the music and non-music estimates. The AI-generated waveforms are not used directly as the final audio.
+5. The music mask is applied identically to both channels of the retained 44.1 kHz stereo source. Non-Music is constructed as `source - music`, so the two tracks reconstruct the source within numerical precision while preserving channel count, stereo image, phase, and duration.
+6. A 16 kHz model can directly evaluate frequencies only up to 8 kHz. With the default 0% high-band extension, source content above 8 kHz is preserved in the Non-Music track.
+
+This design prioritizes music removal and fidelity to the source over extracting three independent speech, effects, and music tracks. Confusion between speech and effects remains in Non-Music, but a non-music sound misclassified as music may also be reduced. Preserving content above 8 kHz retains source clarity, although some high-frequency music such as cymbals may remain in Non-Music. AI separation is not perfect, so users should review both tracks and the full music-muted playback before saving.
+
+For more information about the underlying research and model, see the [AV-CASS project page](https://cass-flowmatching.github.io/), [paper](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), and [public source code](https://github.com/pantheon5100/AVCASS). This project is not an official AV-CASS application and is not affiliated with or endorsed by the AV-CASS researchers.
+
+</details>
 
 <a id="en-limits"></a>
 
@@ -518,28 +562,6 @@ After installation, the application folder contains:
 On the same PC, do not copy this application folder beside every video. Keep it in one location and create a desktop shortcut to `video-music-separator.exe`. `Open Video` can select a video from any folder, and the work folder and saved copy are created beside the selected source video.
 
 To move the application itself, move the entire installed folder rather than either EXE alone. Runtime verification uses the pinned tree fingerprint rather than an installation-path record, so reinstalling only to update a path is unnecessary when every component was moved intact. The `audiosep` folder name is retained for compatibility with the former portable runtime layout.
-
-</details>
-
-<a id="en-separation"></a>
-
-### Music and Non-Music Separation
-
-<details>
-<summary>Expand analysis details and defaults</summary>
-
-The application uses the official audio-visual AV-CASS checkpoint and CAVP checkpoint. Instead of using the three AI-generated `speech`, `sfx`, and `music` estimates directly as final audio, it converts them into a music decision mask and applies that mask to the original stereo signal. This balances music removal with fidelity to the source.
-
-1. The source audio is retained as 44.1 kHz stereo for final output. For AI analysis, the left and right channels are mixed to mono and resampled to 16 kHz.
-2. The video is sampled at 4 fps, and each frame is center-cropped to 224×224. These full-scene frames are passed to the CAVP scene encoder; the application does not perform face detection or use a separate facial encoder.
-3. For each approximately 8.18-second chunk, the AV-CASS conditional flow-matching model analyzes the mixture and scene features and generates `speech`, `sfx`, and `music` estimates simultaneously. Each chunk uses 250 inference steps by default. Adjacent chunks overlap by one second and are joined with cosine-squared overlap-add.
-4. The application combines `speech + sfx` into the non-music estimate, then derives a smooth time-frequency music mask from the relative energy of the music and non-music estimates. The AI-generated waveforms are not used directly as the final audio.
-5. The music mask is applied identically to both channels of the retained 44.1 kHz stereo source. Non-Music is constructed as `source - music`, so the two tracks sum exactly to the source while preserving channel count, stereo image, phase, and duration.
-6. A 16 kHz model can directly evaluate frequencies only up to 8 kHz. With the default 0% high-band extension, source content above 8 kHz is preserved in the Non-Music track.
-
-This design prioritizes music removal and fidelity to the source over extracting three independent speech, effects, and music tracks. Confusion between speech and effects remains in Non-Music, but a non-music sound misclassified as music may also be reduced. Preserving content above 8 kHz retains source clarity, although some high-frequency music such as cymbals may remain in Non-Music. AI separation is not perfect, so users should review both tracks and the full music-muted playback before saving.
-
-For more information about the underlying research and model, see the [AV-CASS project page](https://cass-flowmatching.github.io/), [paper](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), and [public source code](https://github.com/pantheon5100/AVCASS). This project is not an official AV-CASS application and is not affiliated with or endorsed by the AV-CASS researchers.
 
 </details>
 
