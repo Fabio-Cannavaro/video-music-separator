@@ -202,7 +202,7 @@ class DistributionDocumentTests(unittest.TestCase):
         self.assertIn("build and distribution scripts, documentation, and full license texts", readme)
         self.assertNotIn("## 이동용 폴더", readme)
         explanation = re.split(r"(?m)^### ", readme.split("### 음악·비음악 분리 원리", 1)[1], maxsplit=1)[0]
-        for term in ("CAVP", "AV-CASS", "16kHz", "마스크"):
+        for term in ("1초", "OLA", "고역", "스테레오", "마스크"):
             self.assertIn(term, explanation)
         for asset in re.findall(r"!\[[^\]]*\]\((docs/assets/[^)]+)\)", readme):
             self.assertTrue((ROOT / asset).is_file(), asset)
