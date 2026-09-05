@@ -2,7 +2,7 @@
 
 # 영상 음악 분리·제거기 / Video Music Separator
 
-![Video Music Separator — 영상 열기, 음악·비음악 비교, 별도 사본 저장 / Open, compare, save](docs/assets/overview-clean.png)
+![Video Music Separator — 영상 오디오에서 배경음악 분리 / Separate background music from video audio.](docs/assets/overview-4b315110.png)
 
 [![Windows](https://img.shields.io/badge/platform-Windows_64--bit-2563eb)](#한국어)
 [![AV-CASS](https://img.shields.io/badge/model-AV--CASS-0891b2)](https://github.com/pantheon5100/AVCASS)
