@@ -1,9 +1,19 @@
+<a id="top"></a>
+
 # 영상 음악 분리·제거기 / Video Music Separator
 
-[한국어](#한국어) | [English](#english)
+![Video Music Separator — 영상 열기, 음악·비음악 비교, 별도 사본 저장 / Open, compare, save](docs/assets/overview.svg)
+
+[![Windows](https://img.shields.io/badge/platform-Windows_64--bit-2563eb)](#한국어)
+[![AV-CASS](https://img.shields.io/badge/model-AV--CASS-0891b2)](https://github.com/pantheon5100/AVCASS)
+[![Source license](https://img.shields.io/badge/source_license-GPL--3.0--only-64748b)](LICENSE)
+[![Distribution](https://img.shields.io/badge/installers-Draft_%C2%B7_on_hold-b45309)](docs/DISTRIBUTION_CHECKLIST.md)
+
+**[한국어](#한국어) · [English](#english)**
 
 ## 한국어
 
+> [!IMPORTANT]
 > **설치 파일 공개 보류:** AV-CASS 연구진의 서면 허가 범위가 확인될 때까지 설치본과 AI 런타임 릴리스를 Draft로 보관한다. 소스 코드는 공개 상태로 유지하며 로컬 개발과 개인 사용을 계속한다. 이미 설치된 앱은 계속 작동하지만, 기존 설치기를 통한 신규 설치·런타임 재다운로드는 현재 사용할 수 없다.
 
 Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하는 Windows용 GUI 앱이다. 영상 장면과 오디오를 함께 분석해 소리를 `음악`과 `음악 아님`으로 나누고, 두 결과를 직접 비교해 들은 뒤 음악을 끈 영상 사본을 저장할 수 있다. 원본 영상은 수정하지 않으며 처리 속도보다 분리 품질을 우선한다.
@@ -11,17 +21,88 @@ Video Music Separator는 영상에 섞인 배경음악을 줄이거나 제거하
 - 현재 앱·설치본 버전: `0.2.9` (미서명, 설치 릴리스 Draft)
 - 제작: [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
+[기능](#ko-features) · [사용 방법](#ko-usage) · [처리 흐름](#ko-workflow) · [한계](#ko-limits) · [설치 참고](#ko-installation) · [개발·빌드](#ko-layout) · [라이선스](#ko-license)
+
+<a id="ko-features"></a>
+
 ### 핵심 기능
 
-- 영상과 오디오를 함께 분석하는 AV-CASS·CAVP 기반 음악 분리
-- AI 분리 결과를 마스크로 변환해 원본 44.1kHz 스테레오의 채널·공간감·위상 보존
-- 음악과 음악 아님 트랙의 개별 미리듣기 및 음악을 끈 전체 영상 확인
-- 원본을 덮어쓰지 않는 음악 제거 사본 저장
-- 영상·오디오를 외부로 전송하지 않는 로컬 처리
+| 기능 | 설명 |
+| --- | --- |
+| 🎬 시청각 분석 | 영상과 오디오를 함께 분석하는 AV-CASS·CAVP 기반 음악 분리 |
+| 🎧 스테레오 출력 | AI 분리 결과를 마스크로 변환해 원본 44.1kHz 스테레오의 채널·공간감·위상 보존 |
+| 🔊 비교 재생 | 음악과 음악 아님 트랙의 개별 미리듣기 및 음악을 끈 전체 영상 확인 |
+| 💾 사본 저장 | 원본을 덮어쓰지 않는 음악 제거 사본 저장 |
+| 🔒 로컬 처리 | 영상·오디오를 외부로 전송하지 않는 로컬 처리 |
+
+<a id="ko-usage"></a>
+
+### 사용 방법
+
+1. `영상 열기`를 눌러 처리할 클립을 선택한다.
+2. `영상에서 음악 분리`를 눌러 분석을 시작한다.
+3. 음악과 음악 아님 행의 `듣기`를 눌러 각 결과를 확인한다. 같은 버튼을 다시 누르면 재생이 멈추고, 미리보기 아래 슬라이더로 원하는 위치를 탐색할 수 있다.
+4. `음악 (BGM)` 행에서 `뮤트`를 누른다.
+5. `전체 영상 재생`을 눌러 음악이 빠진 영상과 남은 소리를 함께 확인한다.
+6. 결과가 만족스러우면 창 아래의 `사본 저장`을 누른다. 앱은 원본 옆에 `<원본이름>_음악제거.<원본확장자>`를 만들며, 같은 이름이 있으면 `_2`, `_3`처럼 번호를 붙여 기존 파일을 보존한다.
+
+| 원본 형식 | 저장 영상 | 처리된 오디오 |
+| --- | --- | --- |
+| MP4 · MOV · MKV · M4V | 원본 영상 스트림 복사 | AAC |
+| WebM | 원본 영상 스트림 복사 | Opus |
+| AVI | 원본 영상 스트림 복사 | PCM |
+
+앱은 첫 미리보기 때 420×236·24fps 프록시를 만든 뒤 재사용한다. 이 프록시는 재생에만 사용하며 저장본에는 포함하지 않는다. 사본은 원본 확장자(MP4·MOV·MKV·AVI·WebM·M4V)를 유지하고 원본 영상 스트림을 재인코딩 없이 복사한다. 처리한 오디오는 WebM에서 Opus, AVI에서 PCM, 나머지 형식에서 AAC로 저장한다. 오디오 코덱과 컨테이너의 모든 메타데이터까지 원본과 동일하게 보존하는 기능은 아니다. 미리보기는 오디오가 영상보다 짧아도 무음을 채워 영상 끝까지 재생한다.
+
+영상 미리보기 오른쪽에서 `한국어 / English`를 선택하면 창 제목, 버튼, 상태 안내, 결과 표, 경고창과 앱 정보·라이선스·출처 안내가 즉시 해당 언어로 바뀐다.
+
+전체 볼륨 슬라이더는 앱을 시작할 때 100으로 설정되며 원본·뮤트 믹스·두 분리본에 공통 적용된다. AV-CASS 실행 경로는 휴대용 폴더 안에서 자동으로 관리된다.
+
+작업 중 창을 닫으면 분리·영상 처리 프로세스를 중단하고 정리가 끝난 뒤 종료한다. 설치 중에는 동의 항목을 다시 조작해도 설치 작업이 중복 시작되지 않는다.
+
+처리 중에는 원본 옆에 `<영상이름>_sound_work_<난수>` 임시 폴더가 생긴다. 앱은 실행별 난수와 원본 경로가 기록된 소유 표식을 확인해 이번 실행이 만든 폴더만 삭제한다. 기존 `<영상이름>_sound_work` 폴더나 다른 파일은 재사용하거나 삭제하지 않는다. 최종 영상 저장과 확인이 끝나면 임시 폴더를 정리하고, 저장이 실패하거나 취소됐거나 소유 표식이 맞지 않으면 진단을 위해 남겨 둔다.
+
+입력은 로컬 고정 디스크의 지원 미디어 형식만 허용하며 UNC·네트워크 드라이브·재분석 지점·재생목록 형식을 거부한다. 한 번의 입력은 최대 10분, 영상은 최대 7680×4320, 오디오는 최대 8채널·192kHz다. FFmpeg 메모리 할당과 분석량, 외부 도구 로그 크기, 작업자 로그 한 줄·대기 큐에도 상한을 적용한다.
+
+<a id="ko-workflow"></a>
+
+### 앱 처리 흐름
+
+```mermaid
+flowchart LR
+    A["영상 열기"] --> B["음악 분리"]
+    B --> C["음악 · 음악 아님 비교"]
+    C --> D["음악 뮤트 · 영상 확인"]
+    D --> E["별도 사본 저장"]
+```
+
+1. FFmpeg가 선택한 미디어에서 처리용 오디오를 추출한다.
+2. CAVP와 AV-CASS가 영상 장면과 오디오를 함께 분석해 음악과 음악 아님 트랙을 만든다.
+3. 앱은 분리 결과를 전용 캐시 폴더에 보관하고 두 결과 행에 표시한다.
+4. 사용자는 각 트랙을 따로 듣거나 음악을 끈 전체 영상을 재생해 결과를 확인한다.
+5. 음악 트랙이 사실상 원본 전체와 같고 음악 아님 트랙이 거의 무음인 비정상 결과에는 `검토 필요`를 표시한다.
+6. 사본을 저장하면 음악 아님 트랙을 영상과 결합한다. 두 트랙을 모두 켠 재생에는 원본 오디오를 사용한다.
+
+처리 시간은 영상 길이와 GPU 상태에 따라 달라진다.
+
+<a id="ko-limits"></a>
+
+### 한계
+
+- 로컬 일반 파일만 입력할 수 있고 FFmpeg 계열 입력 프로토콜은 `file`로 제한된다. 한 번에 처리할 수 있는 영상은 최대 10분이며, 더 긴 영상은 나눠야 한다. 처리 전에 예상 임시 공간과 2GB 안전 여유를 확인한다.
+- 음악/비음악 분리는 세부 소리 이름별 독립 추출보다 안정적이지만 AI 분리이므로 100% 무누출을 보장하지 않는다.
+- 매우 작은 음악, 음악처럼 반복되는 효과음, 노래·신음처럼 음악과 사람 발성의 경계가 애매한 소리는 반대 트랙에 일부 남을 수 있다.
+- AV-CASS는 16kHz 모노로 장면과 소리를 판단하지만, 최종 출력은 그 판정 마스크를 원본 스테레오에 적용한다. 모델이 판단할 수 없는 8kHz 이상은 음악 아님 쪽에 보존한다.
+- 저장 전에는 반드시 음악 행과 음악 아님 행을 각각 들어보고, 음악 뮤트 전체 재생까지 확인해야 한다.
+
+<a id="ko-installation"></a>
 
 ### 설치 안내
 
 현재 공개 설치 파일을 제공하지 않는다. 아래 내용은 기존 설치본의 구조와 공개 재개 후 설치 절차를 위한 참고 문서이며, 현재 다운로드 가능하다는 의미가 아니다.
+
+<details>
+<summary>기존 설치본 안내와 공개 재개 후 절차 펼치기</summary>
 
 설치 ZIP을 모두 풀면 앱 실행 파일과 필수 구성요소 설치 파일이 함께 나온다. 두 파일을 같은 폴더에 둔 상태에서 **설치 파일을 먼저 실행**한다.
 
@@ -114,39 +195,14 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 앱 자체의 위치를 바꾸려면 EXE만 따로 옮기지 말고 설치된 앱 폴더 전체를 함께 옮긴다. 런타임 검증은 설치 경로가 아니라 고정 트리 지문을 기준으로 하므로, 모든 구성요소가 그대로 이동했다면 경로 갱신용 재설치는 필요하지 않다. `audiosep`라는 폴더명은 기존 휴대용 런타임과의 호환성을 위해 유지했다.
 
-### 사용 방법
+</details>
 
-1. `영상 열기`를 눌러 처리할 클립을 선택한다.
-2. `영상에서 음악 분리`를 눌러 분석을 시작한다.
-3. 음악과 음악 아님 행의 `듣기`를 눌러 각 결과를 확인한다. 같은 버튼을 다시 누르면 재생이 멈추고, 미리보기 아래 슬라이더로 원하는 위치를 탐색할 수 있다.
-4. `음악 (BGM)` 행에서 `뮤트`를 누른다.
-5. `전체 영상 재생`을 눌러 음악이 빠진 영상과 남은 소리를 함께 확인한다.
-6. 결과가 만족스러우면 창 아래의 `사본 저장`을 누른다. 앱은 원본 옆에 `<원본이름>_음악제거.<원본확장자>`를 만들며, 같은 이름이 있으면 `_2`, `_3`처럼 번호를 붙여 기존 파일을 보존한다.
-
-앱은 첫 미리보기 때 420×236·24fps 프록시를 만든 뒤 재사용한다. 이 프록시는 재생에만 사용하며 저장본에는 포함하지 않는다. 사본은 원본 확장자(MP4·MOV·MKV·AVI·WebM·M4V)를 유지하고 원본 영상 스트림을 재인코딩 없이 복사한다. 처리한 오디오는 WebM에서 Opus, AVI에서 PCM, 나머지 형식에서 AAC로 저장한다. 오디오 코덱과 컨테이너의 모든 메타데이터까지 원본과 동일하게 보존하는 기능은 아니다. 미리보기는 오디오가 영상보다 짧아도 무음을 채워 영상 끝까지 재생한다.
-
-영상 미리보기 오른쪽에서 `한국어 / English`를 선택하면 창 제목, 버튼, 상태 안내, 결과 표, 경고창과 앱 정보·라이선스·출처 안내가 즉시 해당 언어로 바뀐다.
-
-전체 볼륨 슬라이더는 앱을 시작할 때 100으로 설정되며 원본·뮤트 믹스·두 분리본에 공통 적용된다. AV-CASS 실행 경로는 휴대용 폴더 안에서 자동으로 관리된다.
-
-작업 중 창을 닫으면 분리·영상 처리 프로세스를 중단하고 정리가 끝난 뒤 종료한다. 설치 중에는 동의 항목을 다시 조작해도 설치 작업이 중복 시작되지 않는다.
-
-처리 중에는 원본 옆에 `<영상이름>_sound_work_<난수>` 임시 폴더가 생긴다. 앱은 실행별 난수와 원본 경로가 기록된 소유 표식을 확인해 이번 실행이 만든 폴더만 삭제한다. 기존 `<영상이름>_sound_work` 폴더나 다른 파일은 재사용하거나 삭제하지 않는다. 최종 영상 저장과 확인이 끝나면 임시 폴더를 정리하고, 저장이 실패하거나 취소됐거나 소유 표식이 맞지 않으면 진단을 위해 남겨 둔다.
-
-입력은 로컬 고정 디스크의 지원 미디어 형식만 허용하며 UNC·네트워크 드라이브·재분석 지점·재생목록 형식을 거부한다. 한 번의 입력은 최대 10분, 영상은 최대 7680×4320, 오디오는 최대 8채널·192kHz다. FFmpeg 메모리 할당과 분석량, 외부 도구 로그 크기, 작업자 로그 한 줄·대기 큐에도 상한을 적용한다.
-
-### 앱 처리 흐름
-
-1. FFmpeg가 선택한 미디어에서 처리용 오디오를 추출한다.
-2. CAVP와 AV-CASS가 영상 장면과 오디오를 함께 분석해 음악과 음악 아님 트랙을 만든다.
-3. 앱은 분리 결과를 전용 캐시 폴더에 보관하고 두 결과 행에 표시한다.
-4. 사용자는 각 트랙을 따로 듣거나 음악을 끈 전체 영상을 재생해 결과를 확인한다.
-5. 음악 트랙이 사실상 원본 전체와 같고 음악 아님 트랙이 거의 무음인 비정상 결과에는 `검토 필요`를 표시한다.
-6. 사본을 저장하면 음악 아님 트랙을 영상과 결합한다. 두 트랙을 모두 켠 재생에는 원본 오디오를 사용한다.
-
-처리 시간은 영상 길이와 GPU 상태에 따라 달라진다.
+<a id="ko-separation"></a>
 
 ### 음악·비음악 분리 원리
+
+<details>
+<summary>분석 방식과 기본값 자세히 보기</summary>
 
 이 앱은 공식 AV-CASS 시청각 체크포인트와 CAVP 체크포인트를 사용한다. AI가 생성한 `speech`·`sfx`·`music` 세 가지 추정 결과를 최종 오디오로 그대로 쓰는 대신, 이를 음악 마스크로 변환해 원본 스테레오에 적용한다. 이 방식은 음악 제거 성능과 원본 음질 보존 사이의 균형을 위한 것이다.
 
@@ -161,6 +217,10 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 기반 연구와 모델에 관한 자세한 내용은 [AV-CASS 프로젝트 페이지](https://cass-flowmatching.github.io/), [논문](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), [공개 소스 코드](https://github.com/pantheon5100/AVCASS)에서 확인할 수 있다. 이 프로젝트는 AV-CASS 연구진의 공식 앱이 아니며 연구진과 제휴 관계가 없고 보증도 받지 않았다.
 
+</details>
+
+<a id="ko-excluded"></a>
+
 ### 저장소에 포함되지 않는 파일
 
 이 저장소에는 앱 소스, 테스트, 빌드·배포 스크립트, 문서와 라이선스 전문이 들어 있다. 다음 항목은 크기와 재배포 조건 때문에 포함하지 않는다.
@@ -171,6 +231,8 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 - 개인 영상·오디오, 분리 결과, 임시 작업 폴더와 로그
 
 모델과 외부 도구의 이용·재배포 조건은 [MODEL_LICENSES.md](docs/MODEL_LICENSES.md)와 [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)를 먼저 확인해야 한다.
+
+<a id="ko-layout"></a>
 
 ### 개발자용 저장소 구조
 
@@ -183,7 +245,12 @@ GitHub가 자동으로 추가하는 `Source code (zip)`과 `Source code (tar.gz)
 
 루트의 `video-music-separator.exe`와 `video-music-separator-setup.exe`는 `scripts/build_executables.ps1`로 만드는 로컬 실행 파일이며 Git에는 포함하지 않는다. GitHub 표시와 라이선스 확인을 위해 `README.md`, `LICENSE`, `requirements.txt`는 루트에 유지한다.
 
+<a id="ko-development"></a>
+
 ### 개발 실행
+
+<details>
+<summary>명령어와 환경 안내 펼치기</summary>
 
 GUI 자체는 가벼운 격리 Python 환경으로 실행하고, AI 추론은 휴대용 폴더의 별도 환경을 사용한다.
 
@@ -196,7 +263,14 @@ py -m venv .venv
 
 `py`가 설치된 Python을 찾지 못하면 설치된 Python 실행 파일의 전체 경로로 첫 명령을 실행한다. AI 추론 기능을 사용하려면 별도로 준비한 휴대용 런타임과 모델 파일이 필요하다.
 
+</details>
+
+<a id="ko-build"></a>
+
 ### 빌드와 테스트
+
+<details>
+<summary>명령어와 환경 안내 펼치기</summary>
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
@@ -231,13 +305,9 @@ AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토�
   ..\test-output\portable_avcass_smoke.json
 ```
 
-### 한계
+</details>
 
-- 로컬 일반 파일만 입력할 수 있고 FFmpeg 계열 입력 프로토콜은 `file`로 제한된다. 한 번에 처리할 수 있는 영상은 최대 10분이며, 더 긴 영상은 나눠야 한다. 처리 전에 예상 임시 공간과 2GB 안전 여유를 확인한다.
-- 음악/비음악 분리는 세부 소리 이름별 독립 추출보다 안정적이지만 AI 분리이므로 100% 무누출을 보장하지 않는다.
-- 매우 작은 음악, 음악처럼 반복되는 효과음, 노래·신음처럼 음악과 사람 발성의 경계가 애매한 소리는 반대 트랙에 일부 남을 수 있다.
-- AV-CASS는 16kHz 모노로 장면과 소리를 판단하지만, 최종 출력은 그 판정 마스크를 원본 스테레오에 적용한다. 모델이 판단할 수 없는 8kHz 이상은 음악 아님 쪽에 보존한다.
-- 저장 전에는 반드시 음악 행과 음악 아님 행을 각각 들어보고, 음악 뮤트 전체 재생까지 확인해야 한다.
+<a id="ko-privacy"></a>
 
 ### 입력 파일과 결과물 책임
 
@@ -246,6 +316,8 @@ AI 기본 런타임이나 내부용 오프라인 묶음을 만들 때는 검토�
 앱은 영상·음원·결과물·파일명 또는 사용 통계를 개발자에게 전송하지 않는다. 설치할 때만 Google Drive, Hugging Face, GitHub와 Gyan에 HTTPS 다운로드 요청을 보낸다. 전송되는 일반 접속 정보와 로컬 파일 처리 범위는 [PRIVACY.md](docs/PRIVACY.md)에 기록한다.
 
 영상 미리보기 왼쪽의 `앱 정보·라이선스` 버튼을 누르면 `앱 정보·라이선스·출처` 창에서 AV-CASS와 CAVP의 출처·논문, FFmpeg GPL 빌드 정보와 제3자 고지를 한국어로 확인할 수 있다. 그 아래에는 GPL·LGPL·MIT·Apache의 변경되지 않은 공식 영문 원문이 이어진다.
+
+<a id="ko-license"></a>
 
 ### 라이선스
 
@@ -259,10 +331,13 @@ AV-CASS, CAVP, FFmpeg, Python 패키지와 모델 가중치 같은 외부 구성
 
 공개 Release를 만들기 전에는 [DISTRIBUTION_CHECKLIST.md](docs/DISTRIBUTION_CHECKLIST.md)를 순서대로 확인한다.
 
+[맨 위로 ↑](#top)
+
 ---
 
 ## English
 
+> [!IMPORTANT]
 > **Public installer distribution paused:** Installer and AI runtime releases are held as Drafts until the scope of written permission from the AV-CASS researchers is confirmed. Source code remains public, and local development and personal use continue. Existing complete installations keep working, but new installations and runtime re-downloads through the existing installer are currently unavailable.
 
 Video Music Separator is a Windows GUI application for reducing or removing background music from video. It analyzes the scene and audio together, separates the soundtrack into `Music` and `Non-Music`, and lets users compare both results before saving a music-muted copy beside the source. The original video is never modified, and separation quality takes priority over processing speed.
@@ -270,17 +345,88 @@ Video Music Separator is a Windows GUI application for reducing or removing back
 - Current application and installer version: `0.2.9` (unsigned; installer release held as Draft)
 - Created by [@ms-0606](https://www.youtube.com/@ms-0606) × OpenAI Codex
 
+[Features](#en-features) · [Usage](#en-usage) · [Workflow](#en-workflow) · [Limitations](#en-limits) · [Installation reference](#en-installation) · [Development](#en-layout) · [License](#en-license)
+
+<a id="en-features"></a>
+
 ### Key Features
 
-- Audio-visual music separation using AV-CASS and CAVP
-- A decision mask that preserves the channel layout, spatial image, and phase of the original 44.1 kHz stereo signal
-- Individual preview of the Music and Non-Music tracks, plus full-video review with music muted
-- Music-removed copies that never overwrite the source
-- Local media processing without uploading video or audio
+| Feature | Description |
+| --- | --- |
+| 🎬 Scene + audio | Audio-visual music separation using AV-CASS and CAVP |
+| 🎧 Stereo output | A decision mask that preserves the channel layout, spatial image, and phase of the original 44.1 kHz stereo signal |
+| 🔊 Compare | Individual preview of the Music and Non-Music tracks, plus full-video review with music muted |
+| 💾 Save a copy | Music-removed copies that never overwrite the source |
+| 🔒 Local processing | Local media processing without uploading video or audio |
+
+<a id="en-usage"></a>
+
+### Usage
+
+1. Select the clip to process with `Open Video`.
+2. Select `Separate Music from Video` to start the analysis.
+3. Use `Listen` on the Music or Non-Music row to review each result. Select the same button again to stop, or use the slider below the preview to seek.
+4. Select `Mute` on the `Music (BGM)` row.
+5. Select `Play Full Video` to review the video together with the remaining Non-Music audio.
+6. When satisfied with the result, select `Save Copy`. The application creates `<source name>_음악제거.<source extension>` beside the source and adds `_2`, `_3`, and so on if that name already exists.
+
+| Source format | Saved video | Processed audio |
+| --- | --- | --- |
+| MP4 · MOV · MKV · M4V | Original video stream copied | AAC |
+| WebM | Original video stream copied | Opus |
+| AVI | Original video stream copied | PCM |
+
+The application creates a lightweight 420×236, 24 fps proxy for the first preview and reuses it afterward. The proxy is used only for playback and is never included in the saved copy. Saved copies retain the source extension (MP4, MOV, MKV, AVI, WebM, or M4V) and copy the original video stream without re-encoding. Processed audio uses Opus for WebM, PCM for AVI, and AAC for the other formats. The original audio codec and all container metadata are not guaranteed to be preserved. Previews silence-pad shorter audio to retain the entire video.
+
+Selecting `한국어 / English` to the right of the video preview immediately changes the window title, buttons, status messages, result table, warnings, and application information, license, and source notices to the selected language.
+
+The master volume slider starts at 100 and applies to the source, muted mix, and both separated tracks. AV-CASS runtime paths are managed automatically inside the portable folder.
+
+Closing the application during a job cancels its separation and media processes and waits for cleanup before exiting. The installer prevents a second installation from starting while one is running.
+
+During processing, the application creates a random `<video name>_sound_work_<nonce>` folder beside the source. An ownership marker records the per-run nonce and canonical source path, allowing the application to delete only the folder created by that run. It never reuses or deletes a pre-existing predictable work folder. The temporary folder is removed after the final video is saved and verified, but remains available for diagnosis if saving is cancelled, fails, or the marker no longer matches.
+
+Inputs are restricted to supported media formats on fixed local disks. UNC paths, network drives, reparse points, and playlist formats are rejected. Each input is limited to 10 minutes, video to 7680×4320, and audio to 8 channels at 192 kHz. FFmpeg allocation and probing, external-tool output, worker log-line length, and the pending log queue are also bounded.
+
+<a id="en-workflow"></a>
+
+### Application Workflow
+
+```mermaid
+flowchart LR
+    A["Open video"] --> B["Separate music"]
+    B --> C["Compare both tracks"]
+    C --> D["Mute music · review video"]
+    D --> E["Save a separate copy"]
+```
+
+1. FFmpeg extracts the audio needed for processing from the selected media.
+2. CAVP and AV-CASS analyze the scene and audio together to create Music and Non-Music tracks.
+3. The application retains the separated results in a dedicated cache folder and displays them in the two result rows.
+4. The user can audition each track separately or review the full video with music muted.
+5. An abnormal result in which the Music track is effectively identical to the full source and Non-Music is nearly silent is marked `Review Needed`.
+6. Saving a copy combines the Non-Music track with the video. Playback with both tracks enabled uses the original audio.
+
+Processing time depends on video duration and GPU performance.
+
+<a id="en-limits"></a>
+
+### Limitations
+
+- Inputs must be local regular files, and FFmpeg-family input protocols are restricted to `file`. A single job is limited to 10 minutes; split longer media first. The application checks estimated scratch use plus a 2 GB safety reserve before extraction.
+- Music/non-music separation is more stable than independent extraction by detailed sound name, but no AI separation can guarantee zero leakage.
+- Very quiet music, rhythmically repeated effects, and sounds near the boundary between music and human vocalization—such as singing or moaning—may partially remain in the opposite track.
+- AV-CASS analyzes the scene and audio at 16 kHz mono, but the final output applies its decision mask to the original stereo signal. Frequencies above 8 kHz that the model cannot evaluate are preserved in the non-music track.
+- Always listen to both the Music and Non-Music rows and review full playback with music muted before saving.
+
+<a id="en-installation"></a>
 
 ### Installation Guide
 
 Public installer downloads are currently paused. The instructions below document existing packages and the installation procedure for a future resumption; they do not indicate current download availability.
+
+<details>
+<summary>Expand existing-package notes and procedures for a future resumption</summary>
 
 After extracting the installation ZIP, keep the application and required-components installer in the same folder and **run the installer first**.
 
@@ -373,39 +519,14 @@ On the same PC, do not copy this application folder beside every video. Keep it 
 
 To move the application itself, move the entire installed folder rather than either EXE alone. Runtime verification uses the pinned tree fingerprint rather than an installation-path record, so reinstalling only to update a path is unnecessary when every component was moved intact. The `audiosep` folder name is retained for compatibility with the former portable runtime layout.
 
-### Usage
+</details>
 
-1. Select the clip to process with `Open Video`.
-2. Select `Separate Music from Video` to start the analysis.
-3. Use `Listen` on the Music or Non-Music row to review each result. Select the same button again to stop, or use the slider below the preview to seek.
-4. Select `Mute` on the `Music (BGM)` row.
-5. Select `Play Full Video` to review the video together with the remaining Non-Music audio.
-6. When satisfied with the result, select `Save Copy`. The application creates `<source name>_음악제거.<source extension>` beside the source and adds `_2`, `_3`, and so on if that name already exists.
-
-The application creates a lightweight 420×236, 24 fps proxy for the first preview and reuses it afterward. The proxy is used only for playback and is never included in the saved copy. Saved copies retain the source extension (MP4, MOV, MKV, AVI, WebM, or M4V) and copy the original video stream without re-encoding. Processed audio uses Opus for WebM, PCM for AVI, and AAC for the other formats. The original audio codec and all container metadata are not guaranteed to be preserved. Previews silence-pad shorter audio to retain the entire video.
-
-Selecting `한국어 / English` to the right of the video preview immediately changes the window title, buttons, status messages, result table, warnings, and application information, license, and source notices to the selected language.
-
-The master volume slider starts at 100 and applies to the source, muted mix, and both separated tracks. AV-CASS runtime paths are managed automatically inside the portable folder.
-
-Closing the application during a job cancels its separation and media processes and waits for cleanup before exiting. The installer prevents a second installation from starting while one is running.
-
-During processing, the application creates a random `<video name>_sound_work_<nonce>` folder beside the source. An ownership marker records the per-run nonce and canonical source path, allowing the application to delete only the folder created by that run. It never reuses or deletes a pre-existing predictable work folder. The temporary folder is removed after the final video is saved and verified, but remains available for diagnosis if saving is cancelled, fails, or the marker no longer matches.
-
-Inputs are restricted to supported media formats on fixed local disks. UNC paths, network drives, reparse points, and playlist formats are rejected. Each input is limited to 10 minutes, video to 7680×4320, and audio to 8 channels at 192 kHz. FFmpeg allocation and probing, external-tool output, worker log-line length, and the pending log queue are also bounded.
-
-### Application Workflow
-
-1. FFmpeg extracts the audio needed for processing from the selected media.
-2. CAVP and AV-CASS analyze the scene and audio together to create Music and Non-Music tracks.
-3. The application retains the separated results in a dedicated cache folder and displays them in the two result rows.
-4. The user can audition each track separately or review the full video with music muted.
-5. An abnormal result in which the Music track is effectively identical to the full source and Non-Music is nearly silent is marked `Review Needed`.
-6. Saving a copy combines the Non-Music track with the video. Playback with both tracks enabled uses the original audio.
-
-Processing time depends on video duration and GPU performance.
+<a id="en-separation"></a>
 
 ### Music and Non-Music Separation
+
+<details>
+<summary>Expand analysis details and defaults</summary>
 
 The application uses the official audio-visual AV-CASS checkpoint and CAVP checkpoint. Instead of using the three AI-generated `speech`, `sfx`, and `music` estimates directly as final audio, it converts them into a music decision mask and applies that mask to the original stereo signal. This balances music removal with fidelity to the source.
 
@@ -420,6 +541,10 @@ This design prioritizes music removal and fidelity to the source over extracting
 
 For more information about the underlying research and model, see the [AV-CASS project page](https://cass-flowmatching.github.io/), [paper](https://mm.kaist.ac.kr/pubs/pdfs/zhang26a.pdf), and [public source code](https://github.com/pantheon5100/AVCASS). This project is not an official AV-CASS application and is not affiliated with or endorsed by the AV-CASS researchers.
 
+</details>
+
+<a id="en-excluded"></a>
+
 ### Files Not Included in the Repository
 
 This repository contains the application source, tests, build and distribution scripts, documentation, and full license texts. The following files are excluded because of their size and redistribution terms:
@@ -430,6 +555,8 @@ This repository contains the application source, tests, build and distribution s
 - Personal video/audio files, separation results, temporary work folders, and logs
 
 Review [MODEL_LICENSES.en.md](docs/MODEL_LICENSES.en.md) and [THIRD_PARTY_NOTICES.en.md](docs/THIRD_PARTY_NOTICES.en.md) before using or redistributing models and external tools.
+
+<a id="en-layout"></a>
 
 ### Repository Layout for Developers
 
@@ -442,7 +569,12 @@ Review [MODEL_LICENSES.en.md](docs/MODEL_LICENSES.en.md) and [THIRD_PARTY_NOTICE
 
 The root `video-music-separator.exe` and `video-music-separator-setup.exe` files are local executables produced by `scripts/build_executables.ps1` and are not committed to Git. `README.md`, `LICENSE`, and `requirements.txt` remain in the root for GitHub presentation and license verification.
 
+<a id="en-development"></a>
+
 ### Development
+
+<details>
+<summary>Expand commands and environment notes</summary>
 
 The GUI runs in a lightweight Python environment, while AI inference uses a separate environment in the portable folder.
 
@@ -455,7 +587,14 @@ py -m venv .venv
 
 If `py` cannot find the installed Python interpreter, use the full path to the installed Python executable for the first command. AI inference requires a separately prepared portable runtime and model files.
 
+</details>
+
+<a id="en-build"></a>
+
 ### Build and Test
+
+<details>
+<summary>Expand commands and environment notes</summary>
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -t . -v
@@ -490,13 +629,9 @@ Run the portable smoke test as follows:
   ..\test-output\portable_avcass_smoke.json
 ```
 
-### Limitations
+</details>
 
-- Inputs must be local regular files, and FFmpeg-family input protocols are restricted to `file`. A single job is limited to 10 minutes; split longer media first. The application checks estimated scratch use plus a 2 GB safety reserve before extraction.
-- Music/non-music separation is more stable than independent extraction by detailed sound name, but no AI separation can guarantee zero leakage.
-- Very quiet music, rhythmically repeated effects, and sounds near the boundary between music and human vocalization—such as singing or moaning—may partially remain in the opposite track.
-- AV-CASS analyzes the scene and audio at 16 kHz mono, but the final output applies its decision mask to the original stereo signal. Frequencies above 8 kHz that the model cannot evaluate are preserved in the non-music track.
-- Always listen to both the Music and Non-Music rows and review full playback with music muted before saving.
+<a id="en-privacy"></a>
 
 ### Input and Output Responsibility
 
@@ -505,6 +640,8 @@ The application processes user-selected files locally on the PC. Users must obta
 The application does not transmit video, audio, output, file names, or usage analytics to the developer. HTTPS download requests are sent only to Google Drive, Hugging Face, GitHub, and Gyan during installation. Ordinary connection information transmitted and the scope of local file processing are documented in [PRIVACY.en.md](docs/PRIVACY.en.md).
 
 The `App Info & Licenses` button to the left of the video preview opens the `App Information, Licenses & Sources` page. In Korean mode, Korean notices and sources appear first, followed by the unmodified official GPL, LGPL, MIT, and Apache license texts.
+
+<a id="en-license"></a>
 
 ### License
 
@@ -517,3 +654,5 @@ A modifier may own copyright in newly authored changes but does not acquire copy
 External components such as AV-CASS, CAVP, FFmpeg, Python packages, and model weights remain governed by their respective copyright holders and licenses. Before publicly distributing an executable, verify the license and source-provision obligations for every included file and provide the Git tag or source ZIP exactly corresponding to that executable in the same Release.
 
 Before creating a public Release, follow [DISTRIBUTION_CHECKLIST.md](docs/DISTRIBUTION_CHECKLIST.md) in order.
+
+[Back to top ↑](#top)

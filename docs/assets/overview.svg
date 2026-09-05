@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">Video Music Separator</title>
+  <desc id="desc">A conceptual workflow: open a video, compare music and non-music tracks, and save a separate copy. Local processing with AV-CASS.</desc>
+  <rect width="1200" height="320" rx="24" fill="#111827"/>
+  <circle cx="1120" cy="32" r="180" fill="#172d45"/>
+  <text x="48" y="55" fill="#67e8f9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="3">LOCAL AUDIO · AV-CASS</text>
+  <text x="48" y="106" fill="#f8fafc" font-family="Segoe UI,Arial,sans-serif" font-size="40" font-weight="700">Video Music Separator</text>
+  <text x="48" y="143" fill="#cbd5e1" font-family="Segoe UI,Arial,sans-serif" font-size="19">Separate music. Review the sound. Save a copy.</text>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <rect x="48" y="184" width="330" height="94" rx="14" fill="#1e293b" stroke="#334155"/>
+    <rect x="430" y="184" width="340" height="94" rx="14" fill="#163347" stroke="#22d3ee"/>
+    <rect x="822" y="184" width="330" height="94" rx="14" fill="#1e293b" stroke="#334155"/>
+    <text x="70" y="214" fill="#94a3b8" font-size="12" font-weight="700">01 / OPEN</text>
+    <text x="70" y="250" fill="#f8fafc" font-size="22">Source video</text>
+    <text x="452" y="214" fill="#67e8f9" font-size="12" font-weight="700">02 / COMPARE</text>
+    <text x="452" y="250" fill="#f8fafc" font-size="22">Music + Non-Music</text>
+    <text x="844" y="214" fill="#94a3b8" font-size="12" font-weight="700">03 / SAVE</text>
+    <text x="844" y="250" fill="#f8fafc" font-size="22">Separate video copy</text>
+  </g>
+  <g fill="none" stroke="#67e8f9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M391 231h25m-8-8 8 8-8 8M783 231h25m-8-8 8 8-8 8"/>
+    <path d="M956 98h10l7-18 8 42 9-58 10 72 10-51 8 25 8-12h17l8-20 10 47 9-60 10 65 10-42 8 10h18"/>
+  </g>
+</svg>
